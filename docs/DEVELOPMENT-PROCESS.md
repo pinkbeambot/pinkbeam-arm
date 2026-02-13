@@ -112,29 +112,41 @@
 
 ---
 
-## 6. Standup Cadence
+## 6. Event-Driven Reporting
 
-**Problem:** Engineers code heads-down, blockers surface late.
+**Problem:** Daily standups are designed for humans (8-hour cycles). Agents work in hours, not days. Forced cadence creates noise and delays blocker resolution.
 
 **Solution:**
-- **Daily Async Standup:**
-  - Time: 9am PST (before deep work)
-  - Format: Text in #engineering channel
-  - Template:
-    ```
-    **Yesterday:** X, Y, Z
-    **Today:** A, B
-    **Blockers:** None / [description]
-    **Need help with:** Nothing / [specific question]
-    ```
-- **Synchronous Standup:**
-  - When: Only if blockers need real-time discussion
-  - Who: CTO + blocked engineer(s)
-  - Duration: 15 min max
-- **Weekly Review (Fridays 4pm):**
-  - CTO + ENG-BE + ENG-FE
-  - Review what shipped, what's blocked, next week's priorities
-  - Richard optional (attend if curious)
+- **Event-Driven Reporting:** Agents report ONLY on state changes, not time intervals
+- **No scheduled standups:** CTO responds to signals, not calendar
+
+**Agent Signal Protocol:**
+
+| Signal | Format | Triggers |
+|--------|--------|----------|
+| **DONE** | `DONE #[issue]: [summary]` | CTO validates, tests, closes issue |
+| **BLOCKED** | `BLOCKED #[issue]: [what's needed]` | Immediate CTO unblocking action |
+| **PROGRESS** | `PROGRESS #[issue]: [milestone]` | Optional, acknowledge only |
+
+**Examples:**
+```
+DONE #20: /api/agents CRUD endpoints with 94% coverage
+BLOCKED #22: Need schema decision on decision_logs table structure
+PROGRESS #25: Edge function scaffold complete, runtime wiring in progress
+```
+
+**CTO Response Protocol:**
+- On **DONE** → Validate, test, close issue with summary comment
+- On **BLOCKED** → Unblock immediately, escalate to CEO if needed
+- On **PROGRESS** → Acknowledge, no action required
+
+**Full documentation:** See `docs/REPORTING.md`
+
+**Why This Works:**
+- Matches agent speed (hours, not days)
+- Blockers surface immediately
+- No wasted "nothing to report" updates
+- CTO responds to actual events, not scheduled interruptions
 
 ---
 
@@ -147,7 +159,7 @@
 | Deployment | CTO | Staging auto, prod daily @4pm | Now |
 | Rollback | CTO | Staging env, backwards compat migrations | This week |
 | Documentation | CTO | PR checklist, monthly audit | Now |
-| Standups | CTO | Daily async, weekly sync | Now |
+| Reporting | Agents | Event-driven (done/blocked signals) | Now |
 
 ---
 
