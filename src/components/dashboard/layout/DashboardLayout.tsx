@@ -28,15 +28,15 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Agent Roster', href: '/dashboard/agents', icon: Bot },
-  { label: 'Activity Feed', href: '/dashboard/activity', icon: Activity },
-  { label: 'Task Pipeline', href: '/dashboard/tasks', icon: Kanban },
-  { label: 'Decision Log', href: '/dashboard/decisions', icon: Brain },
-  { label: 'Escalations', href: '/dashboard/escalations', icon: AlertCircle, badge: 0 },
-  { label: 'Performance', href: '/dashboard/performance', icon: BarChart3 },
-  { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
-  { label: 'Settings', href: '/dashboard/settings', icon: Settings },
+  { label: 'Portal', href: '/portal', icon: LayoutDashboard },
+  { label: 'Agent Roster', href: '/portal/agents', icon: Bot },
+  { label: 'Activity Feed', href: '/portal/activity', icon: Activity },
+  { label: 'Task Pipeline', href: '/portal/tasks', icon: Kanban },
+  { label: 'Decision Log', href: '/portal/decisions', icon: Brain },
+  { label: 'Escalations', href: '/portal/escalations', icon: AlertCircle, badge: 0 },
+  { label: 'Performance', href: '/portal/performance', icon: BarChart3 },
+  { label: 'Chat', href: '/portal/chat', icon: MessageSquare },
+  { label: 'Settings', href: '/portal/settings', icon: Settings },
 ];
 
 interface DashboardSidebarProps {
@@ -64,7 +64,7 @@ export function DashboardSidebar({
       {/* Logo Section */}
       <div className="flex h-16 items-center justify-between px-4 border-b border-border">
         <Link 
-          href="/dashboard" 
+          href="/portal" 
           className={cn(
             'flex items-center gap-3 transition-opacity',
             collapsed && 'justify-center w-full'
@@ -212,7 +212,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/portal" className="flex items-center gap-2">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
             <span className="text-white font-bold text-xs">PB</span>
           </div>

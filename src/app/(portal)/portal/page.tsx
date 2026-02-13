@@ -8,7 +8,7 @@ export default function DashboardPage() {
     <DashboardLayout>
       <PageContainer>
         <PageHeader
-          title="Dashboard"
+          title="Portal"
           description="Welcome to your AI workforce command center."
         >
           <Button>Create Task</Button>

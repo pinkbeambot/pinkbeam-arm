@@ -26,7 +26,7 @@ export default function AgentConfigurePage() {
   };
 
   const handleCancel = () => {
-    router.push('/agents');
+    router.push('/portal/agents');
   };
 
   if (loading) {
