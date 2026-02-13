@@ -43,7 +43,6 @@ export type {
   GoogleConfig,
   LocalConfig,
   ProviderConfigs,
-  LLMError,
   CostTrackingEntry,
   AgentLLMPreferences,
   LLMStreamChunk,

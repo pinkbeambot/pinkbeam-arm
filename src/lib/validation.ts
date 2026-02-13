@@ -66,8 +66,8 @@ export const createTaskSchema = z.object({
   assignee_id: z.string().uuid().optional(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
   parent_task_id: z.string().uuid().optional(),
-  inputs: z.record(z.unknown()).optional(),
-  expected_outputs: z.record(z.unknown()).optional(),
+  inputs: z.record(z.string(), z.unknown()).optional(),
+  expected_outputs: z.record(z.string(), z.unknown()).optional(),
   deadline_at: z.string().datetime().optional(),
 });
 
@@ -79,7 +79,7 @@ export const updateTaskSchema = z.object({
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
   progress_percent: z.number().int().min(0).max(100).optional(),
   current_step: z.string().optional(),
-  outputs: z.record(z.unknown()).optional(),
+  outputs: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const listTasksQuerySchema = z.object({
@@ -100,7 +100,7 @@ export const createDecisionSchema = z.object({
   category: z.enum(['action', 'resource', 'escalation', 'strategy', 'system']),
   title: z.string().min(1).max(500),
   description: z.string().optional(),
-  proposed_action: z.record(z.unknown()),
+  proposed_action: z.record(z.string(), z.unknown()),
   reasoning: z.object({
     context: z.string(),
     analysis: z.string(),
@@ -124,7 +124,7 @@ export const createDecisionSchema = z.object({
 
 export const overrideDecisionSchema = z.object({
   reason: z.string().min(1),
-  correct_action: z.record(z.unknown()).optional(),
+  correct_action: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const listDecisionsQuerySchema = z.object({
@@ -143,7 +143,7 @@ export const resolveEscalationSchema = z.object({
   status: z.enum(['resolved', 'dismissed']),
   resolution_type: z.string().optional(),
   resolution_answer: z.string().min(1),
-  resolution_resources: z.record(z.unknown()).optional(),
+  resolution_resources: z.record(z.string(), z.unknown()).optional(),
   learning_notes: z.string().optional(),
 });
 
