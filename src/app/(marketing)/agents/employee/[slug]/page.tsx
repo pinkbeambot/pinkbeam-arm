@@ -8,17 +8,19 @@ import { Search, Users, Headphones, PenTool, Palette, Video, ArrowLeft, Check, A
 import { FadeIn, StaggerContainer } from "@/components/animations";
 import type { Metadata } from "next";
 
-// Employee data - this would typically come from a CMS or API
-const employees = {
-  researcher: {
-    id: "researcher",
+// Agent data with name-based slugs as per assignment
+const agents = {
+  sarah: {
+    id: "sarah",
     name: "Sarah",
     role: "Market Intelligence Analyst",
     tagline: "Your eyes and ears in the market",
     description: "Sarah monitors competitors, tracks industry trends, and delivers weekly briefs with actionable insights. She reads your industry's top sources so you don't have to, surfacing opportunities and threats before your competitors know about them.",
+    avatar: "/agents/sarah-avatar.png",
     icon: Search,
     color: "bg-pink-500",
     gradient: "from-pink-500 to-rose-500",
+    skills: ["Competitive Analysis", "Market Research", "Trend Forecasting", "Report Generation", "Data Synthesis"],
     fullCapabilities: [
       {
         title: "Competitive Monitoring",
@@ -41,20 +43,28 @@ const employees = {
         description: "Answer specific research questions with sourced, cited findings. Get board-ready reports in minutes, not days.",
       },
     ],
+    useCases: [
+      "Weekly competitive intelligence briefs",
+      "Pre-meeting prospect research",
+      "Industry trend analysis",
+      "Regulatory compliance monitoring",
+    ],
     integrations: ["Crunchbase", "LinkedIn Sales Navigator", "Google Alerts", "SEMrush", "Gartner", "Industry Publications"],
     pricing: "Starting at $397/month",
     responseTime: "< 5 minutes",
     availability: "24/7",
   },
-  sdr: {
-    id: "sdr",
+  mike: {
+    id: "mike",
     name: "Mike",
     role: "Sales Development Representative",
-    tagline: "Your pipeline builder, working around the clock",
+    tagline: "Your 24/7 SDR — prospecting, qualifying, and booking meetings",
     description: "Mike identifies prospects, crafts personalized outreach, and books meetings on your calendar. He sends personalized emails at scale—and follows up perfectly every time. Your pipeline will never be empty again.",
+    avatar: "/agents/mike-avatar.png",
     icon: Users,
     color: "bg-purple-500",
     gradient: "from-purple-500 to-violet-500",
+    skills: ["Lead Research", "Outreach", "Qualification", "CRM Sync", "Meeting Booking"],
     fullCapabilities: [
       {
         title: "Lead Generation",
@@ -77,20 +87,28 @@ const employees = {
         description: "Log all activities, update stages, and maintain clean data in your existing tools. No manual data entry.",
       },
     ],
+    useCases: [
+      "Outbound prospecting campaigns",
+      "Inbound lead qualification",
+      "Event follow-up sequences",
+      "Account-based outreach",
+    ],
     integrations: ["Salesforce", "HubSpot", "Apollo", "LinkedIn", "Outreach", "Salesloft", "Calendly"],
     pricing: "Starting at $397/month",
     responseTime: "< 2 minutes",
     availability: "24/7",
   },
-  support: {
-    id: "support",
+  alex: {
+    id: "alex",
     name: "Alex",
     role: "Customer Support Specialist",
     tagline: "Instant support, zero wait time",
     description: "Alex handles tier-1 support tickets, answers FAQs, and escalates only what needs human judgment. He responds instantly, 24/7, learning from every interaction to get better over time.",
+    avatar: "/agents/alex-avatar.png",
     icon: Headphones,
     color: "bg-cyan-500",
     gradient: "from-cyan-500 to-blue-500",
+    skills: ["Ticket Resolution", "Live Chat", "Knowledge Base", "Escalation", "Customer Retention"],
     fullCapabilities: [
       {
         title: "Instant Response",
@@ -113,20 +131,28 @@ const employees = {
         description: "Identify at-risk customers and trigger retention workflows. Stop churn before it happens.",
       },
     ],
+    useCases: [
+      "24/7 customer support coverage",
+      "Password reset and account recovery",
+      "Billing and subscription questions",
+      "Feature how-to guidance",
+    ],
     integrations: ["Zendesk", "Intercom", "Freshdesk", "Slack", "Notion", "Stripe", "Chargebee"],
     pricing: "Starting at $397/month",
     responseTime: "< 2 minutes",
     availability: "24/7",
   },
-  content: {
-    id: "content",
+  casey: {
+    id: "casey",
     name: "Casey",
     role: "Content Marketing Specialist",
     tagline: "Content that sounds like you, at scale",
     description: "Casey writes blog posts, social content, email sequences, and ad copy in your brand voice. She publishes consistently—without the content calendar headaches. Finally, a content marketer who never misses a deadline.",
+    avatar: "/agents/casey-avatar.png",
     icon: PenTool,
     color: "bg-amber-500",
     gradient: "from-amber-500 to-orange-500",
+    skills: ["Blog Writing", "Social Media", "Email Marketing", "SEO", "Copywriting"],
     fullCapabilities: [
       {
         title: "Blog Posts",
@@ -149,20 +175,28 @@ const employees = {
         description: "Recommend topics based on trending searches and competitor gaps. Never run out of ideas.",
       },
     ],
+    useCases: [
+      "Weekly blog post publishing",
+      "Daily social media content",
+      "Email newsletter campaigns",
+      "Landing page copy",
+    ],
     integrations: ["WordPress", "HubSpot", "Mailchimp", "ConvertKit", "Buffer", "Hootsuite", "Google Analytics"],
     pricing: "Starting at $397/month",
     responseTime: "< 1 hour",
     availability: "24/7",
   },
-  designer: {
-    id: "designer",
-    name: "LUMEN",
+  lumen: {
+    id: "lumen",
+    name: "Lumen",
     role: "Visual Designer",
     tagline: "Beautiful design, delivered instantly",
-    description: "LUMEN creates social graphics, presentation decks, ad creatives, and brand assets. She works in your brand guidelines and delivers print-ready files. Your design bottleneck just disappeared.",
+    description: "Lumen creates social graphics, presentation decks, ad creatives, and brand assets. She works in your brand guidelines and delivers print-ready files. Your design bottleneck just disappeared.",
+    avatar: "/agents/lumen-avatar.png",
     icon: Palette,
     color: "bg-indigo-500",
     gradient: "from-indigo-500 to-purple-500",
+    skills: ["Brand Design", "Social Graphics", "Presentations", "Ad Creatives", "Asset Production"],
     fullCapabilities: [
       {
         title: "Brand Assets",
@@ -185,20 +219,28 @@ const employees = {
         description: "Maintain brand guidelines across all deliverables automatically. No more off-brand assets.",
       },
     ],
+    useCases: [
+      "Social media graphics at scale",
+      "Investor pitch decks",
+      "Marketing collateral",
+      "Brand asset libraries",
+    ],
     integrations: ["Figma", "Canva", "Adobe Creative Suite", "Google Slides", "Pitch", "Notion"],
     pricing: "Starting at $397/month",
     responseTime: "< 2 hours",
     availability: "24/7",
   },
-  video: {
-    id: "video",
-    name: "FLUX",
+  flux: {
+    id: "flux",
+    name: "Flux",
     role: "Motion Designer",
     tagline: "Video content, automatically optimized",
-    description: "FLUX produces short-form video content, animated explainers, and social clips. She edits, adds captions, and optimizes for every platform—automatically. Your video production just went autonomous.",
+    description: "Flux produces short-form video content, animated explainers, and social clips. She edits, adds captions, and optimizes for every platform—automatically. Your video production just went autonomous.",
+    avatar: "/agents/flux-avatar.png",
     icon: Video,
     color: "bg-pink-400",
     gradient: "from-pink-400 to-rose-400",
+    skills: ["Video Editing", "Motion Graphics", "Captioning", "Platform Optimization", "Short-form Content"],
     fullCapabilities: [
       {
         title: "Short-Form Video",
@@ -221,6 +263,12 @@ const employees = {
         description: "Repurpose and adapt videos for different platforms and audiences. One video, many formats.",
       },
     ],
+    useCases: [
+      "TikTok and Reels creation",
+      "Product demo videos",
+      "Podcast clip extraction",
+      "Webinar repurposing",
+    ],
     integrations: ["Adobe Premiere", "Final Cut Pro", "CapCut", "YouTube", "TikTok", "Instagram", "Descript"],
     pricing: "Starting at $397/month",
     responseTime: "< 4 hours",
@@ -228,32 +276,45 @@ const employees = {
   },
 };
 
-// Generate metadata for each employee
+// Generate static params for all agents
+export function generateStaticParams() {
+  return Object.keys(agents).map((slug) => ({ slug }));
+}
+
+// Generate metadata for each agent
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const employee = employees[slug as keyof typeof employees];
+  const agent = agents[slug as keyof typeof agents];
   
-  if (!employee) {
+  if (!agent) {
     return {
-      title: "Employee Not Found | Pink Beam ARM",
+      title: "Agent Not Found | Pink Beam ARM",
     };
   }
 
   return {
-    title: `${employee.name} - ${employee.role} | Pink Beam ARM`,
-    description: employee.description,
+    title: `${agent.name} | AI ${agent.role} | Pink Beam ARM`,
+    description: agent.description,
+    openGraph: {
+      title: `${agent.name} - AI ${agent.role}`,
+      description: agent.tagline,
+      images: [{
+        url: agent.avatar,
+        alt: `${agent.name} - AI ${agent.role}`,
+      }],
+    },
   };
 }
 
-export default async function EmployeeDetailPage({ params }: { params: Promise<{ slug: string }> }): Promise<ReactElement> {
+export default async function AgentDetailPage({ params }: { params: Promise<{ slug: string }> }): Promise<ReactElement> {
   const { slug } = await params;
-  const employee = employees[slug as keyof typeof employees];
+  const agent = agents[slug as keyof typeof agents];
 
-  if (!employee) {
+  if (!agent) {
     notFound();
   }
 
-  const Icon = employee.icon;
+  const Icon = agent.icon;
 
   return (
     <div className="min-h-screen bg-background">
@@ -283,7 +344,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </header>
 
       {/* Hero Section */}
-      <section className={`py-20 md:py-32 bg-gradient-to-br ${employee.gradient} relative overflow-hidden`}>
+      <section className={`py-20 md:py-32 bg-gradient-to-br ${agent.gradient} relative overflow-hidden`}>
         <div className="absolute inset-0 bg-black/20" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <FadeIn>
@@ -292,7 +353,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
               className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-8 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to all employees
+              Back to all agents
             </Link>
             <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
               <div className="w-24 h-24 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
@@ -300,13 +361,13 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
               </div>
               <div>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2">
-                  {employee.name}
+                  {agent.name}
                 </h1>
-                <p className="text-xl text-white/90">{employee.role}</p>
+                <p className="text-xl text-white/90">{agent.role}</p>
               </div>
             </div>
             <p className="text-lg md:text-xl text-white/80 max-w-2xl">
-              {employee.tagline}
+              {agent.tagline}
             </p>
           </FadeIn>
         </div>
@@ -319,21 +380,33 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <div className="lg:col-span-2 space-y-12">
             {/* About */}
             <FadeIn>
-              <h2 className="text-2xl font-bold mb-4">About {employee.name}</h2>
+              <h2 className="text-2xl font-bold mb-4">About {agent.name}</h2>
               <p className="text-lg text-muted-foreground leading-relaxed">
-                {employee.description}
+                {agent.description}
               </p>
+            </FadeIn>
+
+            {/* Skills */}
+            <FadeIn delay={0.1}>
+              <h2 className="text-2xl font-bold mb-6">Skills</h2>
+              <div className="flex flex-wrap gap-2">
+                {agent.skills.map((skill) => (
+                  <Badge key={skill} variant="secondary" className="text-sm">
+                    {skill}
+                  </Badge>
+                ))}
+              </div>
             </FadeIn>
 
             {/* Capabilities */}
             <FadeIn delay={0.1}>
-              <h2 className="text-2xl font-bold mb-6">Capabilities</h2>
+              <h2 className="text-2xl font-bold mb-6">Key Capabilities</h2>
               <StaggerContainer className="space-y-4">
-                {employee.fullCapabilities.map((capability) => (
+                {agent.fullCapabilities.map((capability) => (
                   <Card key={capability.title}>
                     <CardContent className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className={`w-10 h-10 rounded-lg ${employee.color} flex items-center justify-center shrink-0`}>
+                        <div className={`w-10 h-10 rounded-lg ${agent.color} flex items-center justify-center shrink-0`}>
                           <Check className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -347,15 +420,30 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
               </StaggerContainer>
             </FadeIn>
 
+            {/* Use Cases */}
+            <FadeIn delay={0.2}>
+              <h2 className="text-2xl font-bold mb-6">Use Cases</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {agent.useCases.map((useCase) => (
+                  <Card key={useCase}>
+                    <CardContent className="p-4 flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full ${agent.color}`} />
+                      <span className="text-muted-foreground">{useCase}</span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </FadeIn>
+
             {/* Integrations */}
             <FadeIn delay={0.2}>
               <h2 className="text-2xl font-bold mb-4">Integrations</h2>
               <p className="text-muted-foreground mb-4">
-                {employee.name} works seamlessly with your existing tools:
+                {agent.name} works seamlessly with your existing tools:
               </p>
               <div className="flex flex-wrap gap-2">
-                {employee.integrations.map((integration) => (
-                  <Badge key={integration} variant="secondary">
+                {agent.integrations.map((integration) => (
+                  <Badge key={integration} variant="outline">
                     {integration}
                   </Badge>
                 ))}
@@ -370,26 +458,26 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                 <CardContent className="p-6 space-y-6">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Starting at</p>
-                    <p className="text-3xl font-bold">{employee.pricing}</p>
+                    <p className="text-3xl font-bold">{agent.pricing}</p>
                   </div>
 
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Response Time</span>
-                      <span className="font-medium">{employee.responseTime}</span>
+                      <span className="font-medium">{agent.responseTime}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Availability</span>
-                      <span className="font-medium">{employee.availability}</span>
+                      <span className="font-medium">{agent.availability}</span>
                     </div>
                   </div>
 
                   <div className="pt-4 border-t border-border">
-                    <h4 className="font-semibold mb-3">What's included:</h4>
+                    <h4 className="font-semibold mb-3">What&apos;s included:</h4>
                     <ul className="space-y-2">
                       <li className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-primary" />
-                        <span className="text-muted-foreground">Full setup & training</span>
+                        <span className="text-muted-foreground">Full setup &amp; training</span>
                       </li>
                       <li className="flex items-center gap-2 text-sm">
                         <Check className="w-4 h-4 text-primary" />
@@ -407,8 +495,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                   </div>
 
                   <Button size="lg" className="w-full" asChild>
-                    <Link href="/pricing">
-                      Hire {employee.name}
+                    <Link href="/portal">
+                      Hire {agent.name}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
                   </Button>
@@ -428,7 +516,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <FadeIn>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Hire {employee.name}?
+              Ready to Hire {agent.name}?
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
               Join 100+ companies already scaling with AI employees. Start your 
@@ -436,10 +524,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>
-                <Link href="/pricing">View Pricing</Link>
+                <Link href="/portal">Get Started</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/agents">View All Employees</Link>
+                <Link href="/pricing">View Pricing</Link>
               </Button>
             </div>
           </FadeIn>
