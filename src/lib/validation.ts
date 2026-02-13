@@ -175,10 +175,20 @@ export const overrideDecisionSchema = z.object({
   correct_action: z.record(z.string(), z.unknown()).optional(),
 });
 
+export const updateDecisionSchema = z.object({
+  status: z.enum(['proposed', 'approved', 'rejected', 'overridden', 'executed']).optional(),
+  outcome: z.record(z.string(), z.unknown()).optional(),
+  executed_action: z.record(z.string(), z.unknown()).optional(),
+});
+
 export const listDecisionsQuerySchema = z.object({
   agent_id: z.string().uuid().optional(),
   status: z.enum(['proposed', 'approved', 'rejected', 'overridden', 'executed']).optional(),
   category: z.enum(['action', 'resource', 'escalation', 'strategy', 'system']).optional(),
+  date_from: z.string().datetime().optional(),
+  date_to: z.string().datetime().optional(),
+  confidence_min: z.coerce.number().min(0).max(1).optional(),
+  search: z.string().min(1).max(200).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
@@ -256,6 +266,7 @@ export type UpdateTaskInput = z.infer<typeof updateTaskSchema>;
 export type ListTasksQuery = z.infer<typeof listTasksQuerySchema>;
 
 export type CreateDecisionInput = z.infer<typeof createDecisionSchema>;
+export type UpdateDecisionInput = z.infer<typeof updateDecisionSchema>;
 export type OverrideDecisionInput = z.infer<typeof overrideDecisionSchema>;
 export type ListDecisionsQuery = z.infer<typeof listDecisionsQuerySchema>;
 
