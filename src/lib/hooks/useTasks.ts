@@ -55,6 +55,11 @@ interface UpdateTaskInput {
   progress_percent?: number;
   current_step?: string;
   outputs?: Record<string, unknown>;
+  started_at?: string;
+  completed_at?: string;
+  actual_duration?: number;
+  due_date?: string;
+  acceptance_criteria?: string[];
 }
 
 /**

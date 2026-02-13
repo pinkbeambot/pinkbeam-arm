@@ -55,7 +55,7 @@ export function useAgentsRealtime(tenantId: string | null) {
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
@@ -140,7 +140,7 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
@@ -266,4 +266,16 @@ export function useDeleteAgent() {
   }, [supabase]);
 
   return { deleteAgent, loading, error };
+}
+
+// Demo tenant ID - in production, this would come from auth context
+const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Convenience hook for fetching all agents
+ * Uses the demo tenant ID for now
+ */
+export function useAgents() {
+  const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);
+  return { agents, isLoading: loading, error, refetch };
 }
