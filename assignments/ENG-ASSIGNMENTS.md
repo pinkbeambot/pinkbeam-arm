@@ -2,7 +2,28 @@
 
 ## ENG-FE (Frontend Engineer)
 
-### Current Assignments - Phase 4: Real-time Features (PRIORITY)
+### 🔥 URGENT: Marketing Site Implementation (NEW PRIORITY)
+**Assigned:** 2026-02-13 12:35 PST by CTO
+**Context:** Portal is auth-walled; need public `/` for user acquisition
+
+| Issue | Title | Status | Route |
+|-------|-------|--------|-------|
+| #34 | Migrate Components from pinkbeam | **START HERE** | `/` |
+| #35 | Landing Page (/) | Open | `/` |
+| #36 | Agent Detail Pages | Open | `/agents/employee/[slug]` |
+| #37 | Pricing Page | Open | `/pricing` |
+| #38 | Visual QA & Testing | Open | All |
+
+**Key Requirements:**
+- Reference: `~/code/pinkbeam/components/agents/sections/` for components to migrate
+- Routes to implement: `/`, `/agents`, `/agents/employee/[slug]`, `/pricing`
+- Keep `/portal/*` auth-walled (existing)
+- Quality: Responsive (desktop-first), Lighthouse >90, visual regression testing, cross-browser
+- Stack: Next.js 15 + React 19 + TypeScript + Tailwind CSS 4
+
+**START WITH #34** - Component migration is the foundation
+
+### Current Assignments - Phase 4: Real-time Features (PAUSED)
 | Issue | Title | Status |
 |-------|-------|--------|
 | #27 | WebSocket Connection Manager | Open |
@@ -12,7 +33,7 @@
 | #31 | Notification System | Open |
 | #32 | Live Task Pipeline Updates | Open |
 
-**Start with #27 (WebSocket Connection Manager)** - This is the foundation for all other real-time features.
+**Note:** Phase 4 work PAUSED pending completion of Marketing Site (#34-#38)
 
 ### Recently Completed - Phase 2: UI Deliverables
 | Issue | Title | Status |
@@ -55,6 +76,13 @@ None - ENG-FE is unblocked and ready for Phase 4 work.
 ---
 
 ## Notes
+
+### 2026-02-13 12:35 PST - URGENT: Marketing Site Assignment
+- **NEW PRIORITY:** Marketing site implementation assigned by CEO via CTO
+- Issues #34-#38 created for public marketing site (user acquisition)
+- Phase 4 work (#27-#32) PAUSED until marketing site complete
+- ENG-FE to start with #34 (component migration from pinkbeam)
+- **Components to migrate:** Hero, ProblemSection, HowItWorks, EmployeeTabs, UseCases, TrustSignals, Testimonials, PricingSection, FAQ, FinalCTA
 
 ### 2026-02-13 12:20 PST
 - Cleared Phase 2 validation backlog

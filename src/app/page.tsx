@@ -1,11 +1,24 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import {
+  Hero,
+  ProblemSection,
+  SolutionSection,
+  EmployeeTabs,
+  HowItWorks,
+  UseCases,
+  TrustSignals,
+  Testimonials,
+  PricingSection,
+  FAQ,
+  FinalCTA,
+} from "@/components/marketing";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-2">
@@ -14,91 +27,102 @@ export default function LandingPage() {
               </div>
               <span className="font-bold text-xl">Pink Beam</span>
             </div>
-            <nav className="flex items-center gap-4">
-              <Link href="/portal" className="text-sm text-muted-foreground hover:text-foreground">
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/agents" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                AI Employees
+              </Link>
+              <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+              <Link href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                FAQ
+              </Link>
+            </nav>
+            <div className="flex items-center gap-4">
+              <Link href="/portal" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">
                 Portal
               </Link>
-              <Button asChild>
+              <Button asChild size="sm">
                 <Link href="/portal">Enter Portal</Link>
               </Button>
-            </nav>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero */}
+      {/* Main Content */}
       <main>
-        <section className="py-20 md:py-32">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm mb-8">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pink-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-pink-500"></span>
-              </span>
-              Powered by VALIS
-            </div>
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-6">
-              Your AI Workforce,
-              <br />
-              <span className="text-gradient-beam">Managed.</span>
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              Deploy, monitor, and scale your AI agent workforce from a single command center. 
-              The future of work is autonomous.
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" asChild>
-                <Link href="/portal">Enter the Portal</Link>
-              </Button>
-              <Button variant="outline" size="lg">
-                Learn More
-              </Button>
-            </div>
+        <div className="pt-16">
+          <Hero />
+          <TrustSignals />
+          <ProblemSection />
+          <SolutionSection />
+          <EmployeeTabs />
+          <HowItWorks />
+          <UseCases />
+          <Testimonials />
+          <PricingSection />
+          <div id="faq">
+            <FAQ />
           </div>
-        </section>
-
-        {/* Features */}
-        <section className="py-20 bg-muted/50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid md:grid-cols-3 gap-8">
-              <div className="p-6 bg-card rounded-xl border">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <span className="text-primary font-bold">01</span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Agent Roster</h3>
-                <p className="text-muted-foreground">Manage your entire AI workforce from one dashboard.</p>
-              </div>
-              <div className="p-6 bg-card rounded-xl border">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <span className="text-primary font-bold">02</span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Task Pipeline</h3>
-                <p className="text-muted-foreground">Orchestrate complex workflows across multiple agents.</p>
-              </div>
-              <div className="p-6 bg-card rounded-xl border">
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <span className="text-primary font-bold">03</span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Real-time Monitor</h3>
-                <p className="text-muted-foreground">Watch your agents work with live activity feeds.</p>
-              </div>
-            </div>
-          </div>
-        </section>
+          <FinalCTA />
+        </div>
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-border py-8">
+      <footer className="border-t border-border py-12 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-xs">PB</span>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            {/* Brand */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
+                  <span className="text-white font-bold text-sm">PB</span>
+                </div>
+                <span className="font-bold text-xl">Pink Beam</span>
               </div>
-              <span className="font-semibold text-sm">Pink Beam</span>
+              <p className="text-sm text-muted-foreground">
+                The command center for your AI workforce.
+              </p>
             </div>
+
+            {/* Product */}
+            <div>
+              <h4 className="font-semibold mb-3">Product</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="/agents" className="hover:text-foreground">AI Employees</Link></li>
+                <li><Link href="/pricing" className="hover:text-foreground">Pricing</Link></li>
+                <li><Link href="/portal" className="hover:text-foreground">Portal</Link></li>
+              </ul>
+            </div>
+
+            {/* Company */}
+            <div>
+              <h4 className="font-semibold mb-3">Company</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="#" className="hover:text-foreground">About</Link></li>
+                <li><Link href="#" className="hover:text-foreground">Blog</Link></li>
+                <li><Link href="#" className="hover:text-foreground">Careers</Link></li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-semibold mb-3">Legal</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><Link href="#" className="hover:text-foreground">Privacy</Link></li>
+                <li><Link href="#" className="hover:text-foreground">Terms</Link></li>
+                <li><Link href="#" className="hover:text-foreground">Security</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
-              © 2026 Pink Beam. Powered by VALIS.
+              © 2026 Pink Beam. All rights reserved.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Powered by VALIS
             </p>
           </div>
         </div>

@@ -1,0 +1,467 @@
+import type { ReactElement } from "react";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Search, Users, Headphones, PenTool, Palette, Video, ArrowLeft, Check, ArrowRight } from "lucide-react";
+import { FadeIn, StaggerContainer } from "@/components/animations";
+import type { Metadata } from "next";
+
+// Employee data - this would typically come from a CMS or API
+const employees = {
+  researcher: {
+    id: "researcher",
+    name: "Sarah",
+    role: "Market Intelligence Analyst",
+    tagline: "Your eyes and ears in the market",
+    description: "Sarah monitors competitors, tracks industry trends, and delivers weekly briefs with actionable insights. She reads your industry's top sources so you don't have to, surfacing opportunities and threats before your competitors know about them.",
+    icon: Search,
+    color: "bg-pink-500",
+    gradient: "from-pink-500 to-rose-500",
+    fullCapabilities: [
+      {
+        title: "Competitive Monitoring",
+        description: "Track competitor pricing, product launches, and messaging changes in real-time. Get alerted the moment something important happens.",
+      },
+      {
+        title: "Market Intelligence",
+        description: "Synthesize industry reports, news, and trends into weekly executive briefs that actually get read.",
+      },
+      {
+        title: "Prospect Research",
+        description: "Deep-dive on target accounts and decision-makers before your sales calls. Know their pain points before they tell you.",
+      },
+      {
+        title: "Regulatory Tracking",
+        description: "Monitor policy changes and compliance requirements affecting your industry. Stay ahead of the curve.",
+      },
+      {
+        title: "Custom Reports",
+        description: "Answer specific research questions with sourced, cited findings. Get board-ready reports in minutes, not days.",
+      },
+    ],
+    integrations: ["Crunchbase", "LinkedIn Sales Navigator", "Google Alerts", "SEMrush", "Gartner", "Industry Publications"],
+    pricing: "Starting at $397/month",
+    responseTime: "< 5 minutes",
+    availability: "24/7",
+  },
+  sdr: {
+    id: "sdr",
+    name: "Mike",
+    role: "Sales Development Representative",
+    tagline: "Your pipeline builder, working around the clock",
+    description: "Mike identifies prospects, crafts personalized outreach, and books meetings on your calendar. He sends personalized emails at scale—and follows up perfectly every time. Your pipeline will never be empty again.",
+    icon: Users,
+    color: "bg-purple-500",
+    gradient: "from-purple-500 to-violet-500",
+    fullCapabilities: [
+      {
+        title: "Lead Generation",
+        description: "Identify and enrich prospects from 50+ data sources based on your ICP. Never run out of people to talk to.",
+      },
+      {
+        title: "Personalized Outreach",
+        description: "Write unique, research-backed emails that don't sound like templates. Each message is tailored to the recipient.",
+      },
+      {
+        title: "Multi-Channel Sequences",
+        description: "Orchestrate email, LinkedIn, and voicemail touchpoints automatically. Meet prospects where they are.",
+      },
+      {
+        title: "Meeting Booking",
+        description: "Handle objections, answer questions, and schedule qualified calls on your calendar. You just show up.",
+      },
+      {
+        title: "CRM Sync",
+        description: "Log all activities, update stages, and maintain clean data in your existing tools. No manual data entry.",
+      },
+    ],
+    integrations: ["Salesforce", "HubSpot", "Apollo", "LinkedIn", "Outreach", "Salesloft", "Calendly"],
+    pricing: "Starting at $397/month",
+    responseTime: "< 2 minutes",
+    availability: "24/7",
+  },
+  support: {
+    id: "support",
+    name: "Alex",
+    role: "Customer Support Specialist",
+    tagline: "Instant support, zero wait time",
+    description: "Alex handles tier-1 support tickets, answers FAQs, and escalates only what needs human judgment. He responds instantly, 24/7, learning from every interaction to get better over time.",
+    icon: Headphones,
+    color: "bg-cyan-500",
+    gradient: "from-cyan-500 to-blue-500",
+    fullCapabilities: [
+      {
+        title: "Instant Response",
+        description: "Answer common questions in under 2 minutes, 24/7/365. Your customers never wait.",
+      },
+      {
+        title: "Ticket Resolution",
+        description: "Handle password resets, billing questions, and feature guidance autonomously. Free up your team for complex issues.",
+      },
+      {
+        title: "Smart Escalation",
+        description: "Route complex issues to the right human with full context attached. No more 'Can you explain that again?'",
+      },
+      {
+        title: "Knowledge Base",
+        description: "Learn from your docs and improve answers over time. The more he works, the smarter he gets.",
+      },
+      {
+        title: "Proactive Outreach",
+        description: "Identify at-risk customers and trigger retention workflows. Stop churn before it happens.",
+      },
+    ],
+    integrations: ["Zendesk", "Intercom", "Freshdesk", "Slack", "Notion", "Stripe", "Chargebee"],
+    pricing: "Starting at $397/month",
+    responseTime: "< 2 minutes",
+    availability: "24/7",
+  },
+  content: {
+    id: "content",
+    name: "Casey",
+    role: "Content Marketing Specialist",
+    tagline: "Content that sounds like you, at scale",
+    description: "Casey writes blog posts, social content, email sequences, and ad copy in your brand voice. She publishes consistently—without the content calendar headaches. Finally, a content marketer who never misses a deadline.",
+    icon: PenTool,
+    color: "bg-amber-500",
+    gradient: "from-amber-500 to-orange-500",
+    fullCapabilities: [
+      {
+        title: "Blog Posts",
+        description: "Write SEO-optimized long-form content in your brand voice. Rank higher without the writing grind.",
+      },
+      {
+        title: "Social Media",
+        description: "Create platform-native content for LinkedIn, Twitter, and Instagram. Engage your audience where they hang out.",
+      },
+      {
+        title: "Email Sequences",
+        description: "Build nurture campaigns, newsletters, and transactional emails. Keep your audience engaged.",
+      },
+      {
+        title: "Ad Copy",
+        description: "Generate and test variations for Google, Meta, and LinkedIn ads. Find winning copy faster.",
+      },
+      {
+        title: "Content Strategy",
+        description: "Recommend topics based on trending searches and competitor gaps. Never run out of ideas.",
+      },
+    ],
+    integrations: ["WordPress", "HubSpot", "Mailchimp", "ConvertKit", "Buffer", "Hootsuite", "Google Analytics"],
+    pricing: "Starting at $397/month",
+    responseTime: "< 1 hour",
+    availability: "24/7",
+  },
+  designer: {
+    id: "designer",
+    name: "LUMEN",
+    role: "Visual Designer",
+    tagline: "Beautiful design, delivered instantly",
+    description: "LUMEN creates social graphics, presentation decks, ad creatives, and brand assets. She works in your brand guidelines and delivers print-ready files. Your design bottleneck just disappeared.",
+    icon: Palette,
+    color: "bg-indigo-500",
+    gradient: "from-indigo-500 to-purple-500",
+    fullCapabilities: [
+      {
+        title: "Brand Assets",
+        description: "Create logos, icons, and design systems that reflect your brand. Consistency at scale.",
+      },
+      {
+        title: "Social Graphics",
+        description: "Design engaging posts, stories, and carousel graphics at scale. Never miss a posting opportunity.",
+      },
+      {
+        title: "Presentation Decks",
+        description: "Build polished pitch decks and marketing materials. Close more deals with stunning visuals.",
+      },
+      {
+        title: "Ad Creatives",
+        description: "Produce high-converting banner ads and social campaign visuals. Test more variations.",
+      },
+      {
+        title: "Design Consistency",
+        description: "Maintain brand guidelines across all deliverables automatically. No more off-brand assets.",
+      },
+    ],
+    integrations: ["Figma", "Canva", "Adobe Creative Suite", "Google Slides", "Pitch", "Notion"],
+    pricing: "Starting at $397/month",
+    responseTime: "< 2 hours",
+    availability: "24/7",
+  },
+  video: {
+    id: "video",
+    name: "FLUX",
+    role: "Motion Designer",
+    tagline: "Video content, automatically optimized",
+    description: "FLUX produces short-form video content, animated explainers, and social clips. She edits, adds captions, and optimizes for every platform—automatically. Your video production just went autonomous.",
+    icon: Video,
+    color: "bg-pink-400",
+    gradient: "from-pink-400 to-rose-400",
+    fullCapabilities: [
+      {
+        title: "Short-Form Video",
+        description: "Create TikTok, Reels, and YouTube Shorts optimized for each platform. Dominate short-form.",
+      },
+      {
+        title: "Animated Explainers",
+        description: "Build engaging product demos and how-to videos. Show, don't just tell.",
+      },
+      {
+        title: "Video Editing",
+        description: "Edit raw footage, add captions, effects, and music automatically. Professional edits in minutes.",
+      },
+      {
+        title: "Social Clips",
+        description: "Transform long-form content into shareable video snippets. Maximize every piece of content.",
+      },
+      {
+        title: "Auto-Optimization",
+        description: "Repurpose and adapt videos for different platforms and audiences. One video, many formats.",
+      },
+    ],
+    integrations: ["Adobe Premiere", "Final Cut Pro", "CapCut", "YouTube", "TikTok", "Instagram", "Descript"],
+    pricing: "Starting at $397/month",
+    responseTime: "< 4 hours",
+    availability: "24/7",
+  },
+};
+
+// Generate metadata for each employee
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const employee = employees[slug as keyof typeof employees];
+  
+  if (!employee) {
+    return {
+      title: "Employee Not Found | Pink Beam ARM",
+    };
+  }
+
+  return {
+    title: `${employee.name} - ${employee.role} | Pink Beam ARM`,
+    description: employee.description,
+  };
+}
+
+export default async function EmployeeDetailPage({ params }: { params: Promise<{ slug: string }> }): Promise<ReactElement> {
+  const { slug } = await params;
+  const employee = employees[slug as keyof typeof employees];
+
+  if (!employee) {
+    notFound();
+  }
+
+  const Icon = employee.icon;
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex h-16 items-center justify-between">
+            <Link href="/" className="flex items-center gap-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
+                <span className="text-white font-bold text-sm">PB</span>
+              </div>
+              <span className="font-bold text-xl">Pink Beam</span>
+            </Link>
+            <nav className="hidden md:flex items-center gap-6">
+              <Link href="/agents" className="text-sm text-foreground font-medium">
+                AI Employees
+              </Link>
+              <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+            </nav>
+            <Button asChild size="sm">
+              <Link href="/portal">Enter Portal</Link>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Hero Section */}
+      <section className={`py-20 md:py-32 bg-gradient-to-br ${employee.gradient} relative overflow-hidden`}>
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <FadeIn>
+            <Link 
+              href="/agents" 
+              className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-8 transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to all employees
+            </Link>
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-6 mb-8">
+              <div className="w-24 h-24 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                <Icon className="w-12 h-12 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-2">
+                  {employee.name}
+                </h1>
+                <p className="text-xl text-white/90">{employee.role}</p>
+              </div>
+            </div>
+            <p className="text-lg md:text-xl text-white/80 max-w-2xl">
+              {employee.tagline}
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* Left Column - Description & Capabilities */}
+          <div className="lg:col-span-2 space-y-12">
+            {/* About */}
+            <FadeIn>
+              <h2 className="text-2xl font-bold mb-4">About {employee.name}</h2>
+              <p className="text-lg text-muted-foreground leading-relaxed">
+                {employee.description}
+              </p>
+            </FadeIn>
+
+            {/* Capabilities */}
+            <FadeIn delay={0.1}>
+              <h2 className="text-2xl font-bold mb-6">Capabilities</h2>
+              <StaggerContainer className="space-y-4">
+                {employee.fullCapabilities.map((capability) => (
+                  <Card key={capability.title}>
+                    <CardContent className="p-6">
+                      <div className="flex items-start gap-4">
+                        <div className={`w-10 h-10 rounded-lg ${employee.color} flex items-center justify-center shrink-0`}>
+                          <Check className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold mb-1">{capability.title}</h3>
+                          <p className="text-muted-foreground">{capability.description}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </StaggerContainer>
+            </FadeIn>
+
+            {/* Integrations */}
+            <FadeIn delay={0.2}>
+              <h2 className="text-2xl font-bold mb-4">Integrations</h2>
+              <p className="text-muted-foreground mb-4">
+                {employee.name} works seamlessly with your existing tools:
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {employee.integrations.map((integration) => (
+                  <Badge key={integration} variant="secondary">
+                    {integration}
+                  </Badge>
+                ))}
+              </div>
+            </FadeIn>
+          </div>
+
+          {/* Right Column - Stats & CTA */}
+          <div className="lg:col-span-1">
+            <FadeIn delay={0.1}>
+              <Card className="sticky top-24">
+                <CardContent className="p-6 space-y-6">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Starting at</p>
+                    <p className="text-3xl font-bold">{employee.pricing}</p>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Response Time</span>
+                      <span className="font-medium">{employee.responseTime}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Availability</span>
+                      <span className="font-medium">{employee.availability}</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-border">
+                    <h4 className="font-semibold mb-3">What's included:</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="text-muted-foreground">Full setup & training</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="text-muted-foreground">Unlimited tasks</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="text-muted-foreground">Priority support</span>
+                      </li>
+                      <li className="flex items-center gap-2 text-sm">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="text-muted-foreground">Weekly performance reports</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <Button size="lg" className="w-full" asChild>
+                    <Link href="/pricing">
+                      Hire {employee.name}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Link>
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    7-day free trial. No credit card required.
+                  </p>
+                </CardContent>
+              </Card>
+            </FadeIn>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <section className="py-20 md:py-32 bg-muted/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <FadeIn>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              Ready to Hire {employee.name}?
+            </h2>
+            <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+              Join 100+ companies already scaling with AI employees. Start your 
+              free trial today—no credit card required.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button size="lg" asChild>
+                <Link href="/pricing">View Pricing</Link>
+              </Button>
+              <Button size="lg" variant="outline" asChild>
+                <Link href="/agents">View All Employees</Link>
+              </Button>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-border py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
+                <span className="text-white font-bold text-xs">PB</span>
+              </div>
+              <span className="font-semibold text-sm">Pink Beam</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              © 2026 Pink Beam. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

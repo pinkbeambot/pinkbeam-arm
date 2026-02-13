@@ -13,6 +13,11 @@ node_modules/
 
 # Testing
 coverage/
+test-results/
+playwright-report/
+playwright/.cache/
+.lighthouseci/
+lhci_reports/
 
 # Next.js
 .next/
