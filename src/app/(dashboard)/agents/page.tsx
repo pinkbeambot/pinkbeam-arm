@@ -15,6 +15,9 @@ import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, Cre
 // Demo tenant ID - in production, this would come from auth context
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
+// Force dynamic rendering to prevent static generation issues with Supabase
+export const dynamic = 'force-dynamic';
+
 export default function AgentsPage() {
   const { toast } = useToast();
   const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);

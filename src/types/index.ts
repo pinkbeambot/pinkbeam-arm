@@ -50,6 +50,12 @@ export type EscalationUrgency =
   | 'high' 
   | 'critical';
 
+export type EscalationType = 
+  | 'clarification' 
+  | 'approval' 
+  | 'error' 
+  | 'edge_case';
+
 export type DecisionStatus = 
   | 'proposed' 
   | 'approved' 
@@ -57,12 +63,18 @@ export type DecisionStatus =
   | 'overridden' 
   | 'executed';
 
+export type DecisionCategory = 
+  | 'action' 
+  | 'resource' 
+  | 'escalation' 
+  | 'strategy';
+
 // Core Agent Types
 export interface Agent {
   id: string;
   tenant_id: string;
-  parent_id: string | null;
-  root_id: string;
+  parent_id?: string | null;
+  root_id?: string;
   depth: number;
   name: string;
   role: AgentRole;
@@ -78,6 +90,30 @@ export interface Agent {
   updated_at: string;
   last_active_at?: string;
   metadata?: Record<string, unknown>;
+  // Extended fields from mock data
+  slug?: string;
+  status_reason?: string;
+  activated_at?: string;
+  llm_config?: {
+    provider: string;
+    model: string;
+    temperature: number;
+    max_tokens: number;
+  };
+  limits?: {
+    max_sub_agents: number;
+    escalation_threshold: number;
+    timeout_seconds: number;
+    max_tokens_per_task: number;
+    max_cost_per_task_usd: number;
+  };
+  stats?: {
+    tasks_completed: number;
+    tasks_failed: number;
+    escalations_raised: number;
+    avg_task_duration_seconds: number;
+    total_cost_usd: number;
+  };
 }
 
 export interface AgentWithStats extends Agent {
@@ -97,7 +133,7 @@ export interface Task {
   priority: TaskPriority;
   assigned_agent_id?: string;
   assigned_agent?: Agent;
-  created_by: string;
+  created_by?: string;
   created_at: string;
   updated_at: string;
   started_at?: string;
@@ -107,6 +143,17 @@ export interface Task {
   actual_duration?: number;
   acceptance_criteria?: string[];
   metadata?: Record<string, unknown>;
+  // Extended fields from mock data
+  type?: string;
+  assignee_id?: string;
+  assigner_id?: string;
+  parent_task_id?: string;
+  depth?: number;
+  progress_percent?: number;
+  current_step?: string;
+  cost_usd?: number;
+  tokens_used?: number;
+  deadline_at?: string;
 }
 
 // Activity Types
@@ -141,6 +188,10 @@ export interface Activity {
   actor_type?: 'agent' | 'user' | 'system';
   target_id?: string;
   target_type?: 'task' | 'decision' | 'escalation' | 'agent';
+  // Extended fields from mock data
+  category?: string;
+  task_id?: string;
+  sequence_number?: number;
 }
 
 // Decision Types
@@ -182,6 +233,23 @@ export interface Escalation {
   resolution?: string;
   created_at: string;
   resolved_at?: string;
+  updated_at?: string;
+  // Extended fields from mock data
+  situation_context?: {
+    error_code?: string;
+    retry_after?: number;
+  };
+  question?: {
+    title: string;
+    details: string;
+    options?: string[];
+  };
+  agent_analysis?: {
+    what_i_know: string;
+    what_i_dont_know: string;
+    what_i_tried: string[];
+    suggested_resolution?: string;
+  };
 }
 
 // Navigation Types

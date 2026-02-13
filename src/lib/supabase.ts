@@ -37,7 +37,7 @@ export const supabaseService = createClient<Database>(supabaseUrl, supabaseServi
 
 // Helper to set tenant context for RLS
 export async function setTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
-  await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+  await (supabase.rpc as any)('set_tenant_context', { tenant_id: tenantId });
 }
 
 // Get current user from session
@@ -68,7 +68,7 @@ export async function getCurrentTenant(authToken: string) {
   const { data: tenant } = await supabase
     .from('tenants')
     .select('*')
-    .eq('id', user.tenant_id)
+    .eq('id', (user as { tenant_id: string }).tenant_id)
     .single();
   
   return tenant;

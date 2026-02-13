@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Bot, CheckCircle2, Clock, AlertCircle, TrendingUp, Users } from "lucide-react";
 
+// Force dynamic rendering to prevent static generation issues
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
   return (
     <DashboardLayout>

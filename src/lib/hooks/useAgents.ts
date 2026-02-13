@@ -55,26 +55,27 @@ export function useAgentsRealtime(tenantId: string | null) {
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
           table: 'agents',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload: RealtimeChangePayload<Agent>) => {
+        (payload: unknown) => {
+          const typedPayload = payload as RealtimeChangePayload<Agent>;
           setAgents(current => {
-            if (payload.eventType === 'INSERT') {
+            if (typedPayload.eventType === 'INSERT') {
               // Add new agent at the beginning
-              return payload.new ? [payload.new, ...current] : current;
-            } else if (payload.eventType === 'UPDATE') {
+              return typedPayload.new ? [typedPayload.new, ...current] : current;
+            } else if (typedPayload.eventType === 'UPDATE') {
               // Update existing agent
               return current.map(agent => 
-                agent.id === payload.new?.id ? payload.new : agent
+                agent.id === typedPayload.new?.id ? typedPayload.new : agent
               );
-            } else if (payload.eventType === 'DELETE') {
+            } else if (typedPayload.eventType === 'DELETE') {
               // Remove deleted agent
-              return current.filter(agent => agent.id !== payload.old?.id);
+              return current.filter(agent => agent.id !== typedPayload.old?.id);
             }
             return current;
           });
@@ -140,17 +141,18 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
           table: 'agents',
           filter: `id=eq.${agentId}`,
         },
-        (payload: RealtimeChangePayload<Agent>) => {
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            setAgent(current => ({ ...current!, ...payload.new }));
-          } else if (payload.eventType === 'DELETE') {
+        (payload: unknown) => {
+          const typedPayload = payload as RealtimeChangePayload<Agent>;
+          if (typedPayload.eventType === 'UPDATE' && typedPayload.new) {
+            setAgent(current => ({ ...current!, ...typedPayload.new }));
+          } else if (typedPayload.eventType === 'DELETE') {
             setAgent(null);
           }
         }
@@ -266,4 +268,16 @@ export function useDeleteAgent() {
   }, [supabase]);
 
   return { deleteAgent, loading, error };
+}
+
+// Demo tenant ID - in production, this would come from auth context
+const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Convenience hook for fetching all agents
+ * Uses the demo tenant ID for now
+ */
+export function useAgents() {
+  const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);
+  return { agents, isLoading: loading, error, refetch };
 }

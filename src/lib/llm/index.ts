@@ -43,11 +43,12 @@ export type {
   GoogleConfig,
   LocalConfig,
   ProviderConfigs,
-  LLMError,
-  CostTrackingEntry,
   AgentLLMPreferences,
   LLMStreamChunk,
 } from './types';
 
-// Error export
+// Type-only exports to avoid duplicate identifier issues
+export type { CostTrackingEntry } from './types';
+
+// Error export (value export, not type)
 export { LLMError } from './types';
