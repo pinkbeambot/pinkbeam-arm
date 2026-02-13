@@ -16,8 +16,10 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Circle
+  Circle,
+  ExternalLink
 } from 'lucide-react';
+import Link from 'next/link';
 import { cn, formatRelativeTime, getAgentStatusColor, getAgentStatusLabel, getRoleBadgeColor, getRoleLabel, getInitials, getAvatarColor } from '@/lib/utils';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -197,6 +199,12 @@ function AgentTableView({
                         <Settings className="mr-2 h-4 w-4" />
                         Edit Agent
                       </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href={`/agents/${agent.id}/configure`} className="cursor-pointer">
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          Configure
+                        </Link>
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onToggleStatus(agent)}>
                         {agent.status === 'paused' ? (
                           <>
@@ -211,7 +219,7 @@ function AgentTableView({
                         )}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem 
+                      <DropdownMenuItem
                         onClick={() => onDeleteAgent(agent)}
                         className="text-red-600 focus:text-red-600"
                       >
@@ -289,6 +297,12 @@ function AgentCard({ agent, isSelected, onClick, onEdit, onToggleStatus, onDelet
               <DropdownMenuItem onClick={onEdit}>
                 <Settings className="mr-2 h-4 w-4" />
                 Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={`/agents/${agent.id}/configure`} className="cursor-pointer">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Configure
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onToggleStatus}>
                 {agent.status === 'paused' ? (

@@ -1,14 +1,14 @@
 'use client';
 
 import { Settings2, Thermometer, Hash, Clock, FileJson } from 'lucide-react';
-import { Label } from '@/lib/ui/label';
-import { Slider } from '@/lib/ui/slider';
-import { Input } from '@/lib/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/lib/ui/select';
-import { Switch } from '@/lib/ui/switch';
-import { Badge } from '@/lib/ui/badge';
-import { Separator } from '@/lib/ui/separator';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/lib/ui/tooltip';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 interface AdvancedSectionProps {

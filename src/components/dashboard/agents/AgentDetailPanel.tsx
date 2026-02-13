@@ -1,6 +1,7 @@
 'use client';
 
-import { X, Bot, Calendar, Activity, CheckCircle2, Clock, AlertCircle, Settings, MessageSquare, Play, Pause } from 'lucide-react';
+import { X, Bot, Calendar, Activity, CheckCircle2, Clock, AlertCircle, Settings, MessageSquare, Play, Pause, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 import { cn, formatDateTime, getAgentStatusColor, getAgentStatusLabel, getRoleLabel, getRoleBadgeColor, getInitials, getAvatarColor, formatRelativeTime } from '@/lib/utils';
 import type { Agent } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -98,10 +99,13 @@ function AgentDetailContent({
 
         {/* Quick Actions */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={onEdit} className="flex-1">
-            <Settings className="mr-2 h-4 w-4" />
-            Configure
-          </Button>
+          <Link href={`/agents/${agent.id}/configure`} className="flex-1">
+            <Button variant="outline" size="sm" className="w-full">
+              <Settings className="mr-2 h-4 w-4" />
+              Configure
+              <ExternalLink className="ml-2 h-3 w-3" />
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={onChat} className="flex-1">
             <MessageSquare className="mr-2 h-4 w-4" />
             Chat

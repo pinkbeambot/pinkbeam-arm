@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTitle } from '@/components/ui/alert';
 
 interface CapabilitiesSectionProps {
   capabilities: Capability[];
@@ -147,7 +148,7 @@ export function CapabilitiesSection({
     <div className="space-y-8">
       {/* Warning for high-risk permissions */}
       {hasHighRiskPermissions && (
-        <Alert variant="warning" className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
+        <Alert className="border-amber-200 bg-amber-50 dark:bg-amber-950/30">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800 dark:text-amber-200">
             This agent has high-level permissions. Review carefully before activating.
