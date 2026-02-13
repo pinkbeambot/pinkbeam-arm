@@ -174,7 +174,15 @@ export async function GET(request: NextRequest) {
     };
 
     // Get daily breakdown for sparkline charts
-    const dailyBreakdown = currentMetrics?.reduce((acc, m) => {
+    interface DailyMetric {
+      date: string;
+      tasksCompleted: number;
+      tasksCreated: number;
+      successRate: number;
+      cost: number;
+    }
+
+    const dailyBreakdown = currentMetrics?.reduce<Record<string, DailyMetric>>((acc, m) => {
       const date = m.date;
       if (!acc[date]) {
         acc[date] = { date, tasksCompleted: 0, tasksCreated: 0, successRate: 0, cost: 0 };
@@ -183,7 +191,7 @@ export async function GET(request: NextRequest) {
       acc[date].tasksCreated += m.tasks_created || 0;
       acc[date].cost += parseFloat(m.total_cost_usd || '0');
       return acc;
-    }, {} as Record<string, { date: string; tasksCompleted: number; tasksCreated: number; successRate: number; cost: number }>);
+    }, {});
 
     // Get current open escalations count
     const { count: openEscalations, error: escalationsError } = await supabase
@@ -240,7 +248,7 @@ export async function GET(request: NextRequest) {
           trendDirection: trends.escalations >= 0 ? 'up' : 'down',
         },
       },
-      dailyBreakdown: Object.values(dailyBreakdown || {}).sort((a, b) => a.date.localeCompare(b.date)),
+      dailyBreakdown: Object.values(dailyBreakdown || {} as Record<string, DailyMetric>).sort((a: DailyMetric, b: DailyMetric) => a.date.localeCompare(b.date)),
       avgTaskDuration: current.avgTaskDuration,
       period: {
         days,

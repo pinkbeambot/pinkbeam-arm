@@ -25,6 +25,46 @@ function setCachedData(key: string, data: unknown): void {
   cache.set(key, { data, timestamp: Date.now() });
 }
 
+interface PerformanceData {
+  agent_id: string;
+  agent_name: string;
+  agent_role: string;
+  total_tasks_completed: number;
+  total_tasks_failed: number;
+  success_rate: number;
+  avg_task_duration_seconds: number;
+  total_cost_usd: number;
+  total_escalations: number;
+  override_rate: number;
+  trend_direction: string;
+}
+
+interface AgentDetails {
+  id: string;
+  name: string;
+  avatar_url?: string;
+  role: string;
+  status: string;
+}
+
+interface LeaderboardEntry {
+  rank: number;
+  medal: string | null;
+  agentId: string;
+  name: string;
+  avatarUrl?: string;
+  role: string;
+  status: string;
+  tasksCompleted: number;
+  tasksFailed: number;
+  successRate: number;
+  avgTaskDuration: number;
+  totalCost: number;
+  escalationCount: number;
+  overrideRate: number;
+  trendDirection: string;
+}
+
 /**
  * GET /api/analytics/leaderboard
  * Get agent performance rankings
@@ -104,53 +144,34 @@ export async function GET(request: NextRequest) {
     }
 
     // Get agent avatars and additional details
-    const agentIds = performanceData?.map((p: { agent_id: string }) => p.agent_id) || [];
+    const agentIds = (performanceData as PerformanceData[])?.map((p) => p.agent_id) || [];
     
-    let agentsWithDetails: Array<{
-      id: string;
-      name: string;
-      avatar_url?: string;
-      role: string;
-      status: string;
-      stats?: { tasks_completed?: number };
-    }> = [];
+    let agentsWithDetails: AgentDetails[] = [];
     
     if (agentIds.length > 0) {
       const { data: agents, error: agentsError } = await supabase
         .from('agents')
-        .select('id, name, avatar_url, role, status, stats')
+        .select('id, name, avatar_url, role, status')
         .eq('tenant_id', tenantId)
         .in('id', agentIds);
 
       if (agentsError) {
         console.error('Error fetching agent details:', agentsError);
       } else {
-        agentsWithDetails = agents || [];
+        agentsWithDetails = (agents as AgentDetails[]) || [];
       }
     }
 
     // Merge performance data with agent details
-    const leaderboard = (performanceData || [])
-      .map((perf: {
-        agent_id: string;
-        agent_name: string;
-        agent_role: string;
-        total_tasks_completed: number;
-        total_tasks_failed: number;
-        success_rate: number;
-        avg_task_duration_seconds: number;
-        total_cost_usd: number;
-        total_escalations: number;
-        override_rate: number;
-        trend_direction: string;
-      }) => {
+    const leaderboard: LeaderboardEntry[] = (performanceData as PerformanceData[])
+      .map((perf) => {
         const agent = agentsWithDetails.find(a => a.id === perf.agent_id);
         return {
           agentId: perf.agent_id,
           name: perf.agent_name,
           avatarUrl: agent?.avatar_url,
           role: perf.agent_role,
-          status: agent?.status,
+          status: agent?.status || 'unknown',
           tasksCompleted: perf.total_tasks_completed,
           tasksFailed: perf.total_tasks_failed,
           successRate: Math.round(perf.success_rate * 100) / 100,
@@ -159,9 +180,11 @@ export async function GET(request: NextRequest) {
           escalationCount: perf.total_escalations,
           overrideRate: Math.round(perf.override_rate * 100) / 100,
           trendDirection: perf.trend_direction,
+          rank: 0, // Will be set after sorting
+          medal: null, // Will be set after sorting
         };
       })
-      .sort((a, b) => {
+      .sort((a: LeaderboardEntry, b: LeaderboardEntry) => {
         switch (sortBy) {
           case 'tasksCompleted':
             return b.tasksCompleted - a.tasksCompleted;
@@ -175,17 +198,15 @@ export async function GET(request: NextRequest) {
             return b.tasksCompleted - a.tasksCompleted;
         }
       })
-      .slice(0, limit);
-
-    // Add rank
-    const rankedLeaderboard = leaderboard.map((agent, index) => ({
-      ...agent,
-      rank: index + 1,
-      medal: index < 3 ? ['gold', 'silver', 'bronze'][index] : null,
-    }));
+      .slice(0, limit)
+      .map((agent, index) => ({
+        ...agent,
+        rank: index + 1,
+        medal: index < 3 ? ['gold', 'silver', 'bronze'][index] : null,
+      }));
 
     const response = {
-      leaderboard: rankedLeaderboard,
+      leaderboard,
       period: { days },
       sortBy,
       generatedAt: new Date().toISOString(),
