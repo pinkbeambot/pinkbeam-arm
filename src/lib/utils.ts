@@ -28,6 +28,22 @@ export function formatDurationDetailed(minutes: number): string {
   return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`
 }
 
+export function formatNumber(value: number, options?: { decimals?: number; compact?: boolean }): string {
+  const { decimals = 0, compact = false } = options || {}
+  
+  if (compact && value >= 1000) {
+    if (value >= 1000000) {
+      return `${(value / 1000000).toFixed(decimals)}M`
+    }
+    return `${(value / 1000).toFixed(decimals)}K`
+  }
+  
+  return value.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })
+}
+
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return '—'
   return new Date(date).toLocaleDateString('en-US', {
