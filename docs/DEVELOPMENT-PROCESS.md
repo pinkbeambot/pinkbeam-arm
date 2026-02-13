@@ -150,6 +150,55 @@ PROGRESS #25: Edge function scaffold complete, runtime wiring in progress
 
 ---
 
+## 7. CTO Resilience Patterns
+
+**Problem:** CTO sessions experiencing timeouts on long-running validation tasks.
+
+**Root Causes:**
+1. Reviewing too many issues in one session (context overflow)
+2. Blocking on external API calls (GitHub, git operations)
+3. No checkpoint pattern (all-or-nothing reporting)
+
+**Solutions:**
+
+### Batch Size Limits
+- **Max 3-4 issues per validation session**
+- Prioritize by impact (unblock ENG-FE first, then ENG-BE)
+- Report progress after each batch: `VALIDATED #[issues]: [summary]`
+
+### Checkpoint Pattern
+- **Report every 30 minutes** even if not done
+- Format: `PROGRESS: Validated 2/4 issues, continuing with #X, #Y`
+- This prevents timeout data loss
+
+### Async Validation
+- Use `gh issue close` from command line (non-blocking)
+- Don't wait for full conversational review
+- If validation takes >10 minutes, skip and move to next issue
+- Come back to complex issues in separate session
+
+### Session Timeout Strategy
+- **Target session length:** 30 minutes max
+- **If timeout detected:** Report `TIMEOUT: Completed X/Y issues, respawning`
+- **Respawn continuation:** New session picks up where previous left off
+
+### Quality vs. Speed Trade-off
+- **Fast validation:** Check acceptance criteria, run tests, close
+- **Deep validation:** Only for critical paths (auth, billing, agent spawning)
+- **Spot check:** 20% of issues get deep review, 80% get fast validation
+
+**Example CTO Session Flow:**
+```
+START: Validating #6, #7, #8 (ARM-001 to ARM-003)
+PROGRESS: Validated #6 (2 min), #7 (3 min), continuing #8
+DONE #6: Agent Runtime Core validated, tests pass, closing
+DONE #7: Dashboard + Agent Roster validated, closing
+DONE #8: Activity Feed validated, closing
+REPORT: Batch complete. Starting #9, #10, #11
+```
+
+---
+
 ## Summary Table
 
 | Problem | Owner | Fix | When |
@@ -160,17 +209,18 @@ PROGRESS #25: Edge function scaffold complete, runtime wiring in progress
 | Rollback | CTO | Staging env, backwards compat migrations | This week |
 | Documentation | CTO | PR checklist, monthly audit | Now |
 | Reporting | Agents | Event-driven (done/blocked signals) | Now |
+| CTO Timeouts | VALIS | Batch limits, checkpoint pattern, 30min sessions | Now |
 
 ---
 
 ## Files to Create/Update
 
-1. `~/code/arm/docs/DEVELOPMENT-PROCESS.md` — This document
+1. `~/code/arm/docs/DEVELOPMENT-PROCESS.md` — This document ✅ Created
 2. `~/code/arm/docs/INCIDENT-RESPONSE.md` — Rollback procedures
 3. `~/code/arm/scripts/rollback.sh` — Rollback automation
 4. `~/code/arm/vitest.config.ts` — Add coverage thresholds
 5. `.github/workflows/ci.yml` — Add coverage check
-6. Update CTO workflow message — Include these processes
+6. Update CTO workflow message — Include these processes (resilience patterns added)
 
 ---
 
