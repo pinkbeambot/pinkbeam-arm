@@ -34,7 +34,7 @@ const navItems: NavItem[] = [
   { label: 'Task Pipeline', href: '/dashboard/tasks', icon: Kanban },
   { label: 'Decision Log', href: '/dashboard/decisions', icon: Brain },
   { label: 'Escalations', href: '/dashboard/escalations', icon: AlertCircle, badge: 0 },
-  { label: 'Performance', href: '/dashboard/analytics', icon: BarChart3 },
+  { label: 'Performance', href: '/dashboard/performance', icon: BarChart3 },
   { label: 'Chat', href: '/dashboard/chat', icon: MessageSquare },
   { label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
