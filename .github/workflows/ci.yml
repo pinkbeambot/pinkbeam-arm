@@ -49,7 +49,7 @@ jobs:
         run: npm run lint
 
   test:
-    name: Test
+    name: Test with Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -64,8 +64,35 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run tests
-        run: npm run test
+      - name: Run tests with coverage
+        run: npm run test:coverage
+        # This will FAIL the build if coverage thresholds are not met
+        # Backend API: 80% minimum
+        # Frontend: 60% minimum  
+        # Critical paths (auth, billing, agents): 90% minimum
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 30
+
+      - name: Post coverage summary
+        if: always()
+        run: |
+          echo "=== Coverage Summary ==="
+          if [ -f coverage/coverage-summary.json ]; then
+            cat coverage/coverage-summary.json | jq '.total' || echo "Could not parse coverage summary"
+          else
+            echo "Coverage summary not found"
+          fi
+          echo ""
+          echo "Thresholds:"
+          echo "  - Backend API routes: 80%"
+          echo "  - Frontend components: 60%"
+          echo "  - Critical paths (auth, billing, agents): 90%"
 
   build:
     name: Build
