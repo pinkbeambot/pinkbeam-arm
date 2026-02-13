@@ -282,3 +282,139 @@ export interface RealtimeChangePayload<T> {
   new: T | null;
   old: T | null;
 }
+
+// ============================================================================
+// Agent Configuration Types
+// ============================================================================
+
+export interface AgentConfig {
+  basic_info?: {
+    name?: string;
+    role?: string;
+    avatar_url?: string;
+    description?: string;
+  };
+  instructions?: {
+    system_prompt?: string;
+    success_criteria?: string;
+    examples?: Array<{
+      input: string;
+      output: string;
+      description?: string;
+    }>;
+  };
+  tools?: {
+    enabled?: string[];
+    config?: Record<string, unknown>;
+  };
+  permissions?: {
+    data_access?: Record<string, 'none' | 'read' | 'write' | 'admin'>;
+    external_apis?: string[];
+  };
+  escalation?: {
+    triggers?: Record<string, boolean | { amount_usd?: number; deal_size_usd?: number; confidence_threshold?: number }>;
+    thresholds?: {
+      confidence?: number;
+    };
+    quiet_hours?: {
+      enabled?: boolean;
+      start?: string;
+      end?: string;
+      timezone?: string;
+    };
+  };
+  advanced?: {
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+    timeout_seconds?: number;
+    json_mode?: boolean;
+  };
+}
+
+export interface AgentConfigRecord {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  config: AgentConfig;
+  version_id: string;
+  version_number: number;
+  is_valid: boolean;
+  validation_errors: Array<{
+    field: string;
+    message: string;
+    severity: 'error' | 'warning';
+  }>;
+  last_tested_at?: string;
+  last_test_result?: {
+    success: boolean;
+    test_input: string;
+    response_time_ms: number;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentConfigVersion {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  version_number: number;
+  name?: string;
+  description?: string;
+  config: AgentConfig;
+  change_type: 'manual' | 'auto_save' | 'restore' | 'template_import' | 'clone';
+  changed_by?: string;
+  change_summary?: {
+    is_initial?: boolean;
+    previous_version?: number;
+    changed_fields?: string[];
+    restored_from_version?: number;
+    restored_from_version_id?: string;
+  };
+  is_valid: boolean;
+  validation_errors: Array<{
+    field: string;
+    message: string;
+    severity: 'error' | 'warning';
+  }>;
+  created_at: string;
+}
+
+export interface AgentTemplate {
+  id: string;
+  tenant_id?: string;
+  name: string;
+  slug: string;
+  description?: string;
+  category: string;
+  icon?: string;
+  color?: string;
+  config: AgentConfig;
+  capabilities: string[];
+  recommended_model?: string;
+  recommended_tools?: string[];
+  is_system: boolean;
+  is_active: boolean;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ConfigTestResult {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  config_version_id?: string;
+  test_input: string;
+  test_output?: string;
+  success: boolean;
+  response_time_ms: number;
+  tokens_used?: number;
+  cost_usd?: number;
+  error_message?: string;
+  error_details?: unknown;
+  model_used?: string;
+  raw_response?: unknown;
+  created_at: string;
+}
