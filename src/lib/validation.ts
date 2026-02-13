@@ -218,3 +218,33 @@ export type AnalyticsLeaderboardQuery = z.infer<typeof analyticsLeaderboardQuery
 export type AnalyticsAgentQuery = z.infer<typeof analyticsAgentQuerySchema>;
 export type AnalyticsRoiQuery = z.infer<typeof analyticsRoiQuerySchema>;
 export type AnalyticsBottlenecksQuery = z.infer<typeof analyticsBottlenecksQuerySchema>;
+
+// ============================================================================
+// Re-export Agent Config Validation
+// ============================================================================
+
+export {
+  // Schemas
+  agentConfigSchema,
+  updateAgentConfigSchema,
+  listConfigVersionsQuerySchema,
+  restoreConfigVersionSchema,
+  testAgentConfigSchema,
+  listAgentTemplatesQuerySchema,
+  applyTemplateSchema,
+  compareVersionsQuerySchema,
+  // Types
+  type AgentConfig,
+  type UpdateAgentConfigInput,
+  type ListConfigVersionsQuery,
+  type RestoreConfigVersionInput,
+  type TestAgentConfigInput,
+  type ListAgentTemplatesQuery,
+  type ApplyTemplateInput,
+  type CompareVersionsQuery,
+  type ConfigValidationResult,
+  type ConfigValidationError,
+  // Functions
+  validateAgentConfig,
+  mergeConfigs,
+} from './validation/agent-config';
