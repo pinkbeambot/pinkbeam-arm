@@ -60,8 +60,8 @@ None - ENG-FE is unblocked and ready for Phase 4 work.
 ### Current Assignments
 | Issue | Title | Status |
 |-------|-------|--------|
-| #20 | /api/agents CRUD Endpoints | ✅ Closed 2026-02-13 |
-| #21 | /api/tasks Enhancements | Open |
+| #20 | /api/agents CRUD Endpoints | ✅ Closed 2026-02-13 — VALIDATED |
+| #21 | /api/tasks Enhancements | ✅ Closed 2026-02-13 — VALIDATED |
 | #22 | /api/decisions Endpoints | Open |
 | #23 | /api/escalations Endpoints | Open |
 | #24 | /api/messages Endpoints | Open |
