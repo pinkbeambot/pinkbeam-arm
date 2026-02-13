@@ -150,51 +150,74 @@ PROGRESS #25: Edge function scaffold complete, runtime wiring in progress
 
 ---
 
-## 7. CTO Resilience Patterns
+## 7. Stateless Agent Architecture
 
-**Problem:** CTO sessions experiencing timeouts on long-running validation tasks.
+**Problem:** Persistent agents (CTO, ENG-BE, ENG-FE) experiencing timeouts on long-running tasks.
 
-**Root Causes:**
-1. Reviewing too many issues in one session (context overflow)
-2. Blocking on external API calls (GitHub, git operations)
-3. No checkpoint pattern (all-or-nothing reporting)
+**Solution:** Stateless, fire-and-forget agent sessions.
 
-**Solutions:**
+### CEO as Orchestrator
+- **VALIS (CEO)** reads signals and decides what needs to happen
+- **Spawns stateless CTO/ENG-BE/ENG-FE sessions** for specific, bounded tasks
+- **Each session does ONE thing, reports back, ends**
+- **No persistent agents** running for hours
 
-### Batch Size Limits
-- **Max 3-4 issues per validation session**
-- Prioritize by impact (unblock ENG-FE first, then ENG-BE)
-- Report progress after each batch: `VALIDATED #[issues]: [summary]`
-
-### Checkpoint Pattern
-- **Report every 30 minutes** even if not done
-- Format: `PROGRESS: Validated 2/4 issues, continuing with #X, #Y`
-- This prevents timeout data loss
-
-### Async Validation
-- Use `gh issue close` from command line (non-blocking)
-- Don't wait for full conversational review
-- If validation takes >10 minutes, skip and move to next issue
-- Come back to complex issues in separate session
-
-### Session Timeout Strategy
-- **Target session length:** 30 minutes max
-- **If timeout detected:** Report `TIMEOUT: Completed X/Y issues, respawning`
-- **Respawn continuation:** New session picks up where previous left off
-
-### Quality vs. Speed Trade-off
-- **Fast validation:** Check acceptance criteria, run tests, close
-- **Deep validation:** Only for critical paths (auth, billing, agent spawning)
-- **Spot check:** 20% of issues get deep review, 80% get fast validation
-
-**Example CTO Session Flow:**
+### Stateless CTO Sessions
+**Pattern:**
 ```
-START: Validating #6, #7, #8 (ARM-001 to ARM-003)
-PROGRESS: Validated #6 (2 min), #7 (3 min), continuing #8
-DONE #6: Agent Runtime Core validated, tests pass, closing
-DONE #7: Dashboard + Agent Roster validated, closing
-DONE #8: Activity Feed validated, closing
-REPORT: Batch complete. Starting #9, #10, #11
+VALIS: "CTO — validate #20-#21, report back"
+→ CTO spawns, validates, reports DONE, session ends
+
+VALIS: "CTO — spawn ENG-BE on #22, report back"  
+→ CTO spawns, assigns, reports DONE, session ends
+
+VALIS: "CTO — merge PR #123, report back"
+→ CTO merges, reports DONE, session ends
+```
+
+**Benefits:**
+- No context overflow (sessions <5 minutes)
+- No blocking operations accumulation
+- Clear audit trail (each spawn is a decision point)
+- Easy recovery (respawn with same task if timeout)
+
+### Stateless Engineer Sessions
+**ENG-BE/ENG-FE:** Spawned for single tasks, report DONE/BLOCKED, session ends
+
+**Pattern:**
+```
+CTO (on behalf of VALIS): "ENG-BE — implement #20, report when done"
+→ ENG-BE works, reports DONE #20, session ends
+
+VALIS: "ENG-FE — migrate components #34, report when done"
+→ ENG-FE works, reports DONE #34, session ends
+```
+
+### No Automatic Spawning
+- No cron jobs spawning agents
+- No timers
+- **Only VALIS decides when to spawn**
+- Each spawn has explicit task and expected output
+
+### Recovery from Timeout
+If any session times out:
+1. VALIS detects (no report received)
+2. VALIS respawns same agent with same task
+3. Agent starts fresh (no context from failed session)
+4. If work was partially done, it shows in git/GitHub state
+
+### Example Flow
+```
+10:00 — ENG-BE reports: DONE #20
+10:00 — VALIS spawns CTO: "Validate #20"
+10:05 — CTO reports: #20 validated and closed
+10:05 — VALIS spawns CTO: "Assign ENG-BE to #21"
+10:10 — CTO reports: ENG-BE spawned on #21
+10:10 — VALIS waits (no action until ENG-BE signals)
+...
+11:30 — ENG-BE reports: DONE #21
+11:30 — VALIS spawns CTO: "Validate #21"
+...
 ```
 
 ---
