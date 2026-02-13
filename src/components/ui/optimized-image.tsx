@@ -61,7 +61,7 @@ export function OptimizedImage({
   const resolvedWidth = width ?? transform?.width ?? resolvedPreset?.width
   const resolvedHeight = height ?? transform?.height ?? resolvedPreset?.height
   const resolvedSizes =
-    sizes ?? (preset ? RESPONSIVE_SIZES[preset as keyof typeof RESPONSIVE_SIZES] : undefined)
+    sizes ?? (preset ? String(RESPONSIVE_SIZES[preset as keyof typeof RESPONSIVE_SIZES]) : undefined)
 
   const useFill = !resolvedWidth && !resolvedHeight
 
