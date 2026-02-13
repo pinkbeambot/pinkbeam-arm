@@ -46,7 +46,7 @@ async function createAuthClient(request: NextRequest) {
 /**
  * Helper to get tenant ID from user
  */
-async function getTenantId(supabase: ReturnType<typeof createServerClient>) {
+async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return null;

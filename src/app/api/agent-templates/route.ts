@@ -35,7 +35,7 @@ async function createAuthClient(request: NextRequest) {
 /**
  * Helper to get tenant ID from user
  */
-async function getTenantId(supabase: ReturnType<typeof createServerClient>) {
+async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return null;
@@ -47,11 +47,11 @@ async function getTenantId(supabase: ReturnType<typeof createServerClient>) {
     .eq('auth_id', user.id)
     .single();
 
-  if (profileError || !userProfile?.tenant_id) {
+  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
     return null;
   }
 
-  return { tenantId: userProfile.tenant_id, user };
+  return { tenantId: (userProfile as { tenant_id: string }).tenant_id, user };
 }
 
 /**
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
       category: z.string().max(100).default('custom'),
       icon: z.string().max(100).optional(),
       color: z.string().max(50).default('#6366F1'),
-      config: z.record(z.unknown()),
+      config: z.record(z.string(), z.unknown()),
       capabilities: z.array(z.string()).default([]),
       recommended_model: z.string().optional(),
       recommended_tools: z.array(z.string()).default([]),

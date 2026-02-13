@@ -277,4 +277,5 @@ export {
   // Functions
   validateAgentConfig,
   mergeConfigs,
+  stripEmptyValues,
 } from './validation/agent-config';

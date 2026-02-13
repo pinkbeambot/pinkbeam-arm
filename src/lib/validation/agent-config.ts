@@ -262,6 +262,34 @@ export function validateAgentConfig(config: unknown): ConfigValidationResult {
 }
 
 /**
+ * Recursively strip empty values (null, undefined, empty strings) from an object
+ */
+export function stripEmptyValues<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return obj;
+  }
+
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj
+      .map(stripEmptyValues)
+      .filter((item) => item !== null && item !== undefined && item !== '') as unknown as T;
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    const stripped = stripEmptyValues(value);
+    if (stripped !== null && stripped !== undefined && stripped !== '') {
+      result[key] = stripped;
+    }
+  }
+  return result as T;
+}
+
+/**
  * Deep merge two configuration objects
  */
 export function mergeConfigs(

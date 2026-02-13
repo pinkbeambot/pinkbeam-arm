@@ -60,6 +60,25 @@ All 11 features from ENG-FE-TASKS.md completed:
 
 ---
 
+## Phase 2.5: Meta-Agent Architecture Prep (IN PROGRESS)
+
+Minimal work to future-proof for the meta-agent without building it yet.
+
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| System agent type in schema | ENG-BE | ⏳ | Add `type` column to agents table, reserved system UUID |
+| Flexible activity API filters | ENG-BE | 🔄 | `/api/activities?agent_id=&type=&from=&to=` |
+| System actor permissions | ENG-BE | ⏳ | RLS allowing system agents read access |
+| Document meta-agent pattern | VALIS | ✅ | Added to ARCHITECTURE.md |
+
+**Deferred to Post-MVP:**
+- Natural language → query translation layer
+- LLM integration for meta-agent
+- Context assembly and synthesis
+- Meta-agent chat interface
+
+---
+
 ## Phase 3: Backend API (IN PROGRESS)
 
 ### Critical Priority

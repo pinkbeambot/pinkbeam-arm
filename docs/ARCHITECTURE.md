@@ -311,9 +311,50 @@ CREATE POLICY user_tenant_isolation ON users
 - Onboarding
 - Performance optimization
 
+## Meta-Agent Architecture (Future)
+
+The platform is architected to support a **meta-agent** (codename: VALIS) — a central command agent that provides natural language access to the entire agent workforce. This is intentionally deferred post-MVP but the foundation is built from day one.
+
+### Architectural Requirements (Implemented in MVP)
+
+1. **System Agent Type** — Reserved agent ID per tenant with `role = 'system'` and `type = 'meta'`
+2. **Queryable Activity Schema** — Activities stored as structured data (JSONB), not just display strings
+3. **Flexible API Filtering** — `/api/activities` supports filtering by: agent_id, time_range, event_type, entity_type
+4. **Permission Model** — System agents bypass standard RLS within their tenant (but not cross-tenant)
+5. **Message Protocol** — A2A messaging already supports `to: 'broadcast'` and hierarchical routing
+
+### Future Implementation (Post-MVP)
+
+**Phase 1: Natural Language Queries (Read-Only)**
+```
+User: "What's MarketingBot working on?"
+→ LLM converts to: GET /api/tasks?assigned_to=marketingbot&status=in_progress
+→ Results synthesized into conversational response
+```
+
+**Phase 2: Cross-Agent Aggregation**
+```
+User: "Compare my agents' performance this week"
+→ Query analytics across all agents → Comparative summary
+```
+
+**Phase 3: Action Commands**
+```
+User: "Pause all sales agents and summarize their open tasks"
+→ Multi-step: bulk update + aggregate query + natural language response
+```
+
+### Why This Architecture
+
+- **Zero MVP overhead** — Schema and APIs you'd build anyway
+- **No refactor cost** — No migration needed when adding meta-agent later
+- **Clean separation** — Business logic (now) vs NL interface (later)
+- **Category differentiation** — Nobody else has conversational workforce management
+
 ## Future Considerations
 
 ### Roadmap
+- Meta-agent / natural language interface (VALIS)
 - Mobile applications
 - Advanced workflow builder
 - Marketplace for agent templates

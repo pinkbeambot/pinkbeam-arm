@@ -58,7 +58,7 @@ async function createAuthClient(request: NextRequest) {
 /**
  * Helper to get tenant ID from user
  */
-async function getTenantId(supabase: ReturnType<typeof createServerClient>) {
+async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   if (authError || !user) {
     return null;
@@ -70,7 +70,7 @@ async function getTenantId(supabase: ReturnType<typeof createServerClient>) {
     .eq('auth_id', user.id)
     .single();
 
-  if (profileError || !userProfile?.tenant_id) {
+  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
     return null;
   }
 
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * Store test result in database
  */
 async function storeTestResult(
-  supabase: ReturnType<typeof createServerClient>,
+  supabase: Awaited<ReturnType<typeof createAuthClient>>,
   result: {
     tenant_id: string;
     agent_id: string;
@@ -380,6 +380,7 @@ async function storeTestResult(
     error_details?: unknown;
   }
 ) {
+  if (!supabase) return;
   try {
     await supabase.from('config_test_results').insert({
       tenant_id: result.tenant_id,
