@@ -8,7 +8,7 @@
 
 | Issue | Title | Status | Route |
 |-------|-------|--------|-------|
-| #34 | Migrate Components from pinkbeam | **START HERE** | `/` |
+| #34 | Migrate Components from pinkbeam | ✅ Closed 2026-02-13 | `/` |
 | #35 | Landing Page (/) | Open | `/` |
 | #36 | Agent Detail Pages | Open | `/agents/employee/[slug]` |
 | #37 | Pricing Page | Open | `/pricing` |
@@ -60,7 +60,7 @@ None - ENG-FE is unblocked and ready for Phase 4 work.
 ### Current Assignments
 | Issue | Title | Status |
 |-------|-------|--------|
-| #20 | /api/agents CRUD Endpoints | Open |
+| #20 | /api/agents CRUD Endpoints | ✅ Closed 2026-02-13 |
 | #21 | /api/tasks Enhancements | Open |
 | #22 | /api/decisions Endpoints | Open |
 | #23 | /api/escalations Endpoints | Open |
