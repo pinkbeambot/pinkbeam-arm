@@ -43,12 +43,12 @@ export function Hero() {
           {/* Main Headline */}
           <FadeInOnMount delay={0.1}>
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-foreground tracking-tight">
-              Build Your{" "}
+              Run a{" "}
               <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                AI Workforce
+                50-person company
               </span>
               <br className="hidden md:block" />
-              <span className="text-foreground"> Today</span>
+              <span className="text-foreground"> as a 1-person founder</span>
             </h1>
           </FadeInOnMount>
           
