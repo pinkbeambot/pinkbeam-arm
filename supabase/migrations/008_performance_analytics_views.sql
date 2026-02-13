@@ -519,3 +519,49 @@ BEGIN
     ORDER BY day_of_week;
 END;
 $$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- HELPER FUNCTIONS FOR API
+-- ============================================================================
+
+-- Function to get agent backlogs for bottleneck analysis
+CREATE OR REPLACE FUNCTION get_agent_backlogs(p_tenant_id UUID)
+RETURNS TABLE (
+    assignee_id UUID,
+    name VARCHAR,
+    pending_tasks BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        t.assignee_id,
+        a.name,
+        COUNT(*)::BIGINT as pending_tasks
+    FROM tasks t
+    JOIN agents a ON t.assignee_id = a.id
+    WHERE t.tenant_id = p_tenant_id
+    AND a.tenant_id = p_tenant_id
+    AND t.status IN ('queued', 'in_progress')
+    GROUP BY t.assignee_id, a.name
+    ORDER BY pending_tasks DESC
+    LIMIT 10;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get pipeline counts by status
+CREATE OR REPLACE FUNCTION get_pipeline_counts(p_tenant_id UUID)
+RETURNS TABLE (
+    status VARCHAR,
+    count BIGINT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        t.status::VARCHAR,
+        COUNT(*)::BIGINT
+    FROM tasks t
+    WHERE t.tenant_id = p_tenant_id
+    AND t.status IN ('queued', 'in_progress', 'blocked', 'review')
+    GROUP BY t.status;
+END;
+$$ LANGUAGE plpgsql;

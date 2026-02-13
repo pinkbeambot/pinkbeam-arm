@@ -108,15 +108,11 @@ export async function GET(request: NextRequest) {
       console.error('Error fetching waiting tasks:', waitingError);
     }
 
-    // Get agents with high backlogs
-    const { data: agentBacklogs, error: backlogError } = await supabase
-      .from('tasks')
-      .select('assignee_id, assignee:assignee_id(id, name), count')
-      .eq('tenant_id', tenantId)
-      .in('status', ['queued', 'in_progress'])
-      .group('assignee_id, assignee.id, assignee.name')
-      .order('count', { ascending: false })
-      .limit(10);
+    // Get agents with high backlogs using raw SQL
+    const { data: agentBacklogs, error: backlogError } = await supabase.rpc(
+      'get_agent_backlogs',
+      { p_tenant_id: tenantId }
+    );
 
     if (backlogError) {
       console.error('Error fetching agent backlogs:', backlogError);
@@ -129,15 +125,37 @@ export async function GET(request: NextRequest) {
         id,
         task_id,
         depends_on_task_id,
-        dependency_type,
-        task:task_id(id, title, status, created_at),
-        depends_on:depends_on_task_id(id, title, status, completed_at)
+        dependency_type
       `)
       .eq('tenant_id', tenantId)
       .limit(20);
 
     if (depsError) {
       console.error('Error fetching dependencies:', depsError);
+    }
+
+    // Get the task details for dependencies
+    const taskIds = new Set<string>();
+    const dependsOnIds = new Set<string>();
+    (blockedByDeps || []).forEach(dep => {
+      taskIds.add(dep.task_id);
+      dependsOnIds.add(dep.depends_on_task_id);
+    });
+
+    const allTaskIds = Array.from(new Set([...taskIds, ...dependsOnIds]));
+    
+    let taskDetails: Record<string, { id: string; title: string; status: string; created_at: string }> = {};
+    if (allTaskIds.length > 0) {
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('id, title, status, created_at')
+        .eq('tenant_id', tenantId)
+        .in('id', allTaskIds.slice(0, 50));
+      
+      taskDetails = (tasks || []).reduce((acc, task) => {
+        acc[task.id] = task;
+        return acc;
+      }, {} as Record<string, { id: string; title: string; status: string; created_at: string }>);
     }
 
     // Get hourly metrics for trend analysis
@@ -182,19 +200,16 @@ export async function GET(request: NextRequest) {
       review: 0,
     };
 
+    // Count tasks by status using raw query
     const { data: pipelineCounts, error: pipelineError } = await supabase
-      .from('tasks')
-      .select('status, count')
-      .eq('tenant_id', tenantId)
-      .in('status', ['queued', 'in_progress', 'blocked', 'review'])
-      .group('status');
+      .rpc('get_pipeline_counts', { p_tenant_id: tenantId });
 
     if (pipelineError) {
       console.error('Error fetching pipeline counts:', pipelineError);
     } else {
-      (pipelineCounts || []).forEach(row => {
+      (pipelineCounts || []).forEach((row: { status: string; count: number }) => {
         if (row.status in pipelineSnapshot) {
-          pipelineSnapshot[row.status as keyof typeof pipelineSnapshot] = parseInt(row.count as unknown as string);
+          pipelineSnapshot[row.status as keyof typeof pipelineSnapshot] = row.count;
         }
       });
     }
@@ -202,43 +217,49 @@ export async function GET(request: NextRequest) {
     // Process waiting tasks
     const tasksWaitingLongest = (longestWaitingTasks || []).map(task => {
       const waitingTime = Date.now() - new Date(task.created_at).getTime();
+      const assignee = Array.isArray(task.assignee) ? task.assignee[0] : task.assignee;
       return {
         id: task.id,
         title: task.title,
         status: task.status,
         waitingTimeSeconds: Math.floor(waitingTime / 1000),
-        assignee: task.assignee,
+        assignee: assignee ? { id: assignee.id, name: assignee.name } : null,
       };
     });
 
     // Process agent backlogs
-    const agentWorkload = (agentBacklogs || []).map(agent => ({
+    const agentWorkload = (agentBacklogs || []).map((agent: { assignee_id: string; name: string; pending_tasks: number }) => ({
       agentId: agent.assignee_id,
-      name: agent.assignee?.name || 'Unknown',
-      pendingTasks: parseInt(agent.count as unknown as string),
+      name: agent.name || 'Unknown',
+      pendingTasks: agent.pending_tasks,
     }));
 
     // Process dependency delays
     const dependencyDelays = (blockedByDeps || [])
-      .filter(dep => dep.depends_on?.status !== 'completed')
+      .filter(dep => {
+        const dependsOnTask = taskDetails[dep.depends_on_task_id];
+        return dependsOnTask && dependsOnTask.status !== 'completed';
+      })
       .map(dep => ({
         taskId: dep.task_id,
-        taskTitle: dep.task?.title,
+        taskTitle: taskDetails[dep.task_id]?.title || 'Unknown',
         blockedByTaskId: dep.depends_on_task_id,
-        blockedByTaskTitle: dep.depends_on?.title,
-        blockedByStatus: dep.depends_on?.status,
+        blockedByTaskTitle: taskDetails[dep.depends_on_task_id]?.title || 'Unknown',
+        blockedByStatus: taskDetails[dep.depends_on_task_id]?.status || 'unknown',
         dependencyType: dep.dependency_type,
       }));
 
     // Format bottleneck data from database function
-    const identifiedBottlenecks = (bottleneckData || []).map((b: {
+    interface BottleneckRow {
       bottleneck_type: string;
       description: string;
       affected_count: number;
       avg_wait_time_seconds: number;
       severity: string;
       recommendation: string;
-    }) => ({
+    }
+
+    const identifiedBottlenecks = (bottleneckData || []).map((b: BottleneckRow) => ({
       type: b.bottleneck_type,
       description: b.description,
       affectedCount: parseInt(b.affected_count?.toString() || '0'),
@@ -250,10 +271,10 @@ export async function GET(request: NextRequest) {
     const response = {
       summary: {
         totalBottlenecks: identifiedBottlenecks.length,
-        highSeverityCount: identifiedBottlenecks.filter(b => b.severity === 'high').length,
+        highSeverityCount: identifiedBottlenecks.filter((b: { severity: string }) => b.severity === 'high').length,
         totalBlockedTasks: pipelineSnapshot.blocked,
         avgWaitTime: identifiedBottlenecks.length > 0
-          ? identifiedBottlenecks.reduce((sum, b) => sum + b.avgWaitTimeSeconds, 0) / identifiedBottlenecks.length
+          ? identifiedBottlenecks.reduce((sum: number, b: { avgWaitTimeSeconds: number }) => sum + b.avgWaitTimeSeconds, 0) / identifiedBottlenecks.length
           : 0,
       },
       bottlenecks: identifiedBottlenecks,
@@ -262,7 +283,7 @@ export async function GET(request: NextRequest) {
       tasksWaitingLongest,
       agentWorkload,
       dependencyDelays,
-      recommendations: identifiedBottlenecks.map(b => ({
+      recommendations: identifiedBottlenecks.map((b: { type: string; severity: string; recommendation: string; affectedCount: number }) => ({
         type: b.type,
         severity: b.severity,
         action: b.recommendation,
