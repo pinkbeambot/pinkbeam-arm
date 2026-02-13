@@ -1,15 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@supabase/supabase-js';
-import { createTaskSchema, listTasksQuerySchema } from '@/lib/validation';
+import { 
+  createTaskSchema, 
+  listTasksQuerySchema,
+  enhancedListTasksQuerySchema 
+} from '@/lib/validation';
 import { z } from 'zod';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Priority order mapping for sorting
+const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
+
 /**
  * GET /api/tasks
- * List tasks with filtering support
+ * List tasks with advanced filtering support
  */
 export async function GET(request: NextRequest) {
   try {
@@ -57,17 +64,56 @@ export async function GET(request: NextRequest) {
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const queryParams = {
-      status: searchParams.get('status') || undefined,
-      assignee_id: searchParams.get('assignee_id') || undefined,
-      priority: searchParams.get('priority') || undefined,
-      page: searchParams.get('page') || '1',
-      limit: searchParams.get('limit') || '20',
-    };
+    
+    // Check if using enhanced filtering
+    const useEnhanced = searchParams.has('sort') || 
+                       searchParams.has('search') || 
+                       searchParams.has('due_before') ||
+                       searchParams.get('status')?.includes(',');
+    
+    let validatedQuery;
+    let page: number;
+    let limit: number;
+    let sort: string;
+    let order: string;
 
-    // Validate query parameters
-    const validatedQuery = listTasksQuerySchema.parse(queryParams);
-    const { page, limit } = validatedQuery;
+    if (useEnhanced) {
+      // Use enhanced schema
+      const queryParams = {
+        status: searchParams.get('status') || undefined,
+        priority: searchParams.get('priority') || undefined,
+        agent_id: searchParams.get('agent_id') || searchParams.get('assignee_id') || undefined,
+        assignee_id: searchParams.get('assignee_id') || undefined,
+        parent_id: searchParams.get('parent_id') || undefined,
+        due_before: searchParams.get('due_before') || undefined,
+        due_after: searchParams.get('due_after') || undefined,
+        search: searchParams.get('search') || undefined,
+        sort: searchParams.get('sort') || 'created_at',
+        order: searchParams.get('order') || 'desc',
+        page: searchParams.get('page') || '1',
+        limit: searchParams.get('limit') || '20',
+      };
+      validatedQuery = enhancedListTasksQuerySchema.parse(queryParams);
+      page = validatedQuery.page;
+      limit = validatedQuery.limit;
+      sort = validatedQuery.sort;
+      order = validatedQuery.order;
+    } else {
+      // Use basic schema for backward compatibility
+      const queryParams = {
+        status: searchParams.get('status') || undefined,
+        assignee_id: searchParams.get('assignee_id') || undefined,
+        priority: searchParams.get('priority') || undefined,
+        page: searchParams.get('page') || '1',
+        limit: searchParams.get('limit') || '20',
+      };
+      validatedQuery = listTasksQuerySchema.parse(queryParams);
+      page = validatedQuery.page;
+      limit = validatedQuery.limit;
+      sort = 'created_at';
+      order = 'desc';
+    }
+
     const offset = (page - 1) * limit;
 
     // Build the query
@@ -78,25 +124,78 @@ export async function GET(request: NextRequest) {
         *,
         assignee:assignee_id(id, name, avatar_url, status, role),
         assigner:assigner_id(id, name, avatar_url),
+        parent:parent_task_id(id, title, status),
         dependencies:task_dependencies!task_id(id, depends_on_task_id, dependency_type),
         blocked_by:task_dependencies!depends_on_task_id(id, task_id, dependency_type)
       `,
         { count: 'exact' }
       )
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .eq('tenant_id', tenantId);
 
     // Apply filters
     if (validatedQuery.status) {
-      dbQuery = dbQuery.eq('status', validatedQuery.status);
+      if (Array.isArray(validatedQuery.status) && validatedQuery.status.length > 0) {
+        // Multiple statuses
+        dbQuery = dbQuery.in('status', validatedQuery.status);
+      } else if (typeof validatedQuery.status === 'string') {
+        // Single status (basic schema)
+        dbQuery = dbQuery.eq('status', validatedQuery.status);
+      }
     }
-    if (validatedQuery.assignee_id) {
-      dbQuery = dbQuery.eq('assignee_id', validatedQuery.assignee_id);
-    }
+
     if (validatedQuery.priority) {
       dbQuery = dbQuery.eq('priority', validatedQuery.priority);
     }
+
+    // Handle both agent_id and assignee_id
+    const agentId = (validatedQuery as { agent_id?: string }).agent_id || validatedQuery.assignee_id;
+    if (agentId) {
+      dbQuery = dbQuery.eq('assignee_id', agentId);
+    }
+
+    // Parent filter
+    if ('parent_id' in validatedQuery) {
+      const parentId = (validatedQuery as { parent_id?: string | null }).parent_id;
+      if (parentId === null) {
+        dbQuery = dbQuery.is('parent_task_id', null);
+      } else if (parentId) {
+        dbQuery = dbQuery.eq('parent_task_id', parentId);
+      }
+    }
+
+    // Date range filters
+    if ('due_before' in validatedQuery && validatedQuery.due_before) {
+      dbQuery = dbQuery.lte('deadline_at', validatedQuery.due_before);
+    }
+    if ('due_after' in validatedQuery && validatedQuery.due_after) {
+      dbQuery = dbQuery.gte('deadline_at', validatedQuery.due_after);
+    }
+
+    // Search in title and description
+    if ('search' in validatedQuery && validatedQuery.search) {
+      const searchTerm = validatedQuery.search;
+      dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+    }
+
+    // Apply sorting
+    if (sort === 'priority') {
+      // Custom priority sorting using the enum order
+      dbQuery = dbQuery.order('priority', { 
+        ascending: order === 'asc',
+        foreignTable: undefined,
+        nullsFirst: false
+      });
+    } else if (sort === 'deadline_at') {
+      dbQuery = dbQuery.order('deadline_at', { 
+        ascending: order === 'asc',
+        nullsFirst: order === 'desc' // Show null deadlines last when sorting desc
+      });
+    } else {
+      dbQuery = dbQuery.order(sort, { ascending: order === 'asc' });
+    }
+
+    // Apply pagination
+    dbQuery = dbQuery.range(offset, offset + limit - 1);
 
     // Execute query
     const { data: tasks, error, count } = await dbQuery;
@@ -114,12 +213,25 @@ export async function GET(request: NextRequest) {
       ...task,
       assignee: task.assignee || undefined,
       assigner: task.assigner || undefined,
+      parent: task.parent || undefined,
       dependencies: task.dependencies || [],
       blocked_by: task.blocked_by || [],
     }));
 
     return NextResponse.json({
       data: formattedTasks,
+      meta: {
+        filters: {
+          status: validatedQuery.status,
+          priority: validatedQuery.priority,
+          agent_id: agentId,
+          parent_id: 'parent_id' in validatedQuery ? (validatedQuery as { parent_id?: string | null }).parent_id : undefined,
+          due_before: 'due_before' in validatedQuery ? (validatedQuery as { due_before?: string }).due_before : undefined,
+          due_after: 'due_after' in validatedQuery ? (validatedQuery as { due_after?: string }).due_after : undefined,
+          search: 'search' in validatedQuery ? (validatedQuery as { search?: string }).search : undefined,
+        },
+        sort: { field: sort, order },
+      },
       pagination: {
         page,
         limit,
@@ -212,6 +324,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate parent task exists and belongs to tenant (if provided)
+    let parentDepth = 0;
     if (validatedData.parent_task_id) {
       const { data: parentTask, error: parentError } = await supabase
         .from('tasks')
@@ -227,8 +340,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Calculate depth
-      var parentDepth = parentTask.depth || 0;
+      parentDepth = parentTask.depth || 0;
     }
 
     // Create the task
@@ -238,7 +350,7 @@ export async function POST(request: NextRequest) {
         ...validatedData,
         tenant_id: tenantId,
         assigner_id: user.id, // Set the user who created the task
-        depth: (parentDepth || 0) + 1,
+        depth: parentDepth + 1,
       })
       .select(
         `

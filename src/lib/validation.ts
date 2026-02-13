@@ -90,6 +90,54 @@ export const listTasksQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
+// Enhanced task filtering schema for advanced queries
+export const enhancedListTasksQuerySchema = z.object({
+  // Single or multiple statuses (comma-separated)
+  status: z.string().optional().transform((val) => {
+    if (!val) return undefined;
+    const statuses = val.split(',').map(s => s.trim()).filter(Boolean);
+    const validStatuses = ['queued', 'in_progress', 'blocked', 'review', 'completed', 'failed', 'cancelled'];
+    return statuses.filter(s => validStatuses.includes(s));
+  }),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  agent_id: z.string().uuid().optional(),
+  assignee_id: z.string().uuid().optional(),
+  parent_id: z.string().uuid().optional().nullable(),
+  due_before: z.string().datetime().optional(),
+  due_after: z.string().datetime().optional(),
+  search: z.string().min(1).max(200).optional(),
+  sort: z.enum(['created_at', 'updated_at', 'deadline_at', 'priority']).default('created_at'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+// Batch operations schemas
+export const batchCreateTaskSchema = z.object({
+  tasks: z.array(createTaskSchema).min(1).max(100),
+});
+
+export const batchUpdateTaskItemSchema = z.object({
+  id: z.string().uuid(),
+  data: updateTaskSchema,
+});
+
+export const batchUpdateTaskSchema = z.object({
+  tasks: z.array(batchUpdateTaskItemSchema).min(1).max(100),
+});
+
+export const batchDeleteTaskSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(100),
+  force: z.boolean().default(false), // Force delete even if in_progress
+});
+
+// Task tree query schema
+export const taskTreeQuerySchema = z.object({
+  root_id: z.string().uuid(),
+  max_depth: z.coerce.number().int().min(1).max(10).default(10),
+  include_completed: z.boolean().default(true),
+});
+
 // ============================================================================
 // Decision Validation
 // ============================================================================
