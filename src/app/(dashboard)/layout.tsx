@@ -40,7 +40,7 @@ const sidebarItems = [
   { label: "Decision Log", href: "/decisions", icon: Brain },
   { label: "Escalations", href: "/escalations", icon: AlertCircle, badge: 0 },
   { label: "Chat", href: "/chat", icon: MessageSquare },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Performance", href: "/performance", icon: BarChart3 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
