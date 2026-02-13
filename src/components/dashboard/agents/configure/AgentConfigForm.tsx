@@ -453,7 +453,7 @@ export function AgentConfigForm({ agent, onSave, onCancel, isLoading }: AgentCon
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6 h-[calc(100%-4rem)]">
-            <TestAgentPanel agentConfig={formState as Record<string, unknown>} />
+            <TestAgentPanel agentConfig={formState as unknown as Record<string, unknown>} />
           </div>
         </SheetContent>
       </Sheet>

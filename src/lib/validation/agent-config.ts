@@ -26,7 +26,7 @@ export const instructionsSchema = z.object({
 });
 
 // Tool Configuration Schema
-export const toolConfigSchema = z.record(z.unknown());
+export const toolConfigSchema = z.record(z.string(), z.unknown());
 
 export const toolsSchema = z.object({
   enabled: z.array(z.string()).optional(),
@@ -35,6 +35,7 @@ export const toolsSchema = z.object({
 
 // Permissions Schema
 export const dataAccessSchema = z.record(
+  z.string(),
   z.enum(['none', 'read', 'write', 'admin'])
 );
 
@@ -51,7 +52,7 @@ export const escalationTriggerSchema = z.union([
   z.object({ confidence_threshold: z.number().min(0).max(1) }),
 ]);
 
-export const escalationTriggersSchema = z.record(escalationTriggerSchema).optional();
+export const escalationTriggersSchema = z.record(z.string(), escalationTriggerSchema).optional();
 
 export const escalationSchema = z.object({
   triggers: escalationTriggersSchema,

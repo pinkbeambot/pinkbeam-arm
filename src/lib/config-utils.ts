@@ -294,7 +294,7 @@ export const DEFAULT_AGENT_CONFIG: AgentConfig = {
     config: {},
   },
   permissions: {
-    data_access: {},
+    data_access: { none: 'none', read: 'none', write: 'none', admin: 'none' },
     external_apis: [],
   },
   escalation: {
