@@ -6,7 +6,7 @@ import {
   DashboardLayout, 
   PageContainer, 
   PageHeader 
-} from '@/components/dashboard/layout/DashboardLayout';
+} from '@/components/dashboard/layout';
 import { 
   KanbanBoard, 
   TaskFilters, 

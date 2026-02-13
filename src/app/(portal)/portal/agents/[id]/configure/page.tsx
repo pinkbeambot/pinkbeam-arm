@@ -3,7 +3,7 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useAgentRealtime, useUpdateAgent } from '@/lib/hooks/useAgents';
 import { AgentConfigForm } from '@/components/dashboard/agents/configure';
-import { DashboardLayout, PageContainer } from '@/components/dashboard/layout/DashboardLayout';
+import { DashboardLayout, PageContainer } from '@/components/dashboard/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';

@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout/DashboardLayout';
+import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';

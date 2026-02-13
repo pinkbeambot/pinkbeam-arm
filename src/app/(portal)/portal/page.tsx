@@ -1,11 +1,11 @@
-import { DashboardLayout, PageContainer, PageHeader } from "@/components/dashboard/layout/DashboardLayout";
+import { PortalLayout, PageContainer, PageHeader } from "@/components/dashboard/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, Bot, CheckCircle2, Clock, AlertCircle, TrendingUp, Users } from "lucide-react";
 
 export default function DashboardPage() {
   return (
-    <DashboardLayout>
+    <PortalLayout>
       <PageContainer>
         <PageHeader
           title="Portal"
@@ -127,7 +127,7 @@ export default function DashboardPage() {
           </div>
         </div>
       </PageContainer>
-    </DashboardLayout>
+    </PortalLayout>
   );
 }
 

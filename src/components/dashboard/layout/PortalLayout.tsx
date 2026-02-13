@@ -39,17 +39,17 @@ const navItems: NavItem[] = [
   { label: 'Settings', href: '/portal/settings', icon: Settings },
 ];
 
-interface DashboardSidebarProps {
+interface PortalSidebarProps {
   collapsed?: boolean;
   onToggle?: () => void;
   className?: string;
 }
 
-export function DashboardSidebar({ 
+export function PortalSidebar({ 
   collapsed = false, 
   onToggle,
   className 
-}: DashboardSidebarProps) {
+}: PortalSidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -136,19 +136,22 @@ export function DashboardSidebar({
   );
 }
 
-interface DashboardHeaderProps {
+// Backwards compatibility
+export const DashboardSidebar = PortalSidebar;
+
+interface PortalHeaderProps {
   title: string;
   subtitle?: string;
   children?: React.ReactNode;
   className?: string;
 }
 
-export function DashboardHeader({ 
+export function PortalHeader({ 
   title, 
   subtitle,
   children,
   className 
-}: DashboardHeaderProps) {
+}: PortalHeaderProps) {
   return (
     <header className={cn('border-b border-border bg-card', className)}>
       <div className="flex h-16 items-center justify-between px-6">
@@ -168,11 +171,14 @@ export function DashboardHeader({
   );
 }
 
-interface DashboardLayoutProps {
+// Backwards compatibility
+export const DashboardHeader = PortalHeader;
+
+interface PortalLayoutProps {
   children: React.ReactNode;
 }
 
-export function DashboardLayout({ children }: DashboardLayoutProps) {
+export function PortalLayout({ children }: PortalLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
@@ -180,7 +186,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-background">
       {/* Desktop Sidebar */}
       <div className="hidden md:block">
-        <DashboardSidebar 
+        <PortalSidebar 
           collapsed={sidebarCollapsed} 
           onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
@@ -199,7 +205,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         'fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 md:hidden',
         mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
       )}>
-        <DashboardSidebar className="relative" />
+        <PortalSidebar className="relative" />
       </div>
 
       {/* Mobile Header */}
@@ -235,6 +241,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     </div>
   );
 }
+
+// Backwards compatibility
+export const DashboardLayout = PortalLayout;
 
 export function PageContainer({ 
   children,

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Brain, Download } from 'lucide-react';
-import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout/DashboardLayout';
+import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { DecisionList } from '@/components/dashboard/decisions/DecisionList';
 import { DecisionDetailPanel } from '@/components/dashboard/decisions/DecisionDetailPanel';
 import { DecisionStats } from '@/components/dashboard/decisions/DecisionStats';

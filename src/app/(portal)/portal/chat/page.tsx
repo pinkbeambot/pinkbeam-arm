@@ -1,10 +1,10 @@
-import { DashboardLayout, PageContainer, PageHeader } from "@/components/dashboard/layout/DashboardLayout";
+import { PortalLayout, PageContainer, PageHeader } from "@/components/dashboard/layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageSquare } from "lucide-react";
 
 export default function ChatPage() {
   return (
-    <DashboardLayout>
+    <PortalLayout>
       <PageContainer>
         <PageHeader
           title="Chat"
@@ -34,6 +34,6 @@ export default function ChatPage() {
           </CardContent>
         </Card>
       </PageContainer>
-    </DashboardLayout>
+    </PortalLayout>
   );
 }

@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { AlertCircle, Bell, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout/DashboardLayout';
+import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { EscalationList, EscalationFilters } from '@/components/dashboard/escalations/EscalationList';
 import { EscalationDetailPanel } from '@/components/dashboard/escalations/EscalationDetailPanel';
 import { EscalationStatsView } from '@/components/dashboard/escalations/EscalationStats';
