@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useAgentRealtime, useUpdateAgent } from '@/lib/hooks/useAgents';
+import { useTenant } from '@/lib/hooks/useTenant';
 import { AgentConfigForm } from '@/components/dashboard/agents/configure';
 import { DashboardLayout, PageContainer } from '@/components/dashboard/layout';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -10,15 +11,13 @@ import { Button } from '@/components/ui/button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import type { Agent } from '@/types';
 
-// Demo tenant ID - in production, this would come from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-
 export default function AgentConfigurePage() {
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as string;
+  const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
 
-  const { agent, loading, error } = useAgentRealtime(agentId, DEMO_TENANT_ID);
+  const { agent, loading: agentLoading, error } = useAgentRealtime(agentId, tenantId);
   const { updateAgent, loading: saving } = useUpdateAgent();
 
   const handleSave = async (updates: Partial<Agent>) => {
@@ -28,6 +27,8 @@ export default function AgentConfigurePage() {
   const handleCancel = () => {
     router.push('/portal/agents');
   };
+
+  const loading = agentLoading || tenantLoading;
 
   if (loading) {
     return (
@@ -42,7 +43,7 @@ export default function AgentConfigurePage() {
     );
   }
 
-  if (error || !agent) {
+  if (tenantError || error || !agent) {
     return (
       <DashboardLayout>
         <PageContainer>
@@ -50,7 +51,7 @@ export default function AgentConfigurePage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error</AlertTitle>
             <AlertDescription>
-              {error?.message || 'Failed to load agent configuration'}
+              {tenantError?.message || error?.message || 'Failed to load agent configuration'}
             </AlertDescription>
           </Alert>
           <Button
