@@ -234,7 +234,69 @@ function ChatMessageBubble({
               : 'bg-muted text-foreground rounded-bl-md'
           )}
         >
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          <div className={cn(
+            "prose prose-sm max-w-none",
+            isUser ? "prose-invert" : "prose-slate dark:prose-invert"
+          )}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                // Override default elements for better styling
+                p: ({ children }) => <p className="m-0 whitespace-pre-wrap">{children}</p>,
+                a: ({ children, href }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "underline underline-offset-2",
+                      isUser ? "text-primary-foreground/90 hover:text-primary-foreground" : "text-primary hover:text-primary/80"
+                    )}
+                  >
+                    {children}
+                  </a>
+                ),
+                code: ({ children, className }) => {
+                  const isInline = !className;
+                  return isInline ? (
+                    <code className={cn(
+                      "px-1.5 py-0.5 rounded text-xs font-mono",
+                      isUser
+                        ? "bg-primary-foreground/20 text-primary-foreground"
+                        : "bg-muted-foreground/20 text-foreground"
+                    )}>
+                      {children}
+                    </code>
+                  ) : (
+                    <pre className={cn(
+                      "p-3 rounded-lg overflow-x-auto my-2",
+                      isUser
+                        ? "bg-primary-foreground/10"
+                        : "bg-muted-foreground/10"
+                    )}>
+                      <code className="text-xs font-mono">{children}</code>
+                    </pre>
+                  );
+                },
+                ul: ({ children }) => <ul className="list-disc pl-4 my-1">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal pl-4 my-1">{children}</ol>,
+                li: ({ children }) => <li className="my-0.5">{children}</li>,
+                h1: ({ children }) => <h1 className="text-lg font-bold my-2">{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base font-bold my-2">{children}</h2>,
+                h3: ({ children }) => <h3 className="text-sm font-bold my-1">{children}</h3>,
+                blockquote: ({ children }) => (
+                  <blockquote className={cn(
+                    "border-l-2 pl-3 my-2 italic",
+                    isUser ? "border-primary-foreground/30" : "border-muted-foreground/30"
+                  )}>
+                    {children}
+                  </blockquote>
+                ),
+              }}
+            >
+              {message.content}
+            </ReactMarkdown>
+          </div>
         </div>
 
         {/* Timestamp and actions */}
