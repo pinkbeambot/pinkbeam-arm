@@ -7,7 +7,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Users, Headphones, PenTool, Palette, Video, ArrowLeft, Check, ArrowRight, HelpCircle } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
-import { MarketingNav, MarketingFooter } from "@/components/marketing";
 import {
   Accordion,
   AccordionContent,
@@ -325,8 +324,6 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
 
   return (
     <div className="min-h-screen bg-background">
-      <MarketingNav currentPath="/agents" />
-
       {/* Hero Section */}
       <section className={`pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-br ${agent.gradient} relative overflow-hidden`}>
         <div className="absolute inset-0 bg-black/20" />
@@ -640,8 +637,6 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
           </FadeIn>
         </div>
       </section>
-
-      <MarketingFooter />
     </div>
   );
 }
