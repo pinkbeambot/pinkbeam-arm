@@ -185,8 +185,8 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   useEffect(() => {
     if (!chat?.id) return;
 
-    const channel = supabase
-      .channel(`chat:${chat.id}`)
+    const channel = (supabase
+      .channel(`chat:${chat.id}`) as any)
       .on(
         'postgres_changes',
         {
@@ -194,7 +194,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
-        } as any,
+        },
         (payload: { new: ChatMessage }) => {
           setMessages(current => {
             // Check if message already exists
@@ -213,7 +213,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
-        } as any,
+        },
         (payload: { old: ChatMessage }) => {
           setMessages(current =>
             current.filter(m => m.id !== payload.old.id)
@@ -275,10 +275,10 @@ export function useChats() {
 
   // Subscribe to chat updates
   useEffect(() => {
-    const channel = supabase
-      .channel(`user_chats:${DEMO_TENANT_ID}`)
+    const channel = (supabase
+      .channel(`user_chats:${DEMO_TENANT_ID}`) as any)
       .on(
-        'postgres_changes' as const,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
