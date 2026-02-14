@@ -28,11 +28,12 @@ interface AgentAnalyticsProps {
   agent: AgentPerformance;
   onClose?: () => void;
   className?: string;
+  onClick?: () => void;
 }
 
 const COLORS = ['#22c55e', '#ef4444', '#f59e0b'];
 
-export function AgentAnalytics({ agent, onClose, className }: AgentAnalyticsProps) {
+export function AgentAnalytics({ agent, onClose, className, onClick }: AgentAnalyticsProps) {
   // Task completion data (last 7 days)
   const taskCompletionData = [
     { day: 'Mon', completed: 45, failed: 2 },
@@ -73,7 +74,7 @@ export function AgentAnalytics({ agent, onClose, className }: AgentAnalyticsProp
   ];
 
   return (
-    <Card className={cn("w-full", className)}>
+    <Card className={cn("w-full", className)} onClick={onClick} role={onClick ? "button" : undefined}>
       <CardHeader className="border-b">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">

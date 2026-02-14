@@ -151,9 +151,10 @@ export function EditAgentModal({ agent, open, onOpenChange, onSave, loading }: E
         system_prompt: formState.instructions,
       },
       llm_config: {
-        ...agent.llm_config,
         provider: formState.model.startsWith('claude') ? 'anthropic' : 'openai',
         model: formState.model,
+        temperature: agent.llm_config?.temperature ?? 0.7,
+        max_tokens: agent.llm_config?.max_tokens ?? 2000,
       },
     };
 
