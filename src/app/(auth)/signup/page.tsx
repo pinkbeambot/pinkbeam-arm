@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 
 const valueProps = [
@@ -31,7 +31,7 @@ const valueProps = [
   },
 ];
 
-export default function SignupPage() {
+function SignupForm() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -66,8 +66,7 @@ export default function SignupPage() {
     setIsSubmitting(false);
     
     // Show welcome toast (will be shown after redirect)
-    toast({
-      title: 'Welcome to Pink Beam!',
+    toast.success('Welcome to Pink Beam!', {
       description: 'Check your email to complete signup.',
     });
   };
@@ -257,5 +256,19 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+import { Suspense } from 'react';
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse">Loading...</div>
+      </div>
+    }>
+      <SignupForm />
+    </Suspense>
   );
 }
