@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -11,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -46,6 +47,125 @@ export default function LoginPage() {
   };
 
   return (
+    <Card className="border-border/50 shadow-xl">
+      <CardHeader className="space-y-1 text-center">
+        {/* Logo */}
+        <div className="flex justify-center mb-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-violet-600 shadow-lg shadow-pink-500/25">
+            <span className="text-white font-bold text-xl">PB</span>
+          </div>
+        </div>
+        <CardTitle className="text-2xl font-bold">
+          {isSuccess ? 'Check your email' : 'Welcome back'}
+        </CardTitle>
+        <CardDescription>
+          {isSuccess 
+            ? `We've sent a secure login link to ${email}`
+            : 'Sign in to your Pink Beam ARM account'
+          }
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-6">
+        {isSuccess ? (
+          <div className="space-y-6">
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mb-6 shadow-lg">
+                <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
+              </div>
+              <p className="text-sm text-muted-foreground max-w-sm mb-2">
+                Click the link in your email to sign in instantly. No passwords needed.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Can&apos;t find it? Check your spam folder.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setIsSuccess(false);
+                setEmail('');
+              }}
+            >
+              Use a different email
+            </Button>
+          </div>
+        ) : (
+          <>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive" className="text-sm">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium">
+                  Email address
+                </Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11"
+                    required
+                    disabled={isSubmitting}
+                    autoComplete="email"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full h-11"
+                variant="beam"
+                disabled={isSubmitting || !email}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Sending magic link...
+                  </>
+                ) : (
+                  'Send Magic Link'
+                )}
+              </Button>
+            </form>
+
+            {/* Helper text */}
+            <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
+              <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground mb-0.5">No passwords to remember</p>
+                <p>We&apos;ll email you a secure login link. Click it and you&apos;re in.</p>
+              </div>
+            </div>
+
+            {/* New here? */}
+            <p className="text-center text-sm text-muted-foreground pt-2 border-t border-border/50">
+              New here?{' '}
+              <Link 
+                href={`/signup${redirectTo !== '/portal' ? `?redirect=${redirectTo}` : ''}`}
+                className="font-medium text-primary hover:text-primary/80 transition-colors"
+              >
+                Create an account
+              </Link>
+            </p>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+export default function LoginPage() {
+  return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent pointer-events-none" />
@@ -61,120 +181,15 @@ export default function LoginPage() {
           Back to home
         </Link>
 
-        <Card className="border-border/50 shadow-xl">
-          <CardHeader className="space-y-1 text-center">
-            {/* Logo */}
-            <div className="flex justify-center mb-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-violet-600 shadow-lg shadow-pink-500/25">
-                <span className="text-white font-bold text-xl">PB</span>
-              </div>
+        <Suspense fallback={
+          <Card className="border-border/50 shadow-xl p-8">
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
-            <CardTitle className="text-2xl font-bold">
-              {isSuccess ? 'Check your email' : 'Welcome back'}
-            </CardTitle>
-            <CardDescription>
-              {isSuccess 
-                ? `We've sent a secure login link to ${email}`
-                : 'Sign in to your Pink Beam ARM account'
-              }
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-6">
-            {isSuccess ? (
-              <div className="space-y-6">
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="h-20 w-20 rounded-full bg-green-100 dark:bg-green-900/20 flex items-center justify-center mb-6 shadow-lg">
-                    <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
-                  </div>
-                  <p className="text-sm text-muted-foreground max-w-sm mb-2">
-                    Click the link in your email to sign in instantly. No passwords needed.
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Can&apos;t find it? Check your spam folder.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setIsSuccess(false);
-                    setEmail('');
-                  }}
-                >
-                  Use a different email
-                </Button>
-              </div>
-            ) : (
-              <>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {error && (
-                    <Alert variant="destructive" className="text-sm">
-                      <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                  )}
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-sm font-medium">
-                      Email address
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@company.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="pl-10 h-11"
-                        required
-                        disabled={isSubmitting}
-                        autoComplete="email"
-                        autoFocus
-                      />
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className="w-full h-11"
-                    variant="beam"
-                    disabled={isSubmitting || !email}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending magic link...
-                      </>
-                    ) : (
-                      'Send Magic Link'
-                    )}
-                  </Button>
-                </form>
-
-                {/* Helper text */}
-                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                  <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-foreground mb-0.5">No passwords to remember</p>
-                    <p>We&apos;ll email you a secure login link. Click it and you&apos;re in.</p>
-                  </div>
-                </div>
-
-                {/* New here? */}
-                <p className="text-center text-sm text-muted-foreground pt-2 border-t border-border/50">
-                  New here?{' '}
-                  <Link 
-                    href={`/signup${redirectTo !== '/portal' ? `?redirect=${redirectTo}` : ''}`}
-                    className="font-medium text-primary hover:text-primary/80 transition-colors"
-                  >
-                    Create an account
-                  </Link>
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
+          </Card>
+        }>
+          <LoginForm />
+        </Suspense>
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-8">

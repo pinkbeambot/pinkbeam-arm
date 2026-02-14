@@ -478,8 +478,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
                     </ul>
                   </div>
 
-                  <Button size="lg" className="w-full" asChild>
-                    <Link href="/portal">
+                  <Button size="lg" variant="beam" className="w-full" asChild>
+                    <Link href="/signup">
                       Hire {agent.name}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
@@ -630,8 +630,8 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
               free trial today—no credit card required.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link href="/portal">Get Started</Link>
+              <Button size="lg" variant="beam" asChild>
+                <Link href="/signup">Hire Your Team</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link href="/pricing">View Pricing</Link>

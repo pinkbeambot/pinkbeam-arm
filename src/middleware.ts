@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
 // Public page routes
 const PUBLIC_PAGE_ROUTES = [
   '/login',
+  '/signup',
   '/',
   '/about',
   '/pricing',
@@ -192,8 +193,8 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users away from /login
-  if (pathname === '/login' || pathname.startsWith('/login/')) {
+  // Redirect authenticated users away from /login and /signup
+  if (pathname === '/login' || pathname.startsWith('/login/') || pathname === '/signup') {
     if (session) {
       const redirectTo = request.nextUrl.searchParams.get('redirect') || '/portal';
       return NextResponse.redirect(new URL(redirectTo, request.url));

@@ -42,7 +42,9 @@ const pricingPlans = [
       "Priority support",
     ],
     badge: "Best for trying out",
-    cta: "Start Free Trial",
+    cta: "Start Free",
+    ctaHref: "/signup",
+    ctaVariant: "outline" as const,
   },
   {
     title: "Growth",
@@ -63,7 +65,9 @@ const pricingPlans = [
     ],
     popular: true,
     badge: "Most Popular",
-    cta: "Start Free Trial",
+    cta: "Get Started",
+    ctaHref: "/signup",
+    ctaVariant: "default" as const,
   },
   {
     title: "Scale",
@@ -81,6 +85,8 @@ const pricingPlans = [
     ],
     badge: "For teams 10+",
     cta: "Contact Sales",
+    ctaHref: "/contact",
+    ctaVariant: "outline" as const,
   },
 ];
 
@@ -201,12 +207,12 @@ export default function PricingPage() {
                   </div>
                   
                   <Button 
-                    variant={plan.popular ? "default" : "outline"} 
+                    variant={plan.popular ? "beam" : "outline"} 
                     size="lg"
                     className="w-full mt-6"
                     asChild
                   >
-                    <Link href={plan.price === "Custom" ? "/contact" : "/portal"}>
+                    <Link href={plan.ctaHref}>
                       {plan.cta}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
@@ -271,8 +277,8 @@ export default function PricingPage() {
               and help you choose the right plan.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link href="/contact">Book a Demo</Link>
+              <Button size="lg" variant="beam" asChild>
+                <Link href="/signup">Get Started Free</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link href="/agents">View AI Employees</Link>

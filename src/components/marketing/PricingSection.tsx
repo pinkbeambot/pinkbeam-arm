@@ -20,6 +20,8 @@ const pricingPlans = [
       "7-day data retention",
     ],
     badge: "Best for trying out",
+    cta: "Start Free",
+    ctaHref: "/signup",
   },
   {
     title: "Growth",
@@ -36,6 +38,8 @@ const pricingPlans = [
     ],
     popular: true,
     badge: "Most Popular",
+    cta: "Get Started",
+    ctaHref: "/signup",
   },
   {
     title: "Scale",
@@ -51,6 +55,8 @@ const pricingPlans = [
       "Custom AI training",
     ],
     badge: "For teams 10+",
+    cta: "Contact Sales",
+    ctaHref: "/contact",
   },
 ];
 
@@ -80,7 +86,7 @@ export function PricingSection({ showCTA = true }: PricingSectionProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {pricingPlans.map((plan, index) => (
             <FadeIn key={plan.title} delay={index * 0.1}>
-              <Card className={`h-full flex flex-col ${plan.popular ? 'border-primary shadow-lg relative' : ''}`}>
+              <Card className={`h-full flex flex-col ${plan.popular ? 'border-primary shadow-lg relative md:scale-105' : ''}`}>
                 {plan.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                     <span className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">
@@ -115,12 +121,12 @@ export function PricingSection({ showCTA = true }: PricingSectionProps) {
                     ))}
                   </ul>
                   <Button 
-                    variant={plan.popular ? "default" : "outline"} 
+                    variant={plan.popular ? "beam" : "outline"} 
                     className="w-full"
                     asChild
                   >
-                    <Link href={plan.price === "Custom" ? "#contact" : "/portal"}>
-                      {plan.price === "Custom" ? "Contact Sales" : "Get Started"}
+                    <Link href={plan.ctaHref}>
+                      {plan.cta}
                     </Link>
                   </Button>
                 </CardContent>

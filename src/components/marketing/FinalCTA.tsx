@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FadeIn, FadeInOnMount } from "@/components/animations";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
 
 const trustBadges = [
   { icon: CreditCard, text: "No credit card required" },
-  { icon: Calendar, text: "14-day free trial" },
+  { icon: Calendar, text: "7-day free trial" },
   { icon: CheckCircle, text: "Cancel anytime" },
 ];
 
@@ -44,9 +45,9 @@ export function FinalCTA() {
           {/* Headline */}
           <FadeInOnMount>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-foreground">
-              Your AI Workforce Is{" "}
+              Start Your{" "}
               <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                Waiting
+                AI Workforce
               </span>
             </h2>
           </FadeInOnMount>
@@ -59,49 +60,21 @@ export function FinalCTA() {
             </p>
           </FadeInOnMount>
 
-          {/* Email Capture Form */}
+          {/* Email Capture Form or CTA Button */}
           <FadeInOnMount delay={0.2}>
-            {!isSubmitted ? (
-              <form onSubmit={handleSubmit} className="max-w-md mx-auto mb-8">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <Input
-                    type="email"
-                    placeholder="Enter your work email"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      if (emailError) setEmailError(null);
-                    }}
-                    required
-                    aria-invalid={Boolean(emailError)}
-                    aria-describedby={emailError ? "final-cta-email-error" : undefined}
-                    className={cn(
-                      "h-12 bg-card border-border",
-                      emailError && "border-destructive focus-visible:ring-destructive/30"
-                    )}
-                  />
-                  <Button 
-                    type="submit" 
-                    size="lg" 
-                    className="h-12 shadow-lg whitespace-nowrap"
-                  >
-                    Start Free Trial
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </div>
-                {emailError && (
-                  <p id="final-cta-email-error" className="text-xs text-destructive mt-2 text-left">
-                    {emailError}
-                  </p>
-                )}
-              </form>
-            ) : (
-              <div className="max-w-md mx-auto mb-8 p-6 rounded-xl bg-green-500/10 border border-green-500/20">
-                <p className="text-green-600 dark:text-green-400 font-semibold">
-                  Thanks! Check your inbox to get started.
-                </p>
-              </div>
-            )}
+            <div className="max-w-md mx-auto mb-8">
+              <Button 
+                size="lg" 
+                variant="beam"
+                className="w-full h-12 shadow-lg"
+                asChild
+              >
+                <Link href="/signup">
+                  Get Started Free
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Link>
+              </Button>
+            </div>
           </FadeInOnMount>
 
           {/* Trust Badges */}
