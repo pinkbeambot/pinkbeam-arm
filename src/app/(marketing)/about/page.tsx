@@ -129,7 +129,7 @@ export default function AboutPage() {
             </Badge>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
               Building the{" "}
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                 Future of Work
               </span>
             </h1>
@@ -174,7 +174,7 @@ export default function AboutPage() {
                 {stats.map((stat) => (
                   <Card key={stat.label} className="border-border/50">
                     <CardContent className="p-6 text-center">
-                      <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                      <p className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                         {stat.value}
                       </p>
                       <p className="text-sm text-muted-foreground mt-1">

@@ -86,8 +86,8 @@ const pulseConfig: Record<AgentStatus, {
   },
   escaped: {
     shouldPulse: true,
-    color: "bg-purple-500",
-    ringColor: "ring-purple-500/50",
+    color: "bg-pink-500",
+    ringColor: "ring-pink-500/50",
     label: "⚠️ Escaped",
     intensity: "strong",
   },

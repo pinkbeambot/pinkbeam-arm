@@ -75,8 +75,8 @@ export const agents: Record<string, Agent> = {
     description: "Mike identifies prospects, crafts personalized outreach, and books meetings on your calendar. He sends personalized emails at scale—and follows up perfectly every time. Your pipeline will never be empty again.",
     avatar: "/agents/mike-avatar.png",
     icon: Users,
-    color: "bg-purple-500",
-    gradient: "from-purple-500 to-violet-500",
+    color: "bg-pink-500",
+    gradient: "from-pink-500 to-rose-500",
     skills: ["Lead Research", "Outreach", "Qualification", "CRM Sync", "Meeting Booking"],
     fullCapabilities: [
       {
@@ -208,7 +208,7 @@ export const agents: Record<string, Agent> = {
     avatar: "/agents/lumen-avatar.png",
     icon: Palette,
     color: "bg-indigo-500",
-    gradient: "from-indigo-500 to-purple-500",
+    gradient: "from-indigo-500 to-pink-500",
     skills: ["Brand Design", "Social Graphics", "Presentations", "Ad Creatives", "Asset Production"],
     fullCapabilities: [
       {

@@ -51,7 +51,7 @@ export function Testimonials() {
         <FadeIn className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             Loved by{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
               Founders
             </span>
             {" "}Like You

@@ -90,7 +90,7 @@ const TYPE_OPTIONS: { value: DecisionType; label: string; color: string }[] = [
   { value: 'approved', label: 'Approved', color: 'bg-green-500' },
   { value: 'rejected', label: 'Rejected', color: 'bg-red-500' },
   { value: 'overridden', label: 'Overridden', color: 'bg-orange-500' },
-  { value: 'executed', label: 'Executed', color: 'bg-purple-500' },
+  { value: 'executed', label: 'Executed', color: 'bg-pink-500' },
 ];
 
 const DATE_RANGE_OPTIONS: { value: 'all' | 'today' | 'week' | 'month'; label: string }[] = [
@@ -460,7 +460,7 @@ export function getDecisionStatusIcon(status: DecisionStatus) {
     case 'overridden':
       return <AlertTriangle className="h-4 w-4 text-orange-500" />;
     case 'executed':
-      return <CheckCircle2 className="h-4 w-4 text-purple-500" />;
+      return <CheckCircle2 className="h-4 w-4 text-pink-500" />;
     case 'proposed':
     default:
       return <Brain className="h-4 w-4 text-blue-500" />;
@@ -476,7 +476,7 @@ export function getDecisionStatusColor(status: DecisionStatus): string {
     case 'overridden':
       return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200';
     case 'executed':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
+      return 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200';
     case 'proposed':
     default:
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';

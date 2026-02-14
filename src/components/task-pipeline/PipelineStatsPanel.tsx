@@ -182,7 +182,7 @@ export function PipelineStatsPanel({
         <StatCard
           label="Avg Duration"
           value={formatDuration(stats.avgDuration)}
-          icon={<CheckCircle2 className="w-4 h-4 text-purple-500" />}
+          icon={<CheckCircle2 className="w-4 h-4 text-pink-500" />}
           isRealtime={isRealtime}
         />
       </div>

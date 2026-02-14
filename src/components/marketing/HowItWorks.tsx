@@ -33,7 +33,7 @@ export function HowItWorks() {
         <FadeIn className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             From Signup to Employee in{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
               10 Minutes
             </span>
           </h2>
@@ -60,7 +60,7 @@ export function HowItWorks() {
                         <Icon className="w-8 h-8 text-primary" />
                       </div>
                       {/* Step Number Badge */}
-                      <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center">
+                      <div className="absolute -top-1 -right-1 w-8 h-8 rounded-full bg-gradient-to-r from-primary to-pink-600 flex items-center justify-center">
                         <span className="text-white font-bold text-sm">
                           {step.number}
                         </span>

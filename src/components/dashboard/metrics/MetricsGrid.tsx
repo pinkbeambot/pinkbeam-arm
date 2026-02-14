@@ -29,7 +29,7 @@ interface MetricCardProps {
   trend?: 'up' | 'down' | 'neutral';
   trendValue?: string;
   icon: React.ReactNode;
-  color: 'blue' | 'green' | 'amber' | 'red' | 'purple';
+  color: 'blue' | 'green' | 'amber' | 'red' | 'pink';
   className?: string;
 }
 
@@ -48,7 +48,7 @@ function MetricCard({
     green: 'bg-green-500/10 text-green-600',
     amber: 'bg-amber-500/10 text-amber-600',
     red: 'bg-red-500/10 text-red-600',
-    purple: 'bg-purple-500/10 text-purple-600',
+    pink: 'bg-pink-500/10 text-pink-600',
   };
 
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
@@ -122,7 +122,7 @@ export function MetricsGrid({ metrics, className }: MetricsGridProps) {
         subtitle={`${agents.total} total, ${agents.idle} idle, ${agents.error} error`}
         trend={agentTrend}
         icon={<Users className="w-5 h-5" />}
-        color="purple"
+        color="pink"
       />
 
       {/* Open Escalations */}
@@ -205,7 +205,7 @@ export function MetricsSummary({ metrics, className }: MetricsSummaryProps) {
         {/* Agents */}
         <Card className="p-4">
           <div className="flex items-center gap-2 mb-4">
-            <Users className="w-5 h-5 text-purple-500" />
+            <Users className="w-5 h-5 text-pink-500" />
             <h3 className="font-semibold">Agents</h3>
           </div>
           
