@@ -111,12 +111,34 @@ CTO: "ENG-BE — implement #22 /api/decisions"
 → Read issue #22 requirements
 → Read docs/ARCHITECTURE.md for patterns
 → Create branch: eng-be/task-22-decisions
+→ Set git config for attribution:
+   git config user.name "ENG-BE"
+   git config user.email "eng-be@pinkbeam.ai"
 → Implement endpoint WITH tests
 → Run tests: npm run test:coverage
 → If coverage <80%, add more tests
 → Commit: "feat(api): /api/decisions endpoints (#22)"
 → Push branch
 → Report: "DONE #22: /api/decisions with X% coverage"
+```
+
+### Commit Attribution (Required):
+**Every commit must show correct author:**
+```bash
+# Before committing, always set:
+git config user.name "ENG-BE"
+git config user.email "eng-be@pinkbeam.ai"
+
+# Verify before push:
+git log --oneline -3 --format='%h %an <%ae>'
+# Should show: ENG-BE <eng-be@pinkbeam.ai>, not Richard Hernandez
+```
+
+**For collaborative work, add co-authored-by:**
+```bash
+git commit -m "feat(api): implement feature (#XX)
+
+Co-authored-by: ENG-FE <eng-fe@pinkbeam.ai>"
 ```
 
 ### PR Requirements:

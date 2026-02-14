@@ -15,6 +15,80 @@ const listEscalationsQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
+/**
+ * @openapi
+ * /escalations:
+ *   get:
+ *     summary: List escalations
+ *     description: List escalations with filtering support including status, urgency, type, and agent
+ *     tags:
+ *       - Escalations
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [open, in_progress, resolved, dismissed]
+ *         description: Filter by escalation status
+ *       - in: query
+ *         name: urgency
+ *         schema:
+ *           type: string
+ *           enum: [low, normal, high, critical]
+ *         description: Filter by urgency level
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [clarification, approval, error, edge_case, policy_violation]
+ *         description: Filter by escalation type
+ *       - in: query
+ *         name: agent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by agent ID
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in title and description
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of escalations
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Escalation'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
@@ -114,6 +188,39 @@ const createEscalationSchema = z.object({
   agent_analysis: z.object({ what_i_know: z.string().optional(), what_i_dont_know: z.string().optional(), what_i_tried: z.array(z.string()).optional(), suggested_resolution: z.string().optional() }).optional(),
 });
 
+/**
+ * @openapi
+ * /escalations:
+ *   post:
+ *     summary: Create a new escalation
+ *     description: Create an escalation request from an agent including situation context and agent analysis
+ *     tags:
+ *       - Escalations
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateEscalationInput'
+ *     responses:
+ *       201:
+ *         description: Escalation created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Escalation'
+ *       400:
+ *         description: Validation error or invalid agent/task
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
+ */
 export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');

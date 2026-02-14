@@ -547,3 +547,44 @@ export type {
   ChatRealtimeMessage,
   TypingIndicator,
 } from './chat';
+
+// ============================================================================
+// Meta-Agent (VALIS) Types
+// ============================================================================
+
+export type {
+  MetaAgentIntent,
+  MetaAgentCommandStatus,
+  ExtractedEntities,
+  MetaAgentSession,
+  MetaAgentSessionContext,
+  PendingAction,
+  MetaAgentCommand,
+  MetaAgentResult,
+  MetaAgentResponseMetadata,
+  ProcessMessageRequest,
+  ProcessMessageResponse,
+  SuggestedAction,
+  ListSessionsRequest,
+  ListSessionsResponse,
+  GetSessionHistoryRequest,
+  GetSessionHistoryResponse,
+  ConfirmCommandRequest,
+  IntentHandlerContext,
+  IntentHandlerInput,
+  IntentHandlerOutput,
+  IntentHandler,
+  StatusQueryParams,
+  WorkforceStatus,
+  AgentStatusSummary,
+  TaskSummary,
+  AssignTaskParams,
+  TaskPriority,
+  AssignTaskResult,
+  CreateIssueParams,
+  CreateIssueResult,
+  QueryParams,
+  QueryResult,
+  BroadcastParams,
+  BroadcastResult,
+} from './meta-agent';

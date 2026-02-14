@@ -15,8 +15,122 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
 
 /**
- * GET /api/tasks
- * List tasks with advanced filtering support
+ * @openapi
+ * /tasks:
+ *   get:
+ *     summary: List tasks
+ *     description: List tasks with advanced filtering including status, priority, assignee, date ranges, and search
+ *     tags:
+ *       - Tasks
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [queued, in_progress, blocked, review, completed, failed, cancelled]
+ *         description: Filter by task status (can be comma-separated for multiple)
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, normal, high, urgent]
+ *         description: Filter by task priority
+ *       - in: query
+ *         name: assignee_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by assignee agent ID
+ *       - in: query
+ *         name: agent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Alias for assignee_id
+ *       - in: query
+ *         name: parent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by parent task ID (use 'null' for root tasks)
+ *       - in: query
+ *         name: due_before
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter tasks due before this date
+ *       - in: query
+ *         name: due_after
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter tasks due after this date
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in title and description
+ *       - in: query
+ *         name: sort
+ *         schema:
+ *           type: string
+ *           enum: [created_at, updated_at, deadline_at, priority]
+ *           default: created_at
+ *         description: Sort field
+ *       - in: query
+ *         name: order
+ *         schema:
+ *           type: string
+ *           enum: [asc, desc]
+ *           default: desc
+ *         description: Sort order
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of tasks
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Task'
+ *                 meta:
+ *                   type: object
+ *                   properties:
+ *                     filters:
+ *                       type: object
+ *                     sort:
+ *                       type: object
+ *                       properties:
+ *                         field:
+ *                           type: string
+ *                         order:
+ *                           type: string
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest) {
   try {
@@ -255,8 +369,37 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/tasks
- * Create a new task
+ * @openapi
+ * /tasks:
+ *   post:
+ *     summary: Create a new task
+ *     description: Create a new task and optionally assign it to an agent. Supports parent-child task relationships.
+ *     tags:
+ *       - Tasks
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateTaskInput'
+ *     responses:
+ *       201:
+ *         description: Task created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Task'
+ *       400:
+ *         description: Validation error or invalid assignee/parent
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function POST(request: NextRequest) {
   try {

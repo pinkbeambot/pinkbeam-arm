@@ -17,6 +17,41 @@ const updateEscalationSchema = z.object({
   resolution_answer: z.string().optional(),
 });
 
+/**
+ * @openapi
+ * /escalations/{id}:
+ *   get:
+ *     summary: Get escalation by ID
+ *     description: Get a single escalation by ID with related agent and task data
+ *     tags:
+ *       - Escalations
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Escalation ID
+ *     responses:
+ *       200:
+ *         description: Escalation details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Escalation'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Escalation not found
+ *       500:
+ *         description: Internal server error
+ */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
@@ -67,6 +102,49 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * @openapi
+ * /escalations/{id}:
+ *   patch:
+ *     summary: Update an escalation
+ *     description: Update escalation status, urgency, or resolution. Resolving tracks time_to_resolve_seconds automatically.
+ *     tags:
+ *       - Escalations
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Escalation ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateEscalationInput'
+ *     responses:
+ *       200:
+ *         description: Escalation updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Escalation'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Escalation not found
+ *       500:
+ *         description: Internal server error
+ */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;

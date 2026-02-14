@@ -14,8 +14,39 @@ interface RouteParams {
 }
 
 /**
- * GET /api/messages/:id
- * Get a specific message
+ * @openapi
+ * /messages/{id}:
+ *   get:
+ *     summary: Get message by ID
+ *     description: Get a specific message by ID with sender and recipient agent details
+ *     tags:
+ *       - Messages
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Message ID
+ *     responses:
+ *       200:
+ *         description: Message details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -117,8 +148,47 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * PATCH /api/messages/:id
- * Update message (mark read, etc.)
+ * @openapi
+ * /messages/{id}:
+ *   patch:
+ *     summary: Update a message
+ *     description: Update message properties such as acknowledgment status or payload
+ *     tags:
+ *       - Messages
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Message ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateMessageInput'
+ *     responses:
+ *       200:
+ *         description: Message updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Internal server error
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
@@ -240,8 +310,45 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * DELETE /api/messages/:id
- * Soft delete message
+ * @openapi
+ * /messages/{id}:
+ *   delete:
+ *     summary: Delete a message
+ *     description: Soft delete a message by marking it as deleted in the payload
+ *     tags:
+ *       - Messages
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Message ID
+ *     responses:
+ *       200:
+ *         description: Message deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                       format: uuid
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Message not found
+ *       500:
+ *         description: Internal server error
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {

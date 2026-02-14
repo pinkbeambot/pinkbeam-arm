@@ -8,8 +8,91 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
- * GET /api/decisions
- * List decisions with filtering support
+ * @openapi
+ * /decisions:
+ *   get:
+ *     summary: List decisions
+ *     description: List decisions with filtering support including status, category, date range, and confidence
+ *     tags:
+ *       - Decisions
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: agent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by agent ID
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [proposed, approved, rejected, overridden, executed]
+ *         description: Filter by decision status
+ *       - in: query
+ *         name: category
+ *         schema:
+ *           type: string
+ *           enum: [action, resource, escalation, strategy, system]
+ *         description: Filter by decision category
+ *       - in: query
+ *         name: date_from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter decisions proposed after this date
+ *       - in: query
+ *         name: date_to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter decisions proposed before this date
+ *       - in: query
+ *         name: confidence_min
+ *         schema:
+ *           type: number
+ *           minimum: 0
+ *           maximum: 1
+ *         description: Minimum confidence threshold
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in title and description
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of decisions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Decision'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest) {
   try {
@@ -158,8 +241,37 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/decisions
- * Create a new decision
+ * @openapi
+ * /decisions:
+ *   post:
+ *     summary: Create a new decision
+ *     description: Propose a new decision by an agent. Includes reasoning, confidence, and risk assessment.
+ *     tags:
+ *       - Decisions
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateDecisionInput'
+ *     responses:
+ *       201:
+ *         description: Decision created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Decision'
+ *       400:
+ *         description: Validation error or invalid agent/task
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function POST(request: NextRequest) {
   try {

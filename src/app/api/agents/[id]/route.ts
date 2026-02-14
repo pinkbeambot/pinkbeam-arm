@@ -201,8 +201,49 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * PATCH /api/agents/:id
- * Update an agent
+ * @openapi
+ * /agents/{id}:
+ *   patch:
+ *     summary: Update an agent
+ *     description: Update agent properties. Status changes are tracked with timestamps (activated_at, terminated_at).
+ *     tags:
+ *       - Agents
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Agent ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateAgentInput'
+ *     responses:
+ *       200:
+ *         description: Agent updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Agent'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Tenant not found
+ *       404:
+ *         description: Agent not found
+ *       500:
+ *         description: Internal server error
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
@@ -325,8 +366,50 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * DELETE /api/agents/:id
- * Delete an agent (only if not active or has children)
+ * @openapi
+ * /agents/{id}:
+ *   delete:
+ *     summary: Delete an agent
+ *     description: Delete an agent. Cannot delete agents that are active, have children, or have in-progress tasks.
+ *     tags:
+ *       - Agents
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Agent ID
+ *     responses:
+ *       200:
+ *         description: Agent deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 deleted_agent:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     name:
+ *                       type: string
+ *       400:
+ *         description: Cannot delete agent (has children, active tasks, or is active)
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Tenant not found
+ *       404:
+ *         description: Agent not found
+ *       500:
+ *         description: Internal server error
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {

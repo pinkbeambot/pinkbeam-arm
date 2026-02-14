@@ -123,12 +123,34 @@ CTO: "ENG-FE — implement #31 notification system"
 → Read issue #31 requirements
 → Check Figma/design docs
 → Create branch: eng-fe/task-31-notifications
+→ Set git config for attribution:
+   git config user.name "ENG-FE"
+   git config user.email "eng-fe@pinkbeam.ai"
 → Implement component WITH tests
 → Run tests: npm run test:coverage
 → If coverage <60%, add more tests
 → Commit: "feat(ui): notification system (#31)"
 → Push branch
 → Report: "DONE #31: notification system with X% coverage"
+```
+
+### Commit Attribution (Required):
+**Every commit must show correct author:**
+```bash
+# Before committing, always set:
+git config user.name "ENG-FE"
+git config user.email "eng-fe@pinkbeam.ai"
+
+# Verify before push:
+git log --oneline -3 --format='%h %an <%ae>'
+# Should show: ENG-FE <eng-fe@pinkbeam.ai>, not Richard Hernandez
+```
+
+**For collaborative work, add co-authored-by:**
+```bash
+git commit -m "feat(ui): implement feature (#XX)
+
+Co-authored-by: ENG-BE <eng-be@pinkbeam.ai>"
 ```
 
 ### PR Requirements:

@@ -14,8 +14,46 @@ interface RouteParams {
 }
 
 /**
- * GET /api/decisions/:id
- * Get a single decision by ID
+ * @openapi
+ * /decisions/{id}:
+ *   get:
+ *     summary: Get decision by ID
+ *     description: Get a single decision by ID with related data (agent, task, overrider, activity history)
+ *     tags:
+ *       - Decisions
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Decision ID
+ *     responses:
+ *       200:
+ *         description: Decision details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Decision'
+ *                     - type: object
+ *                       properties:
+ *                         activity_history:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Activity'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Decision not found
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -118,8 +156,49 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * PATCH /api/decisions/:id
- * Update a decision (status, outcome, or override)
+ * @openapi
+ * /decisions/{id}:
+ *   patch:
+ *     summary: Update a decision
+ *     description: Update decision status, outcome, or override it. Supports approving, rejecting, executing, or overriding decisions.
+ *     tags:
+ *       - Decisions
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Decision ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             oneOf:
+ *               - $ref: '#/components/schemas/UpdateDecisionInput'
+ *               - $ref: '#/components/schemas/OverrideDecisionInput'
+ *     responses:
+ *       200:
+ *         description: Decision updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Decision'
+ *       400:
+ *         description: Validation error or decision is immutable
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Decision not found
+ *       500:
+ *         description: Internal server error
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {

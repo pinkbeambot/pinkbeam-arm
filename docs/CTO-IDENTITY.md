@@ -15,6 +15,7 @@
 - [ ] Code follows project conventions (see CLAUDE.md)
 - [ ] **Tests included and passing** (unit, integration, component)
 - [ ] **Coverage meets thresholds** (80% backend, 60% frontend, 90% critical paths)
+- [ ] **Commit attribution correct** (author is ENG-BE/ENG-FE, not "Richard Hernandez")
 - [ ] Build passes (`npm run build`)
 - [ ] No console errors or warnings
 - [ ] Documentation updated (ARCHITECTURE.md, API docs if applicable)

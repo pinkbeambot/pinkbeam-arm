@@ -8,18 +8,85 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
- * GET /api/messages
- * List messages with filtering support
- * 
- * Query Parameters:
- * - from_agent_id: Filter by sender agent UUID
- * - to_agent_id: Filter by recipient agent UUID
- * - message_type: Filter by message type (spawn.request, task.assign, etc.)
- * - thread_id: Filter by thread UUID
- * - unread_only: Show only unread messages (requires_ack=true AND acked_at IS NULL)
- * - priority: Filter by priority (low, normal, high, urgent)
- * - page: Page number (default 1)
- * - limit: Items per page (default 20, max 100)
+ * @openapi
+ * /messages:
+ *   get:
+ *     summary: List messages
+ *     description: List messages with filtering support for inter-agent communication
+ *     tags:
+ *       - Messages
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: from_agent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by sender agent ID
+ *       - in: query
+ *         name: to_agent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by recipient agent ID
+ *       - in: query
+ *         name: message_type
+ *         schema:
+ *           type: string
+ *           enum: [spawn.request, spawn.response, task.assign, task.accept, task.reject, task.progress, task.complete, task.fail, decision.propose, decision.confirm, decision.override, escalate.request, escalate.response, message.direct, message.broadcast, system.ping, system.pong, system.config.update, system.error]
+ *         description: Filter by message type
+ *       - in: query
+ *         name: thread_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by thread ID
+ *       - in: query
+ *         name: unread_only
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: Show only unread messages requiring acknowledgment
+ *       - in: query
+ *         name: priority
+ *         schema:
+ *           type: string
+ *           enum: [low, normal, high, urgent]
+ *         description: Filter by message priority
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of messages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Message'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest) {
   try {
@@ -161,8 +228,37 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/messages
- * Send a new message
+ * @openapi
+ * /messages:
+ *   post:
+ *     summary: Send a new message
+ *     description: Send a message between agents or broadcast to all agents. Supports threaded conversations and acknowledgment tracking.
+ *     tags:
+ *       - Messages
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMessageInput'
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Validation error or invalid agent/thread
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function POST(request: NextRequest) {
   try {

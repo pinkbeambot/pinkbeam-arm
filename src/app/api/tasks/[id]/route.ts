@@ -14,8 +14,54 @@ interface RouteParams {
 }
 
 /**
- * GET /api/tasks/:id
- * Get a single task by ID
+ * @openapi
+ * /tasks/{id}:
+ *   get:
+ *     summary: Get task by ID
+ *     description: Get a single task by ID with related data (assignee, dependencies, subtasks, decisions, escalations)
+ *     tags:
+ *       - Tasks
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Task ID
+ *     responses:
+ *       200:
+ *         description: Task details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Task'
+ *                     - type: object
+ *                       properties:
+ *                         decisions:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Decision'
+ *                         escalations:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Escalation'
+ *                         activity_history:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Activity'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Task not found
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
@@ -147,8 +193,47 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * PATCH /api/tasks/:id
- * Update a task
+ * @openapi
+ * /tasks/{id}:
+ *   patch:
+ *     summary: Update a task
+ *     description: Update task properties. Status changes automatically track timestamps (started_at, completed_at).
+ *     tags:
+ *       - Tasks
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Task ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/UpdateTaskInput'
+ *     responses:
+ *       200:
+ *         description: Task updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Task'
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Task not found
+ *       500:
+ *         description: Internal server error
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
@@ -286,8 +371,41 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 }
 
 /**
- * DELETE /api/tasks/:id
- * Delete a task (only if not in_progress)
+ * @openapi
+ * /tasks/{id}:
+ *   delete:
+ *     summary: Delete a task
+ *     description: Delete a task. Cannot delete tasks that are in_progress.
+ *     tags:
+ *       - Tasks
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Task ID
+ *     responses:
+ *       200:
+ *         description: Task deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *       400:
+ *         description: Cannot delete task that is in progress
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Task not found
+ *       500:
+ *         description: Internal server error
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
