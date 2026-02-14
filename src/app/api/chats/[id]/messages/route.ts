@@ -279,12 +279,12 @@ function generateAgentResponse(
     decisions: Record<string, unknown>[];
     escalations: Record<string, unknown>[];
   },
-  userMessage: string
+  _userMessage: string
 ): string {
   const agentName = agent.name as string;
   const activities = context.activities || [];
   const tasks = context.tasks || [];
-  const decisions = context.decisions || [];
+  // const decisions = context.decisions || [];
   const escalations = context.escalations || [];
 
   // Build a contextual response based on available data
