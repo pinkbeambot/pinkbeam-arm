@@ -16,6 +16,7 @@ const PUBLIC_ROUTES = [
 // Public page routes
 const PUBLIC_PAGE_ROUTES = [
   '/login',
+  '/signup',
   '/',
   '/about',
   '/pricing',
