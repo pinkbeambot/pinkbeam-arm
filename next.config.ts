@@ -1,5 +1,15 @@
 import type { NextConfig } from "next";
 
+// SECURITY: Block production deployments with DEV_AUTH_BYPASS enabled
+// This check runs during Vercel/production builds to prevent auth bypass from leaking
+const isVercelProd = process.env.VERCEL_ENV === 'production' || process.env.VERCEL_TARGET_ENV === 'production';
+if (isVercelProd && process.env.DEV_AUTH_BYPASS === 'true') {
+  throw new Error(
+    'SECURITY VIOLATION: DEV_AUTH_BYPASS cannot be enabled in production. ' +
+    'Remove DEV_AUTH_BYPASS from your environment variables to build.'
+  );
+}
+
 const nextConfig: NextConfig = {
   // Enable React Strict Mode for better development experience
   reactStrictMode: true,

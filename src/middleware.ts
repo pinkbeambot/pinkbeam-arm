@@ -2,8 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-limit';
 
-// Dev auth bypass
-const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === 'true';
+// Dev auth bypass - SERVER SIDE ONLY, development only
+// NEVER set DEV_AUTH_BYPASS in production - build will fail
+const DEV_AUTH_BYPASS = process.env.DEV_AUTH_BYPASS === 'true' && process.env.NODE_ENV === 'development';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
