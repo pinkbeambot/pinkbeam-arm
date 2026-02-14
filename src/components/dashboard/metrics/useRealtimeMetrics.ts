@@ -168,8 +168,7 @@ export function useRealtimeMetrics(
       // Fetch tasks stats
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
-        .select('status, count')
-        .group('status');
+        .select('status');
 
       if (tasksError) throw tasksError;
 
