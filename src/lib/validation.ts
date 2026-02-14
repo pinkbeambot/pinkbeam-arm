@@ -426,14 +426,14 @@ export const sendMessageSchema = z.object({
   content: z.string().min(1).max(4000),
 });
 
-export const listMessagesQuerySchema = z.object({
+export const listChatMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(50),
   before: z.string().datetime().optional(),
 });
 
 export type CreateChatInput = z.infer<typeof createChatSchema>;
 export type SendMessageInput = z.infer<typeof sendMessageSchema>;
-export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
+export type ListChatMessagesQuery = z.infer<typeof listChatMessagesQuerySchema>;
 
 // ============================================================================
 // Re-export Auth Validation
