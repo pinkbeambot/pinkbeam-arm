@@ -494,3 +494,25 @@ export interface ThreadMessagesResponse {
     message_count: number;
   };
 }
+
+// ============================================================================
+// Notification Types
+// ============================================================================
+
+export type {
+  Notification,
+  NotificationType,
+  NotificationChannel,
+  NotificationPriority,
+  NotificationFilters,
+  NotificationPreference,
+  NotificationSettingsFormData,
+  NotificationWebSocketMessage,
+  NotificationListResponse,
+  NotificationPreferenceResponse,
+  NotificationDisplayProps,
+  NotificationBellProps,
+  NotificationDropdownProps,
+} from './notification';
+
+export { DEFAULT_NOTIFICATION_PREFERENCES } from './notification';
