@@ -1,0 +1,86 @@
+name: OpenClaw CTO Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  notify-cto:
+    name: Notify CTO Agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather issue metadata
+        id: issue
+        run: |
+          echo "issue_number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+          echo "issue_title=${{ github.event.issue.title }}" >> "$GITHUB_OUTPUT"
+          echo "issue_author=${{ github.event.issue.user.login }}" >> "$GITHUB_OUTPUT"
+          echo "issue_url=${{ github.event.issue.html_url }}" >> "$GITHUB_OUTPUT"
+
+      - name: Extract issue body
+        id: body
+        env:
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          # Truncate body to 2000 chars to keep message reasonable
+          TRUNCATED=$(echo "$ISSUE_BODY" | head -c 2000)
+          # Write to file to handle multiline safely
+          echo "$TRUNCATED" > /tmp/issue_body.txt
+
+      - name: Extract labels
+        id: labels
+        run: |
+          LABELS=$(echo '${{ toJSON(github.event.issue.labels) }}' | jq -r '.[].name' | tr '\n' ', ' | sed 's/,$//')
+          echo "labels=${LABELS:-none}" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger CTO triage
+        env:
+          OPENCLAW_HOOKS_TOKEN: ${{ secrets.OPENCLAW_HOOKS_TOKEN }}
+          OPENCLAW_GATEWAY_URL: ${{ secrets.OPENCLAW_GATEWAY_URL }}
+        run: |
+          ISSUE_BODY=$(cat /tmp/issue_body.txt)
+
+          MESSAGE=$(cat <<EOFMSG
+          [GITHUB WEBHOOK — NEW ISSUE CREATED]
+
+          Issue #${{ steps.issue.outputs.issue_number }}: ${{ steps.issue.outputs.issue_title }}
+          Author: ${{ steps.issue.outputs.issue_author }}
+          Labels: ${{ steps.labels.outputs.labels }}
+          URL: ${{ steps.issue.outputs.issue_url }}
+
+          Body:
+          ${ISSUE_BODY}
+
+          ACTION REQUIRED: Triage this issue and assign an engineer.
+
+          Steps:
+          1. Read the issue details above carefully
+          2. Assess scope — which engineer domain does this fall under?
+             - Frontend UI/UX → ENG-FE or ENG-UX
+             - Backend API/DB → ENG-BE
+             - Infrastructure/CI → ENG-INFRA
+             - Payments/Stripe → ENG-PAYMENTS
+             - AI/Claude integration → ENG-AI
+             - Testing/QA → ENG-QA
+          3. Add appropriate labels: gh issue edit ${{ steps.issue.outputs.issue_number }} --add-label "<domain>" --repo pinkbeambot/pinkbeam-arm
+          4. Spawn the assigned engineer via sessions_spawn() with:
+             - Clear task description referencing issue #${{ steps.issue.outputs.issue_number }}
+             - Branch naming: eng-{role}/task-${{ steps.issue.outputs.issue_number }}-<description>
+             - Coverage requirements per SOUL.md thresholds
+             - Report format: DONE/BLOCKED with issue number
+          5. Update ACTIVE.md with the new assignment
+          6. Report assignment to VALIS via sessions_send()
+          EOFMSG
+          )
+
+          curl -sf -X POST "${OPENCLAW_GATEWAY_URL}/hooks/agent" \
+            -H "Authorization: Bearer ${OPENCLAW_HOOKS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg message "$MESSAGE" \
+              --arg agentId "cto" \
+              --arg name "github-issue-triage" \
+              '{message: $message, agentId: $agentId, name: $name}'
+            )"
+
+          echo "CTO agent notified for Issue #${{ steps.issue.outputs.issue_number }}"

@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Users, Headphones, PenTool, Palette, Video, ArrowRight, Check } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
-import { MarketingNav, MarketingFooter } from "@/components/marketing";
 
 export const metadata: Metadata = {
   title: "AI Employees | Pink Beam ARM",
@@ -107,8 +106,6 @@ const employees = [
 export default function AgentsPage() {
   return (
     <div className="min-h-screen bg-background">
-      <MarketingNav currentPath="/agents" />
-
       {/* Hero Section */}
       <section className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-background via-muted/30 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -221,7 +218,6 @@ export default function AgentsPage() {
         </div>
       </section>
 
-      <MarketingFooter />
     </div>
   );
 }

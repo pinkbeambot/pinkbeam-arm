@@ -11,8 +11,6 @@ import {
   PricingSection,
   FAQ,
   FinalCTA,
-  MarketingNav,
-  MarketingFooter,
 } from "@/components/marketing";
 
 export const metadata: Metadata = {
@@ -64,8 +62,6 @@ export default function LandingPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
-      <MarketingNav currentPath="/" />
-
       {/* Main Content */}
       <main>
         <div className="pt-0">
@@ -85,7 +81,6 @@ export default function LandingPage() {
         </div>
       </main>
 
-      <MarketingFooter />
     </div>
   );
 }
