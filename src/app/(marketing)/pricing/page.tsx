@@ -1,19 +1,26 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Check, ArrowRight, HelpCircle } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
+import { MarketingNav, MarketingFooter } from "@/components/marketing";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Pricing | Pink Beam ARM",
-  description: "Hire AI employees for less than a single human salary. Simple, transparent pricing with no hidden fees.",
+  description: "Hire AI employees for less than a single human salary. Simple, transparent pricing with no hidden fees. Start with a 7-day free trial.",
+  keywords: ["AI employees pricing", "AI workforce cost", "autonomous agents pricing", "AI agent subscription"],
+  openGraph: {
+    title: "Pricing | Pink Beam ARM",
+    description: "Hire AI employees for less than a single human salary. Simple, transparent pricing with no hidden fees.",
+    images: ["/og-pricing.png"],
+  },
 };
 
 const pricingPlans = [
@@ -107,33 +114,10 @@ const faqItems = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-sm">PB</span>
-              </div>
-              <span className="font-bold text-xl">Pink Beam</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/agents" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                AI Employees
-              </Link>
-              <Link href="/pricing" className="text-sm text-foreground font-medium">
-                Pricing
-              </Link>
-            </nav>
-            <Button asChild size="sm">
-              <Link href="/portal">Enter Portal</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <MarketingNav currentPath="/pricing" />
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-background via-muted/30 to-background">
+      <section className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-background via-muted/30 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
@@ -222,7 +206,7 @@ export default function PricingPage() {
                     className="w-full mt-6"
                     asChild
                   >
-                    <Link href={plan.price === "Custom" ? "#contact" : "/portal"}>
+                    <Link href={plan.price === "Custom" ? "/contact" : "/portal"}>
                       {plan.cta}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </Link>
@@ -288,7 +272,7 @@ export default function PricingPage() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>
-                <Link href="#contact">Book a Demo</Link>
+                <Link href="/contact">Book a Demo</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
                 <Link href="/agents">View AI Employees</Link>
@@ -298,22 +282,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-xs">PB</span>
-              </div>
-              <span className="font-semibold text-sm">Pink Beam</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              © 2026 Pink Beam. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

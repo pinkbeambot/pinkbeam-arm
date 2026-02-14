@@ -10,3 +10,5 @@ export { Testimonials } from "./Testimonials";
 export { PricingSection } from "./PricingSection";
 export { FAQ } from "./FAQ";
 export { FinalCTA } from "./FinalCTA";
+export { MarketingNav } from "./MarketingNav";
+export { MarketingFooter } from "./MarketingFooter";

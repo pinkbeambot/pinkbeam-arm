@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Pink Beam ARM | AI Employees for Your Business",
+  title: {
+    default: "Pink Beam ARM | AI Employees for Your Business",
+    template: "%s | Pink Beam ARM",
+  },
   description: "Run a 50-person company as a 1-person founder. Hire AI employees for research, sales, support, and creative work. One platform. One price. Infinite output.",
   keywords: ["AI employees", "autonomous agents", "AI workforce", "agent relationship management", "AI agents for business"],
   authors: [{ name: "Pink Beam" }],
