@@ -439,6 +439,8 @@ export function useRealtimeMetrics(
     isConnected,
     isRealtime,
     lastUpdateAt,
+    error,
+    isLoading,
     refresh,
     subscribeToAgent,
     unsubscribeFromAgent,

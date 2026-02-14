@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Brain, Download } from 'lucide-react';
+import { useState, useCallback, useMemo } from 'react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { DecisionList } from '@/components/dashboard/decisions/DecisionList';
 import { DecisionDetailPanel } from '@/components/dashboard/decisions/DecisionDetailPanel';
@@ -12,27 +12,53 @@ import {
   type DecisionType 
 } from '@/components/dashboard/decisions/DecisionFilters';
 import { useDecisionsRealtime, useOverrideDecision, useExportDecisions } from '@/lib/hooks/useDecisions';
+import { useAgents } from '@/lib/hooks/useAgents';
 import { useToast } from '@/components/ui/use-toast';
-import type { Decision, Agent } from '@/types';
+import { Button } from '@/components/ui/button';
+import type { Decision, DecisionStatus } from '@/types';
 
-// Demo tenant ID - in production, this would come from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+// Map UI confidence filter to numeric threshold
+const CONFIDENCE_THRESHOLDS: Record<ConfidenceLevel, number | undefined> = {
+  all: undefined,
+  high: 0.9,
+  medium: 0.7,
+  low: 0.5,
+};
 
-// Mock agents for filters
-const MOCK_AGENTS: Agent[] = [
-  { id: 'agent-1', tenant_id: DEMO_TENANT_ID, parent_id: null, root_id: DEMO_TENANT_ID, name: 'Sales Strategist', role: 'specialist', status: 'active', depth: 0, capabilities: ['decide'], avatar_url: undefined, created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-13T00:00:00Z' },
-  { id: 'agent-2', tenant_id: DEMO_TENANT_ID, parent_id: null, root_id: DEMO_TENANT_ID, name: 'Content Writer', role: 'specialist', status: 'active', depth: 0, capabilities: ['decide'], avatar_url: undefined, created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-13T00:00:00Z' },
-  { id: 'agent-3', tenant_id: DEMO_TENANT_ID, parent_id: null, root_id: DEMO_TENANT_ID, name: 'Pricing Optimizer', role: 'specialist', status: 'active', depth: 0, capabilities: ['decide'], avatar_url: undefined, created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-13T00:00:00Z' },
-  { id: 'agent-4', tenant_id: DEMO_TENANT_ID, parent_id: null, root_id: DEMO_TENANT_ID, name: 'Support Router', role: 'specialist', status: 'active', depth: 0, capabilities: ['decide'], avatar_url: undefined, created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-13T00:00:00Z' },
-  { id: 'agent-5', tenant_id: DEMO_TENANT_ID, parent_id: null, root_id: DEMO_TENANT_ID, name: 'Marketing Allocator', role: 'specialist', status: 'active', depth: 0, capabilities: ['decide'], avatar_url: undefined, created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-13T00:00:00Z' },
-  { id: 'agent-6', tenant_id: DEMO_TENANT_ID, parent_id: null, root_id: DEMO_TENANT_ID, name: 'Onboarding Optimizer', role: 'specialist', status: 'active', depth: 0, capabilities: ['decide'], avatar_url: undefined, created_at: '2026-02-01T00:00:00Z', updated_at: '2026-02-13T00:00:00Z' },
-];
+// Map UI type filter to API category
+const TYPE_TO_CATEGORY: Record<DecisionType, string | undefined> = {
+  all: undefined,
+  strategic: 'strategy',
+  tactical: 'action',
+  operational: 'system',
+  emergency: 'escalation',
+};
+
+// Map UI date range to ISO dates
+function getDateRange(range: 'all' | 'today' | 'week' | 'month'): { from?: string; to?: string } {
+  const now = new Date();
+  const to = now.toISOString();
+  
+  switch (range) {
+    case 'today': {
+      const from = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+      return { from, to };
+    }
+    case 'week': {
+      const from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      return { from, to };
+    }
+    case 'month': {
+      const from = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      return { from, to };
+    }
+    default:
+      return {};
+  }
+}
 
 export default function DecisionsPage() {
   const { toast } = useToast();
-  const { decisions, loading, error, refetch } = useDecisionsRealtime(DEMO_TENANT_ID);
-  const { overrideDecision, loading: overrideLoading } = useOverrideDecision();
-  const { exportDecisions } = useExportDecisions();
 
   // UI State
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,10 +68,40 @@ export default function DecisionsPage() {
   const [dateRange, setDateRange] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [sortField, setSortField] = useState<'created_at' | 'confidence' | 'title'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [limit] = useState(20);
 
   // Modal State
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+
+  // Fetch agents for filter dropdown
+  const { agents, loading: agentsLoading } = useAgents();
+
+  // Calculate API parameters
+  const dateRangeParams = useMemo(() => getDateRange(dateRange), [dateRange]);
+  
+  // Fetch decisions with filters
+  const { 
+    decisions, 
+    loading: decisionsLoading, 
+    error, 
+    refetch,
+    pagination 
+  } = useDecisionsRealtime({
+    agentId: agentFilter !== 'all' ? agentFilter : undefined,
+    status: undefined, // Will be filtered client-side for now
+    category: TYPE_TO_CATEGORY[typeFilter],
+    dateFrom: dateRangeParams.from,
+    dateTo: dateRangeParams.to,
+    confidenceMin: CONFIDENCE_THRESHOLDS[confidenceFilter],
+    search: searchQuery || undefined,
+    page,
+    limit,
+  });
+
+  const { overrideDecision, loading: overrideLoading } = useOverrideDecision();
+  const { exportDecisions } = useExportDecisions();
 
   // Handlers
   const handleSelectDecision = useCallback((decision: Decision) => {
@@ -68,7 +124,7 @@ export default function DecisionsPage() {
     } catch (err) {
       toast({
         title: 'Error',
-        description: 'Failed to override decision.',
+        description: err instanceof Error ? err.message : 'Failed to override decision.',
         variant: 'destructive',
       });
     }
@@ -88,7 +144,7 @@ export default function DecisionsPage() {
       description: `Opening task ${taskId}...`,
     });
     // In production, this would navigate to the task page
-    // router.push(`/dashboard/tasks?task=${taskId}`);
+    // router.push(`/portal/tasks?task=${taskId}`);
   }, [toast]);
 
   const handleViewActivity = useCallback((decisionId: string) => {
@@ -97,15 +153,27 @@ export default function DecisionsPage() {
       description: 'Opening activity feed...',
     });
     // In production, this would navigate to activity with filter
-    // router.push(`/dashboard/activity?decision=${decisionId}`);
+    // router.push(`/portal/activity?decision=${decisionId}`);
   }, [toast]);
+
+  const handlePageChange = useCallback((newPage: number) => {
+    setPage(newPage);
+  }, []);
+
+  // Reset page when filters change
+  const handleFilterChange = useCallback((setter: (value: any) => void) => (value: any) => {
+    setter(value);
+    setPage(1);
+  }, []);
+
+  const loading = decisionsLoading || agentsLoading;
 
   return (
     <DashboardLayout>
       <PageContainer>
         <PageHeader
           title="Decision Log"
-          description={`Audit trail of all agent decisions with reasoning and alternatives. ${decisions.length} total decisions.`}
+          description={`Audit trail of all agent decisions with reasoning and alternatives. ${pagination?.total || 0} total decisions.`}
         />
 
         {/* Stats */}
@@ -114,23 +182,23 @@ export default function DecisionsPage() {
         {/* Filters */}
         <div className="mb-6">
           <DecisionFilters
-            agents={MOCK_AGENTS}
+            agents={agents}
             searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
+            onSearchChange={handleFilterChange(setSearchQuery)}
             agentFilter={agentFilter}
-            onAgentFilterChange={setAgentFilter}
+            onAgentFilterChange={handleFilterChange(setAgentFilter)}
             confidenceFilter={confidenceFilter}
-            onConfidenceFilterChange={setConfidenceFilter}
+            onConfidenceFilterChange={handleFilterChange(setConfidenceFilter)}
             typeFilter={typeFilter}
-            onTypeFilterChange={setTypeFilter}
+            onTypeFilterChange={handleFilterChange(setTypeFilter)}
             dateRange={dateRange}
-            onDateRangeChange={setDateRange}
+            onDateRangeChange={handleFilterChange(setDateRange)}
             sortField={sortField}
             onSortFieldChange={setSortField}
             sortOrder={sortOrder}
             onSortOrderChange={setSortOrder}
-            totalCount={decisions.length}
-            filteredCount={decisions.length} // Will be calculated by DecisionList
+            totalCount={pagination?.total || 0}
+            filteredCount={decisions.length}
             onExport={handleExport}
           />
         </div>
@@ -150,23 +218,67 @@ export default function DecisionsPage() {
           </div>
         )}
 
+        {/* Loading State */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-3 text-gray-600 dark:text-gray-400">Loading decisions...</span>
+          </div>
+        )}
+
         {/* Decision List */}
-        <DecisionList
-          decisions={decisions}
-          agents={MOCK_AGENTS}
-          loading={loading}
-          selectedDecisionId={selectedDecision?.id}
-          onSelectDecision={handleSelectDecision}
-          onOverrideDecision={(decision) => handleSelectDecision(decision)}
-          onViewTask={handleViewTask}
-          searchQuery={searchQuery}
-          agentFilter={agentFilter}
-          confidenceFilter={confidenceFilter}
-          typeFilter={typeFilter}
-          dateRange={dateRange}
-          sortField={sortField}
-          sortOrder={sortOrder}
-        />
+        {!loading && (
+          <>
+            <DecisionList
+              decisions={decisions}
+              agents={agents}
+              loading={false}
+              selectedDecisionId={selectedDecision?.id}
+              onSelectDecision={handleSelectDecision}
+              onOverrideDecision={(decision) => handleSelectDecision(decision)}
+              onViewTask={handleViewTask}
+              searchQuery={searchQuery}
+              agentFilter={agentFilter}
+              confidenceFilter={confidenceFilter}
+              typeFilter={typeFilter}
+              dateRange={dateRange}
+              sortField={sortField}
+              sortOrder={sortOrder}
+            />
+
+            {/* Pagination */}
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} decisions
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page - 1)}
+                    disabled={page === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 px-2">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(page + 1)}
+                    disabled={page >= pagination.totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Detail Panel */}
         <DecisionDetailPanel
