@@ -2,56 +2,71 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Agent, RealtimeChangePayload } from '@/types';
+import { useAuth } from '@/components/auth/AuthProvider';
+import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
+
+const API_BASE = '/api/agents';
 
 /**
- * Hook to subscribe to real-time agent changes
- * @param tenantId - The tenant ID to subscribe to
- * @returns Object with agents array, loading state, and error
+ * Hook to subscribe to real-time agent changes via API
+ * Uses server-side API routes that properly set tenant context for RLS
+ * Falls back to realtime updates via Supabase subscriptions
  */
 export function useAgentsRealtime(tenantId: string | null) {
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { session, user } = useAuth();
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  // Initial fetch of agents
+  // Fetch agents via API route (properly handles auth and RLS)
   const fetchAgents = useCallback(async () => {
-    if (!tenantId) return;
+    if (!tenantId || !session?.access_token) {
+      setAgents([]);
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
-      const { data, error: fetchError } = await supabase
-        .from('agents')
-        .select(`
-          *,
-          current_task:tasks(id, title, status)
-        `)
-        .eq('tenant_id', tenantId)
-        .order('created_at', { ascending: false });
+      setError(null);
 
-      if (fetchError) throw fetchError;
-      setAgents(data || []);
+      const response = await fetch(`${API_BASE}?limit=100`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch agents: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAgents(result.data || []);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch agents'));
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agents';
+      setError(new Error(errorMessage));
+      console.error('Error fetching agents:', err);
     } finally {
       setLoading(false);
     }
-  }, [tenantId, supabase]);
+  }, [tenantId, session?.access_token]);
 
-  // Set up real-time subscription
+  // Set up real-time subscription for live updates
   useEffect(() => {
-    if (!tenantId) {
+    if (!tenantId || !user?.id) {
       setAgents([]);
       setLoading(false);
       return;
     }
 
-    // Fetch initial data
+    // Fetch initial data via API
     fetchAgents();
 
-    // Subscribe to changes
+    // Subscribe to realtime changes
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
@@ -65,15 +80,12 @@ export function useAgentsRealtime(tenantId: string | null) {
         (payload: RealtimeChangePayload<Agent>) => {
           setAgents(current => {
             if (payload.eventType === 'INSERT') {
-              // Add new agent at the beginning
               return payload.new ? [payload.new, ...current] : current;
             } else if (payload.eventType === 'UPDATE') {
-              // Update existing agent
               return current.map(agent => 
                 agent.id === payload.new?.id ? payload.new : agent
               );
             } else if (payload.eventType === 'DELETE') {
-              // Remove deleted agent
               return current.filter(agent => agent.id !== payload.old?.id);
             }
             return current;
@@ -90,7 +102,7 @@ export function useAgentsRealtime(tenantId: string | null) {
         channelRef.current = null;
       }
     };
-  }, [tenantId, supabase, fetchAgents]);
+  }, [tenantId, user?.id, supabase, fetchAgents]);
 
   return { agents, loading, error, refetch: fetchAgents };
 }
@@ -102,11 +114,12 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
   const [agent, setAgent] = useState<Agent | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
-    if (!agentId || !tenantId) {
+    if (!agentId || !tenantId || !session?.access_token) {
       setAgent(null);
       setLoading(false);
       return;
@@ -115,20 +128,25 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const fetchAgent = async () => {
       try {
         setLoading(true);
-        const { data, error: fetchError } = await supabase
-          .from('agents')
-          .select(`
-            *,
-            current_task:tasks(id, title, status)
-          `)
-          .eq('id', agentId)
-          .eq('tenant_id', tenantId)
-          .single();
+        setError(null);
 
-        if (fetchError) throw fetchError;
-        setAgent(data);
+        const response = await fetch(`${API_BASE}/${agentId}`, {
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to fetch agent: ${response.status}`);
+        }
+
+        const result = await response.json();
+        setAgent(result.data);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch agent'));
+        const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agent';
+        setError(new Error(errorMessage));
       } finally {
         setLoading(false);
       }
@@ -136,7 +154,7 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
 
     fetchAgent();
 
-    // Subscribe to changes
+    // Subscribe to realtime changes
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
@@ -165,32 +183,44 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
         channelRef.current = null;
       }
     };
-  }, [agentId, tenantId, supabase]);
+  }, [agentId, tenantId, session?.access_token, supabase]);
 
   return { agent, loading, error };
 }
 
 /**
- * Hook to create a new agent
+ * Hook to create a new agent via API
  */
 export function useCreateAgent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const supabase = createClient();
+  const { session } = useAuth();
 
-  const createAgent = useCallback(async (agentData: Partial<Agent>) => {
+  const createAgent = useCallback(async (agentData: Partial<CreateAgentInput> & { tenant_id: string }) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const { data, error: createError } = await supabase
-        .from('agents')
-        .insert(agentData)
-        .select()
-        .single();
+      const response = await fetch(API_BASE, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(agentData),
+      });
 
-      if (createError) throw createError;
-      return data;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to create agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to create agent');
       setError(error);
@@ -198,33 +228,44 @@ export function useCreateAgent() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [session?.access_token]);
 
   return { createAgent, loading, error };
 }
 
 /**
- * Hook to update an agent
+ * Hook to update an agent via API
  */
 export function useUpdateAgent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const supabase = createClient();
+  const { session } = useAuth();
 
   const updateAgent = useCallback(async (agentId: string, updates: Partial<Agent>) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const { data, error: updateError } = await supabase
-        .from('agents')
-        .update(updates)
-        .eq('id', agentId)
-        .select()
-        .single();
+      const response = await fetch(`${API_BASE}/${agentId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updates),
+      });
 
-      if (updateError) throw updateError;
-      return data;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to update agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data;
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to update agent');
       setError(error);
@@ -232,30 +273,40 @@ export function useUpdateAgent() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [session?.access_token]);
 
   return { updateAgent, loading, error };
 }
 
 /**
- * Hook to delete an agent
+ * Hook to delete an agent via API
  */
 export function useDeleteAgent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const supabase = createClient();
+  const { session } = useAuth();
 
   const deleteAgent = useCallback(async (agentId: string) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
     try {
       setLoading(true);
       setError(null);
       
-      const { error: deleteError } = await supabase
-        .from('agents')
-        .delete()
-        .eq('id', agentId);
+      const response = await fetch(`${API_BASE}/${agentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (deleteError) throw deleteError;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to delete agent: ${response.status}`);
+      }
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Failed to delete agent');
       setError(error);
@@ -263,17 +314,17 @@ export function useDeleteAgent() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, [session?.access_token]);
 
   return { deleteAgent, loading, error };
 }
 
-// Demo tenant ID - in production, this would come from auth context
+// Demo tenant ID - in production, this comes from auth context
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
  * Convenience hook for fetching all agents
- * Uses the demo tenant ID for now
+ * Uses the demo tenant ID for development
  */
 export function useAgents() {
   const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);

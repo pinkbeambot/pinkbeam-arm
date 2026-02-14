@@ -123,7 +123,15 @@ export async function GET(request: NextRequest) {
     const tenantId = userProfile.tenant_id;
 
     // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+
+    if (contextError || contextSet !== true) {
+      console.error('Failed to set tenant context:', contextError);
+      return NextResponse.json(
+        { error: 'Failed to set tenant context', details: contextError?.message },
+        { status: 500 }
+      );
+    }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -313,7 +321,15 @@ export async function POST(request: NextRequest) {
     const tenantId = userProfile.tenant_id;
 
     // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+
+    if (contextError || contextSet !== true) {
+      console.error('Failed to set tenant context:', contextError);
+      return NextResponse.json(
+        { error: 'Failed to set tenant context', details: contextError?.message },
+        { status: 500 }
+      );
+    }
 
     // Calculate hierarchy values if parent is provided
     let parentDepth = 0;

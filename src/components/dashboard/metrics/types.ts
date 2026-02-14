@@ -222,6 +222,10 @@ export interface UseRealtimeMetricsReturn {
   isRealtime: boolean;
   lastUpdateAt: Date | null;
   
+  // Error state
+  error: Error | null;
+  isLoading: boolean;
+  
   // Actions
   refresh: () => void;
   subscribeToAgent: (agentId: string) => void;

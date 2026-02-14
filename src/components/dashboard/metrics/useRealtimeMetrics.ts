@@ -141,6 +141,8 @@ export function useRealtimeMetrics(
   const [isConnected, setIsConnected] = React.useState(false);
   const [isRealtime, setIsRealtime] = React.useState(false);
   const [lastUpdateAt, setLastUpdateAt] = React.useState<Date | null>(null);
+  const [error, setError] = React.useState<Error | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
   
   // Chart history state (rolling window)
   const [tasksPerMinuteHistory, setTasksPerMinuteHistory] = React.useState<LiveMetricPoint[]>([]);
@@ -156,6 +158,9 @@ export function useRealtimeMetrics(
   // ============================================================================
 
   const fetchMetricsSnapshot = React.useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    
     try {
       // Fetch agents
       const { data: agentsData, error: agentsError } = await supabase
@@ -163,14 +168,14 @@ export function useRealtimeMetrics(
         .select('*')
         .order('last_active_at', { ascending: false });
 
-      if (agentsError) throw agentsError;
+      if (agentsError) throw new Error(`Failed to fetch agents: ${agentsError.message}`);
 
       // Fetch tasks stats
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('status');
 
-      if (tasksError) throw tasksError;
+      if (tasksError) throw new Error(`Failed to fetch tasks: ${tasksError.message}`);
 
       // Fetch recent activities for calculating rates
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
@@ -180,7 +185,7 @@ export function useRealtimeMetrics(
         .gte('created_at', fiveMinutesAgo)
         .order('created_at', { ascending: false });
 
-      if (activitiesError) throw activitiesError;
+      if (activitiesError) throw new Error(`Failed to fetch activities: ${activitiesError.message}`);
 
       // Process agent metrics
       const agents: AgentLiveMetrics[] = (agentsData || []).map((agent: Agent) => {
@@ -315,9 +320,14 @@ export function useRealtimeMetrics(
       setTasksPerMinuteHistory(prev => [...prev.slice(-maxDataPoints + 1), newPoint]);
       setSuccessRateHistory(prev => [...prev.slice(-maxDataPoints + 1), newSuccessPoint]);
       setAgentLoadHistory(prev => [...prev.slice(-maxDataPoints + 1), newLoadPoint]);
+      setError(null);
 
-    } catch (error) {
-      console.error('Failed to fetch metrics:', error);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch metrics';
+      console.error('Failed to fetch metrics:', err);
+      setError(new Error(errorMessage));
+    } finally {
+      setIsLoading(false);
     }
   }, [supabase, agentIds, maxDataPoints, isRealtime]);
 
@@ -425,6 +435,8 @@ export function useRealtimeMetrics(
     isConnected,
     isRealtime,
     lastUpdateAt,
+    error,
+    isLoading,
     refresh,
     subscribeToAgent,
     unsubscribeFromAgent,
