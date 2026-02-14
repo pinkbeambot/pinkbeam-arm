@@ -1,25 +1,40 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-limit';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Public API routes that don't require authentication
+// Public API routes that don't require authentication or rate limiting
 const PUBLIC_ROUTES = [
   '/api/auth',
   '/api/webhooks',
   '/api/health',
 ];
 
+// Routes excluded from rate limiting (but still require auth)
+const RATE_LIMIT_EXCLUDED_ROUTES = [
+  '/api/health',
+];
+
 /**
- * Next.js Middleware for Authentication and Tenant Context
+ * Check if a route should skip rate limiting
+ */
+function isRateLimitExcluded(pathname: string): boolean {
+  return RATE_LIMIT_EXCLUDED_ROUTES.some(route => pathname.startsWith(route));
+}
+
+/**
+ * Next.js Middleware for Authentication, Tenant Context, and Rate Limiting
  * 
  * This middleware:
  * - Validates JWT tokens via Supabase Auth
  * - Extracts tenant_id from JWT claims
  * - Handles token refresh automatically
  * - Returns 401 for invalid/missing tokens
+ * - Applies per-tenant rate limiting (100 req/min free, 1000 req/min pro)
+ * - Returns 429 with Retry-After header when limit exceeded
  * - Applies to all /api/* routes except public ones
  * - Sets tenant context headers for downstream RLS
  */
@@ -82,7 +97,7 @@ export async function middleware(request: NextRequest) {
         });
         response.cookies.set({
           name,
-          value: '',
+          value,
           ...options,
         });
       },
@@ -157,6 +172,19 @@ export async function middleware(request: NextRequest) {
     // Also set in request headers so API routes can access it
     request.headers.set('x-tenant-id', tenantId);
     request.headers.set('x-user-id', user.id);
+
+    // Apply rate limiting (unless excluded)
+    if (!isRateLimitExcluded(pathname)) {
+      const rateLimitResponse = await rateLimitMiddleware(request, tenantId);
+      
+      if (rateLimitResponse) {
+        // Rate limit exceeded - return the 429 response
+        return rateLimitResponse;
+      }
+      
+      // Add rate limit headers to the response
+      response = await addRateLimitHeaders(response, tenantId);
+    }
 
     // If there's a refreshed session, the cookies will be updated via the cookie callbacks
     return response;
