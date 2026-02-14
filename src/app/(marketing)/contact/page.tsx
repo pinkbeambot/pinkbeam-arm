@@ -1,70 +1,20 @@
-"use client";
-
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MarketingNav, MarketingFooter } from "@/components/marketing";
-import { FadeIn } from "@/components/animations";
-import {
-  Mail,
-  MapPin,
-  Phone,
-  Clock,
-  ArrowRight,
-  CheckCircle,
-  Loader2,
-} from "lucide-react";
-import { useState } from "react";
-import { toast } from "@/components/ui/use-toast";
+import { ContactPageClient } from "./ContactPageClient";
 
-const inquiryTypes = [
-  { value: "sales", label: "Sales Inquiry" },
-  { value: "support", label: "Technical Support" },
-  { value: "demo", label: "Request a Demo" },
-  { value: "partnership", label: "Partnership" },
-  { value: "press", label: "Press & Media" },
-  { value: "other", label: "Other" },
-];
-
-const contactInfo = [
-  {
-    icon: Mail,
-    title: "Email",
-    value: "hello@pinkbeam.io",
-    description: "We'll respond within 24 hours",
+export const metadata: Metadata = {
+  title: "Contact Us | Pink Beam ARM",
+  description: "Get in touch with the Pink Beam team. Book a demo, ask questions, or learn more about AI employees for your business.",
+  keywords: ["contact", "demo", "sales", "support", "AI employees"],
+  openGraph: {
+    title: "Contact Us | Pink Beam ARM",
+    description: "Get in touch with the Pink Beam team. Book a demo or ask questions about AI employees.",
+    images: ["/og-contact.png"],
   },
-  {
-    icon: Phone,
-    title: "Phone",
-    value: "+1 (555) 123-4567",
-    description: "Mon-Fri, 9am-6pm PT",
-  },
-  {
-    icon: MapPin,
-    title: "Office",
-    value: "San Francisco, CA",
-    description: "We also have team members worldwide",
-  },
-  {
-    icon: Clock,
-    title: "Support Hours",
-    value: "24/7 for Enterprise",
-    description: "Standard: Mon-Fri, 9am-6pm PT",
-  },
-];
+};
 
 export default function ContactPage() {
+  return <ContactPageClient />;
+}
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({

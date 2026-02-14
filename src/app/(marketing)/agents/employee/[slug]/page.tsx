@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Users, Headphones, PenTool, Palette, Video, ArrowLeft, Check, ArrowRight, HelpCircle } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
+import { MarketingNav, MarketingFooter } from "@/components/marketing";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import type { Metadata } from "next";
 
 // Agent data with name-based slugs as per assignment
 const agents = {
@@ -324,33 +324,10 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-sm">PB</span>
-              </div>
-              <span className="font-bold text-xl">Pink Beam</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/agents" className="text-sm text-foreground font-medium">
-                AI Employees
-              </Link>
-              <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-            </nav>
-            <Button asChild size="sm">
-              <Link href="/portal">Enter Portal</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <MarketingNav currentPath="/agents" />
 
       {/* Hero Section */}
-      <section className={`py-20 md:py-32 bg-gradient-to-br ${agent.gradient} relative overflow-hidden`}>
+      <section className={`pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-br ${agent.gradient} relative overflow-hidden`}>
         <div className="absolute inset-0 bg-black/20" />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <FadeIn>
@@ -631,7 +608,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
           <FadeIn delay={0.2} className="mt-12 text-center">
             <p className="text-muted-foreground">
               Still have questions?{" "}
-              <Link href="/pricing" className="text-primary hover:text-primary/80 font-medium">
+              <Link href="/contact" className="text-primary hover:text-primary/80 font-medium">
                 Book a demo
               </Link>{" "}
               and we&apos;ll answer everything.
@@ -663,22 +640,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-xs">PB</span>
-              </div>
-              <span className="font-semibold text-sm">Pink Beam</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              © 2026 Pink Beam. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
