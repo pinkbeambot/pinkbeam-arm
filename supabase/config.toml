@@ -80,6 +80,21 @@ verify_jwt = false
 [functions.agent-webhook]
 verify_jwt = false
 
+[functions.agent-spawn]
+verify_jwt = true
+
+[functions.agent-execute]
+verify_jwt = true
+
+[functions.agent-runtime]
+verify_jwt = true
+
+[functions.task-executor]
+verify_jwt = true
+
+[functions.webhook-handler]
+verify_jwt = false
+
 [analytics]
 enabled = false
 port = 54327
