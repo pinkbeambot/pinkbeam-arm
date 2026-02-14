@@ -423,7 +423,7 @@ export interface ConfigTestResult {
 // Message Types
 // ============================================================================
 
-export type MessageType =
+export type MessageTypeValue =
   | 'spawn.request' | 'spawn.response'
   | 'task.assign' | 'task.accept' | 'task.reject' | 'task.progress' | 'task.complete' | 'task.fail'
   | 'decision.propose' | 'decision.confirm' | 'decision.override'
@@ -437,7 +437,7 @@ export interface Message {
   id: string;
   tenant_id: string;
   protocol_version: string;
-  message_type: MessageType;
+  message_type: MessageTypeValue;
   from_agent_id?: string;
   from_agent?: Agent;
   to_agent_id?: string;

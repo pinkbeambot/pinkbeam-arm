@@ -2,22 +2,41 @@
  * Real-time Metrics Dashboard Components
  * 
  * Exports all components, hooks, and types for the real-time metrics dashboard.
- * 
- * @example
- * ```tsx
- * import { 
- *   RealtimeMetricsDashboard,
- *   useRealtimeMetrics,
- *   SystemHealthIndicator,
- *   MetricsGrid,
- * } from '@/components/dashboard/metrics';
- * ```
  */
+
+// Types
+export type {
+  MetricTimeRange,
+  LiveMetricPoint,
+  AgentLiveMetrics,
+  SystemHealthMetrics,
+  AggregatedMetrics,
+  TimeSeriesData,
+  LiveChartData,
+  AgentPerformanceChartData,
+  MetricsMessage,
+  MetricsMessageType,
+  AgentMetricsUpdate,
+  SystemMetricsUpdate,
+  AggregatedMetricsUpdate,
+  UseRealtimeMetricsOptions,
+  UseRealtimeMetricsReturn,
+  UseSystemHealthOptions,
+  UseSystemHealthReturn,
+  LiveLineChartProps,
+  AgentMetricsCardProps,
+  SystemHealthIndicatorProps,
+  HealthStatusBadgeProps,
+  MetricsGridProps,
+  RealtimeMetricsDashboardProps,
+} from './types';
 
 // Hooks
 export { useRealtimeMetrics } from './useRealtimeMetrics';
 
 // Components
+export { LiveLineChart } from './LiveLineChart';
+export { AgentMetricsCard, AgentMetricsCompact } from './AgentMetricsCard';
 export { 
   SystemHealthIndicator, 
   SystemHealthCompact,

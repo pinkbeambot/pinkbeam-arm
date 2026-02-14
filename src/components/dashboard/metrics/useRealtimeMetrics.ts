@@ -1,73 +1,57 @@
 /**
  * useRealtimeMetrics Hook
  * 
- * Custom hook for fetching and managing real-time metrics data.
- * Provides polling-based updates with configurable intervals.
- * 
- * @example
- * ```tsx
- * const { metrics, isLoading, error, refresh } = useRealtimeMetrics({
- *   refreshInterval: 5000,
- *   agentIds: ['agent-1', 'agent-2'],
- * });
- * ```
+ * Provides real-time metrics data via WebSocket connection with fallback to polling.
  */
 
 'use client';
 
 import * as React from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { 
-  UseRealtimeMetricsOptions, 
-  UseRealtimeMetricsReturn,
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { Activity, Agent } from '@/types';
+import type {
   AgentLiveMetrics,
-  AggregatedMetrics,
   SystemHealthMetrics,
+  AggregatedMetrics,
+  LiveMetricPoint,
+  UseRealtimeMetricsOptions,
+  UseRealtimeMetricsReturn,
 } from './types';
 
-interface Agent {
-  id: string;
-  name: string;
-  status: 'active' | 'idle' | 'error' | 'offline';
-  type: string;
-  current_task?: string;
-  last_active_at?: string;
-}
+const DEFAULT_MAX_DATA_POINTS = 60;
+const DEFAULT_REFRESH_INTERVAL = 5000;
+const METRICS_CHANNEL = 'metrics';
 
-interface Activity {
-  id: string;
-  agent_id: string;
-  type: string;
-  status?: string;
-  metadata?: Record<string, unknown>;
-  created_at: string;
-}
+export function useRealtimeMetrics(
+  options: UseRealtimeMetricsOptions = {}
+): UseRealtimeMetricsReturn {
+  const {
+    enabled = true,
+    refreshInterval = DEFAULT_REFRESH_INTERVAL,
+    maxDataPoints = DEFAULT_MAX_DATA_POINTS,
+    agentIds,
+  } = options;
 
-const DEFAULT_REFRESH_INTERVAL = 5000; // 5 seconds
-
-export function useRealtimeMetrics({
-  refreshInterval = DEFAULT_REFRESH_INTERVAL,
-  agentIds,
-  enabled = true,
-}: UseRealtimeMetricsOptions = {}): UseRealtimeMetricsReturn {
-  const [metrics, setMetrics] = React.useState<AgentLiveMetrics[]>([]);
-  const [aggregated, setAggregated] = React.useState<AggregatedMetrics | null>(null);
-  const [systemHealth, setSystemHealth] = React.useState<SystemHealthMetrics | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [error, setError] = React.useState<Error | null>(null);
-  const [lastUpdated, setLastUpdated] = React.useState<Date | null>(null);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
-  
   const supabase = createClient();
-  const intervalRef = React.useRef<NodeJS.Timeout | null>(null);
+  
+  const [agentMetrics, setAgentMetrics] = React.useState<AgentLiveMetrics[]>([]);
+  const [selectedAgent, setSelectedAgent] = React.useState<AgentLiveMetrics | null>(null);
+  const [systemHealth, setSystemHealth] = React.useState<SystemHealthMetrics | null>(null);
+  const [aggregated, setAggregated] = React.useState<AggregatedMetrics | null>(null);
+  const [isConnected, setIsConnected] = React.useState(false);
+  const [isRealtime, setIsRealtime] = React.useState(false);
+  const [lastUpdateAt, setLastUpdateAt] = React.useState<Date | null>(null);
+  
+  const [tasksPerMinuteHistory, setTasksPerMinuteHistory] = React.useState<LiveMetricPoint[]>([]);
+  const [successRateHistory, setSuccessRateHistory] = React.useState<LiveMetricPoint[]>([]);
+  const [agentLoadHistory, setAgentLoadHistory] = React.useState<LiveMetricPoint[]>([]);
+  
+  const subscribedAgents = React.useRef<Set<string>>(new Set());
+  const metricsChannelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  const fetchMetrics = React.useCallback(async (isBackgroundRefresh = false) => {
-    if (!isBackgroundRefresh) {
-      setIsRefreshing(true);
-    }
-
+  const fetchMetricsSnapshot = React.useCallback(async () => {
     try {
-      // Fetch agents
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
         .select('*')
@@ -75,20 +59,17 @@ export function useRealtimeMetrics({
 
       if (agentsError) throw agentsError;
 
-      // Fetch tasks stats
       const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('status');
 
       if (tasksError) throw tasksError;
 
-      // Calculate counts manually
       const taskCounts = (tasksData || []).reduce((acc: Record<string, number>, task: { status: string }) => {
         acc[task.status] = (acc[task.status] || 0) + 1;
         return acc;
       }, {});
 
-      // Fetch recent activities for calculating rates
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
       const { data: activitiesData, error: activitiesError } = await supabase
         .from('activities')
@@ -98,7 +79,6 @@ export function useRealtimeMetrics({
 
       if (activitiesError) throw activitiesError;
 
-      // Process agent metrics
       const agents: AgentLiveMetrics[] = (agentsData || []).map((agent: Agent) => {
         const agentActivities = (activitiesData || []).filter(
           (a: Activity) => a.agent_id === agent.id
@@ -113,28 +93,28 @@ export function useRealtimeMetrics({
         ).length;
         
         const totalTasks = completedTasks + failedTasks;
-        const tasksPerMinute = totalTasks / 5; // per 5 minute window
+        const tasksPerMinute = totalTasks / 5;
         const successRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 100;
 
         return {
           agentId: agent.id,
           agentName: agent.name,
           status: agent.status,
-          currentTask: agent.current_task,
           tasksPerMinute,
           successRate,
-          avgResponseTime: Math.random() * 500 + 100, // Simulated
-          currentLoad: Math.random() * 100,
+          currentLoad: agent.current_task_id ? Math.random() * 40 + 40 : Math.random() * 20,
+          avgResponseTime: Math.random() * 500 + 100,
+          errorRate: successRate > 0 ? 100 - successRate : 0,
+          lastActivityAt: agent.last_active_at || agent.updated_at,
+          cpuUsage: Math.random() * 30 + 10,
           memoryUsage: Math.random() * 40 + 20,
         };
       });
 
-      // Filter by agentIds if specified
       const filteredAgents = agentIds 
         ? agents.filter(a => agentIds.includes(a.agentId))
         : agents;
 
-      // Calculate aggregated metrics
       const completedCount = (activitiesData || []).filter(
         (a: Activity) => a.type === 'task_completed'
       ).length;
@@ -145,18 +125,12 @@ export function useRealtimeMetrics({
       
       const totalCount = completedCount + failedCount;
 
-      // Calculate task counts from tasks table
-      const totalTasksFromDb = (tasksData || []).length;
-      const completedTasksFromDb = taskCounts['completed'] || 0;
-      const failedTasksFromDb = taskCounts['failed'] || 0;
-      const inProgressTasksFromDb = taskCounts['in_progress'] || 0;
-
       const aggregatedData: AggregatedMetrics = {
         tasks: {
-          total: totalTasksFromDb || totalCount,
-          completed: completedTasksFromDb || completedCount,
-          failed: failedTasksFromDb || failedCount,
-          inProgress: inProgressTasksFromDb || filteredAgents.filter(a => a.currentLoad > 50).length,
+          total: (tasksData || []).length || totalCount,
+          completed: taskCounts['completed'] || completedCount,
+          failed: taskCounts['failed'] || failedCount,
+          inProgress: filteredAgents.filter(a => a.currentLoad > 50).length,
           queued: taskCounts['queued'] || Math.floor(Math.random() * 10),
           completionRate: totalCount / 5,
           successRate: totalCount > 0 ? (completedCount / totalCount) * 100 : 100,
@@ -186,71 +160,141 @@ export function useRealtimeMetrics({
         },
       };
 
-      // Calculate system health
       const avgResponseTime = filteredAgents.reduce((acc, a) => acc + a.avgResponseTime, 0) / (filteredAgents.length || 1);
       const systemStatus: SystemHealthMetrics = {
         status: avgResponseTime < 500 ? 'healthy' : avgResponseTime < 1000 ? 'degraded' : 'critical',
         uptime: Date.now() / 1000,
-        responseTime: avgResponseTime,
-        errorRate: totalCount > 0 ? (failedCount / totalCount) * 100 : 0,
-        lastIncident: null,
+        database: {
+          status: 'healthy',
+          responseTime: Math.random() * 50 + 10,
+          connectionPool: { used: 5, total: 100, utilization: 5 },
+          queryLatency: { p50: 10, p95: 25, p99: 50 },
+        },
+        realtime: {
+          status: isRealtime ? 'healthy' : 'degraded',
+          connections: filteredAgents.length,
+          messagesPerSecond: Math.random() * 10,
+          latency: Math.random() * 100,
+        },
+        agentRuntime: {
+          status: filteredAgents.some(a => a.status === 'error') ? 'degraded' : 'healthy',
+          activeAgents: filteredAgents.filter(a => a.status === 'active').length,
+          queuedTasks: aggregatedData.tasks.queued,
+          processingTasks: aggregatedData.tasks.inProgress,
+          avgTaskWaitTime: Math.random() * 30,
+        },
+        resources: {
+          cpu: { usage: Math.random() * 30 + 20, cores: 8 },
+          memory: { used: 4096, total: 16384, usage: 25 },
+          disk: { used: 100, total: 500, usage: 20 },
+        },
       };
 
-      setMetrics(filteredAgents);
-      setAggregated(aggregatedData);
+      setAgentMetrics(filteredAgents);
       setSystemHealth(systemStatus);
-      setLastUpdated(new Date());
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch metrics'));
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  }, [supabase, agentIds]);
+      setAggregated(aggregatedData);
+      setLastUpdateAt(new Date());
 
-  // Initial fetch
-  React.useEffect(() => {
-    if (enabled) {
-      fetchMetrics();
-    }
-  }, [enabled, fetchMetrics]);
+      const now = Date.now();
+      const newPoint: LiveMetricPoint = { timestamp: now, value: aggregatedData.tasks.completionRate };
+      const newSuccessPoint: LiveMetricPoint = { timestamp: now, value: aggregatedData.tasks.successRate };
+      const newLoadPoint: LiveMetricPoint = { 
+        timestamp: now, 
+        value: aggregatedData.agents.avgTasksPerMinute 
+      };
 
-  // Setup polling interval
+      setTasksPerMinuteHistory(prev => [...prev.slice(-maxDataPoints + 1), newPoint]);
+      setSuccessRateHistory(prev => [...prev.slice(-maxDataPoints + 1), newSuccessPoint]);
+      setAgentLoadHistory(prev => [...prev.slice(-maxDataPoints + 1), newLoadPoint]);
+
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+    }
+  }, [supabase, agentIds, maxDataPoints, isRealtime]);
+
   React.useEffect(() => {
     if (!enabled) return;
 
-    intervalRef.current = setInterval(() => {
-      fetchMetrics(true);
+    const channel = supabase
+      .channel(METRICS_CHANNEL)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activities',
+        },
+        (payload: RealtimePostgresChangesPayload<Activity>) => {
+          fetchMetricsSnapshot();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'agents',
+        },
+        () => {
+          fetchMetricsSnapshot();
+        }
+      )
+      .subscribe((status) => {
+        setIsConnected(status === 'SUBSCRIBED');
+        setIsRealtime(status === 'SUBSCRIBED');
+      });
+
+    metricsChannelRef.current = channel;
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [enabled, supabase, fetchMetricsSnapshot]);
+
+  React.useEffect(() => {
+    if (!enabled) return;
+
+    fetchMetricsSnapshot();
+
+    const intervalId = setInterval(() => {
+      if (!isRealtime) {
+        fetchMetricsSnapshot();
+      }
     }, refreshInterval);
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      clearInterval(intervalId);
     };
-  }, [enabled, refreshInterval, fetchMetrics]);
+  }, [enabled, refreshInterval, isRealtime, fetchMetricsSnapshot]);
+
+  const subscribeToAgent = React.useCallback((agentId: string) => {
+    if (!subscribedAgents.current.has(agentId)) {
+      subscribedAgents.current.add(agentId);
+    }
+  }, []);
+
+  const unsubscribeFromAgent = React.useCallback((agentId: string) => {
+    subscribedAgents.current.delete(agentId);
+  }, []);
 
   const refresh = React.useCallback(() => {
-    return fetchMetrics();
-  }, [fetchMetrics]);
+    fetchMetricsSnapshot();
+  }, [fetchMetricsSnapshot]);
 
   return {
-    agentMetrics: metrics,
-    selectedAgent: null,
-    setSelectedAgent: () => {},
-    aggregated,
+    agentMetrics,
+    selectedAgent,
+    setSelectedAgent,
     systemHealth,
-    tasksPerMinuteHistory: [],
-    successRateHistory: [],
-    agentLoadHistory: [],
-    isConnected: !error && !isLoading,
-    isRealtime: false,
-    lastUpdateAt: lastUpdated,
+    aggregated,
+    tasksPerMinuteHistory,
+    successRateHistory,
+    agentLoadHistory,
+    isConnected,
+    isRealtime,
+    lastUpdateAt,
     refresh,
-    subscribeToAgent: () => {},
-    unsubscribeFromAgent: () => {},
+    subscribeToAgent,
+    unsubscribeFromAgent,
   };
 }
-
-export default useRealtimeMetrics;

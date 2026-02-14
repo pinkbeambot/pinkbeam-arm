@@ -18,7 +18,11 @@ export default function MetricsPage() {
   return (
     <DashboardLayout>
       <PageContainer>
-        <RealtimeMetricsDashboard />
+        <RealtimeMetricsDashboard 
+          defaultTimeRange="live"
+          showSystemHealth
+          showAgentList
+        />
       </PageContainer>
     </DashboardLayout>
   );
