@@ -10,8 +10,8 @@
 |-------|-------|--------|-------|
 | #34 | Migrate Components from pinkbeam | ✅ Closed 2026-02-13 | `/` |
 | #35 | Landing Page (/) | Open | `/` |
-| #36 | Agent Detail Pages | Open | `/agents/employee/[slug]` |
-| #37 | Pricing Page | Open | `/pricing` |
+| #36 | Agent Detail Pages | 🔄 IN PROGRESS | `/agents/employee/[slug]` |
+| #37 | Pricing Page | ✅ Closed 2026-02-13 — MERGED | `/pricing` |
 | #38 | Visual QA & Testing | Open | All |
 
 **Key Requirements:**
@@ -63,9 +63,9 @@ None - ENG-FE is unblocked and ready for Phase 4 work.
 | #20 | /api/agents CRUD Endpoints | ✅ Closed 2026-02-13 — VALIDATED |
 | #21 | /api/tasks Enhancements | ✅ Closed 2026-02-13 — VALIDATED |
 | #22 | /api/decisions Endpoints | Open |
-| #23 | /api/escalations Endpoints | Open |
-| #24 | /api/messages Endpoints | Open |
-| #25 | Supabase Edge Functions - Agent Runtime | Open |
+| #23 | /api/escalations Endpoints | ✅ Closed 2026-02-13 — MERGED |
+| #24 | /api/messages Endpoints | ✅ Closed 2026-02-13 — MERGED |
+| #25 | Supabase Edge Functions - Agent Runtime | 🔄 IN PROGRESS |
 | #26 | Authentication Middleware & Tenant Context | Open |
 
 ### Recently Completed
