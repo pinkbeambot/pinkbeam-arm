@@ -6,7 +6,7 @@
  * interface that lets the CEO communicate with the entire agent workforce.
  */
 
-import type { Agent, Task, Escalation, Decision, Activity } from './index';
+import type { Agent, Task, Escalation, Decision, Activity, TaskPriority } from './index';
 
 // ============================================================================
 // Intent Types
