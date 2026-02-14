@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Mail, Loader2, CheckCircle2, ArrowLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 
+const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === 'true';
+
 function LoginForm() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -19,6 +22,7 @@ function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const { signInWithMagicLink } = useAuth();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const redirectTo = searchParams.get('redirect') || '/portal';
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,6 +43,12 @@ function LoginForm() {
     if (signInError) {
       setError(signInError.message || 'Failed to send magic link. Please try again.');
       setIsSubmitting(false);
+      return;
+    }
+
+    // Dev bypass: redirect immediately after mock sign-in
+    if (DEV_AUTH_BYPASS) {
+      router.push(redirectTo);
       return;
     }
 
@@ -148,10 +158,10 @@ function LoginForm() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending magic link...
+                        {DEV_AUTH_BYPASS ? 'Signing in...' : 'Sending magic link...'}
                       </>
                     ) : (
-                      'Send Magic Link'
+                      DEV_AUTH_BYPASS ? 'Dev Login' : 'Send Magic Link'
                     )}
                   </Button>
                 </form>

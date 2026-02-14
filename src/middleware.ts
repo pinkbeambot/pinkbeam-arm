@@ -2,6 +2,9 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-limit';
 
+// Dev auth bypass
+const DEV_AUTH_BYPASS = process.env.NEXT_PUBLIC_DEV_AUTH_BYPASS === 'true';
+
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -74,6 +77,24 @@ export async function middleware(request: NextRequest) {
     pathname.endsWith('.jpg') ||
     pathname.endsWith('.svg')
   ) {
+    return NextResponse.next();
+  }
+
+  // Dev auth bypass — skip all auth checks for page routes
+  if (DEV_AUTH_BYPASS) {
+    // For API routes, inject a mock tenant context
+    if (pathname.startsWith('/api/')) {
+      const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+      if (isPublicRoute) return NextResponse.next();
+
+      const response = NextResponse.next({ request: { headers: request.headers } });
+      response.headers.set('x-tenant-id', 'dev-tenant-000');
+      response.headers.set('x-user-id', 'dev-user-000');
+      request.headers.set('x-tenant-id', 'dev-tenant-000');
+      request.headers.set('x-user-id', 'dev-user-000');
+      return response;
+    }
+    // Let all page routes through (no redirect to login)
     return NextResponse.next();
   }
 
