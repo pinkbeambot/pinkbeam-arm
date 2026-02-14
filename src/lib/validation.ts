@@ -254,6 +254,48 @@ export const listActivitiesQuerySchema = z.object({
 });
 
 // ============================================================================
+// Message Validation
+// ============================================================================
+
+export const createMessageSchema = z.object({
+  protocol_version: z.string().max(10).default('1.0'),
+  message_type: z.enum([
+    'spawn.request', 'spawn.response',
+    'task.assign', 'task.accept', 'task.reject', 'task.progress', 'task.complete', 'task.fail',
+    'decision.propose', 'decision.confirm', 'decision.override',
+    'escalate.request', 'escalate.response',
+    'message.direct', 'message.broadcast',
+    'system.ping', 'system.pong', 'system.config.update', 'system.error'
+  ]),
+  from_agent_id: z.string().uuid(),
+  to_agent_id: z.string().uuid().optional(),
+  to_broadcast: z.boolean().default(false),
+  thread_id: z.string().uuid().optional(),
+  correlation_id: z.string().uuid().optional(),
+  payload: z.record(z.string(), z.unknown()),
+  priority: z.enum(['low', 'normal', 'high', 'urgent']).default('normal'),
+  requires_ack: z.boolean().default(false),
+  expires_at: z.string().datetime().optional(),
+});
+
+export const updateMessageSchema = z.object({
+  acked_at: z.string().datetime().optional(),
+  processed_at: z.string().datetime().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const listMessagesQuerySchema = z.object({
+  agent_id: z.string().uuid().optional(),
+  thread_id: z.string().uuid().optional(),
+  from_agent_id: z.string().uuid().optional(),
+  to_agent_id: z.string().uuid().optional(),
+  message_type: z.string().optional(),
+  unread: z.boolean().optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+});
+
+// ============================================================================
 // Type exports
 // ============================================================================
 
@@ -274,6 +316,10 @@ export type ResolveEscalationInput = z.infer<typeof resolveEscalationSchema>;
 export type ListEscalationsQuery = z.infer<typeof listEscalationsQuerySchema>;
 
 export type ListActivitiesQuery = z.infer<typeof listActivitiesQuerySchema>;
+
+export type CreateMessageInput = z.infer<typeof createMessageSchema>;
+export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
+export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
 
 // ============================================================================
 // Analytics Validation

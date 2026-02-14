@@ -16,7 +16,8 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
-  Menu
+  Menu,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -34,6 +35,7 @@ const navItems: NavItem[] = [
   { label: 'Task Pipeline', href: '/portal/tasks', icon: Kanban },
   { label: 'Decision Log', href: '/portal/decisions', icon: Brain },
   { label: 'Escalations', href: '/portal/escalations', icon: AlertCircle, badge: 0 },
+  { label: 'Live Metrics', href: '/portal/metrics', icon: Zap },
   { label: 'Performance', href: '/portal/performance', icon: BarChart3 },
   { label: 'Chat', href: '/portal/chat', icon: MessageSquare },
   { label: 'Settings', href: '/portal/settings', icon: Settings },
