@@ -11,6 +11,10 @@ const API_BASE = '/api/agents';
  * Hook to subscribe to real-time agent changes via API
  * Uses server-side API routes that properly set tenant context for RLS
  * Falls back to realtime updates via Supabase subscriptions
+ * 
+ * FIX for Issues #61, #62: Portal Auth/RLS Bugs
+ * - Previously used direct Supabase calls which bypassed tenant context
+ * - Now uses API routes that properly set tenant context via set_tenant_context RPC
  */
 export function useAgentsRealtime(tenantId: string | null) {
   const [agents, setAgents] = useState<Agent[]>([]);

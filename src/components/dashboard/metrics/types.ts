@@ -205,23 +205,27 @@ export interface UseRealtimeMetricsReturn {
   agentMetrics: AgentLiveMetrics[];
   selectedAgent: AgentLiveMetrics | null;
   setSelectedAgent: (agent: AgentLiveMetrics | null) => void;
-  
+
   // System health
   systemHealth: SystemHealthMetrics | null;
-  
+
   // Aggregated metrics
   aggregated: AggregatedMetrics | null;
-  
+
   // Chart data (time series)
   tasksPerMinuteHistory: LiveMetricPoint[];
   successRateHistory: LiveMetricPoint[];
   agentLoadHistory: LiveMetricPoint[];
-  
+
   // Connection state
   isConnected: boolean;
   isRealtime: boolean;
   lastUpdateAt: Date | null;
-  
+
+  // Error state
+  error: Error | null;
+  isLoading: boolean;
+
   // Actions
   refresh: () => void;
   subscribeToAgent: (agentId: string) => void;
