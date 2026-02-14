@@ -71,7 +71,7 @@ function transformActivity(activity: Activity): ActivityEvent {
 // useRealtimeActivities Hook
 // ============================================================================
 
-interface UseRealtimeActivitiesReturn {
+export interface UseRealtimeActivitiesReturn {
   events: ActivityEvent[];
   isLoading: boolean;
   isRealtime: boolean;
