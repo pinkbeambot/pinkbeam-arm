@@ -84,6 +84,37 @@ function EmptyState({ message }: { message: string }) {
 }
 
 // ============================================================================
+// ErrorState Component
+// ============================================================================
+
+interface ErrorStateProps {
+  message: string;
+  onRetry?: () => void;
+}
+
+function ErrorState({ message, onRetry }: ErrorStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center" data-testid="metrics-error-state">
+      <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+        <AlertCircle className="w-8 h-8 text-red-600" />
+      </div>
+      <h3 className="text-lg font-medium text-foreground mb-1">
+        Failed to fetch metrics
+      </h3>
+      <p className="text-sm text-muted-foreground mb-4">
+        {message}
+      </p>
+      {onRetry && (
+        <Button onClick={onRetry} variant="outline" size="sm">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Retry
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // RealtimeMetricsDashboard Component
 // ============================================================================
 
@@ -109,6 +140,8 @@ export function RealtimeMetricsDashboard({
     isConnected,
     isRealtime,
     lastUpdateAt,
+    error,
+    isLoading,
     refresh,
   } = useRealtimeMetrics({
     enabled: true,
@@ -173,8 +206,25 @@ export function RealtimeMetricsDashboard({
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between" data-testid="metrics-error-banner">
+          <div className="flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600" />
+            <div>
+              <p className="font-medium text-red-600">Failed to fetch metrics</p>
+              <p className="text-sm text-red-600/80">{error.message}</p>
+            </div>
+          </div>
+          <Button onClick={handleRefresh} variant="outline" size="sm">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      )}
+
       {/* System Health */}
-      {showSystemHealth && systemHealth && (
+      {showSystemHealth && systemHealth && !error && (
         <SystemHealthIndicator
           health={systemHealth}
           showDetails
@@ -182,7 +232,7 @@ export function RealtimeMetricsDashboard({
       )}
 
       {/* Aggregated Metrics */}
-      {aggregated && (
+      {aggregated && !error && (
         <>
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Overview</h2>
@@ -275,7 +325,9 @@ export function RealtimeMetricsDashboard({
 
             <Card>
               <CardContent className="p-4 space-y-3 max-h-[600px] overflow-y-auto scrollbar-thin">
-                {agentMetrics.length === 0 ? (
+                {error ? (
+                  <ErrorState message={error.message} onRetry={handleRefresh} />
+                ) : agentMetrics.length === 0 ? (
                   <EmptyState message="No agents found" />
                 ) : (
                   agentMetrics.map((agent) => (
