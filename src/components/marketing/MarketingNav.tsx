@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu } from "lucide-react";
+import { Menu, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
@@ -74,16 +74,25 @@ export function MarketingNav({ currentPath }: MarketingNavProps) {
             ))}
           </nav>
 
-          {/* Actions */}
+          {/* Auth Actions */}
           <div className="flex items-center gap-3">
+            {/* Desktop: Log In link + Get Started button */}
             <Link
-              href="/portal"
-              className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors"
+              href="/login"
+              className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
             >
-              Portal
+              Log In
             </Link>
-            <Button asChild size="sm" className="hidden sm:flex">
-              <Link href="/portal">Enter Portal</Link>
+            <Button 
+              asChild 
+              size="sm" 
+              variant="beam"
+              className="hidden sm:flex"
+            >
+              <Link href="/signup">
+                Get Started
+                <ArrowRight className="w-4 h-4 ml-1.5" />
+              </Link>
             </Button>
 
             {/* Mobile Menu */}
@@ -122,17 +131,20 @@ export function MarketingNav({ currentPath }: MarketingNavProps) {
                     <hr className="my-4 border-border" />
 
                     <Link
-                      href="/portal"
+                      href="/login"
                       onClick={() => setMobileMenuOpen(false)}
                       className="px-4 py-3 text-base text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Portal
+                      Log In
                     </Link>
                   </nav>
 
-                  <div className="pt-4 border-t border-border">
-                    <Button asChild className="w-full">
-                      <Link href="/portal">Enter Portal</Link>
+                  <div className="pt-4 border-t border-border space-y-3">
+                    <Button asChild className="w-full" variant="beam">
+                      <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                        Get Started
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Link>
                     </Button>
                   </div>
                 </div>

@@ -2,21 +2,41 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-import { Mail, Loader2, CheckCircle2, ArrowLeft, Sparkles } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Loader2, CheckCircle2, ArrowLeft, Sparkles, Shield, Zap, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { toast } from '@/components/ui/use-toast';
 
-export default function LoginPage() {
+const valueProps = [
+  {
+    icon: Sparkles,
+    title: 'Full Visibility',
+    description: 'See what every AI employee is working on in real-time',
+  },
+  {
+    icon: Shield,
+    title: 'Total Control',
+    description: 'Set guardrails, approve decisions, maintain oversight',
+  },
+  {
+    icon: Zap,
+    title: 'Infinite Scale',
+    description: 'Add agents as you grow — no hiring overhead',
+  },
+];
+
+export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { signInWithMagicLink } = useAuth();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') || '/portal';
 
@@ -43,13 +63,19 @@ export default function LoginPage() {
 
     setIsSuccess(true);
     setIsSubmitting(false);
+    
+    // Show welcome toast (will be shown after redirect)
+    toast({
+      title: 'Welcome to Pink Beam!',
+      description: 'Check your email to complete signup.',
+    });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-muted/30 to-background p-4">
       {/* Background Effects */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-pink-500/10 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent pointer-events-none" />
       
       <div className="w-full max-w-md relative z-10">
         {/* Back to home link */}
@@ -61,7 +87,7 @@ export default function LoginPage() {
           Back to home
         </Link>
 
-        <Card className="border-border/50 shadow-xl">
+        <Card className="border-border/50 shadow-xl shadow-pink-500/5">
           <CardHeader className="space-y-1 text-center">
             {/* Logo */}
             <div className="flex justify-center mb-4">
@@ -70,12 +96,12 @@ export default function LoginPage() {
               </div>
             </div>
             <CardTitle className="text-2xl font-bold">
-              {isSuccess ? 'Check your email' : 'Welcome back'}
+              {isSuccess ? 'Check your email' : 'Start managing your AI workforce'}
             </CardTitle>
             <CardDescription>
               {isSuccess 
-                ? `We've sent a secure login link to ${email}`
-                : 'Sign in to your Pink Beam ARM account'
+                ? `We've sent a magic link to ${email}`
+                : 'Create your account and get started in minutes'
               }
             </CardDescription>
           </CardHeader>
@@ -88,7 +114,7 @@ export default function LoginPage() {
                     <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" />
                   </div>
                   <p className="text-sm text-muted-foreground max-w-sm mb-2">
-                    Click the link in your email to sign in instantly. No passwords needed.
+                    Click the link in your email to complete your signup and access your portal.
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Can&apos;t find it? Check your spam folder.
@@ -107,6 +133,24 @@ export default function LoginPage() {
               </div>
             ) : (
               <>
+                {/* Value Props */}
+                <div className="space-y-3">
+                  {valueProps.map((prop) => {
+                    const Icon = prop.icon;
+                    return (
+                      <div key={prop.title} className="flex items-start gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <Icon className="w-4 h-4 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{prop.title}</p>
+                          <p className="text-xs text-muted-foreground">{prop.description}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {error && (
                     <Alert variant="destructive" className="text-sm">
@@ -116,7 +160,7 @@ export default function LoginPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-sm font-medium">
-                      Email address
+                      Work email
                     </Label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -144,31 +188,51 @@ export default function LoginPage() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending magic link...
+                        Creating your account...
                       </>
                     ) : (
-                      'Send Magic Link'
+                      'Create Free Account'
                     )}
                   </Button>
                 </form>
 
-                {/* Helper text */}
-                <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/50 p-3 rounded-lg">
-                  <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-medium text-foreground mb-0.5">No passwords to remember</p>
-                    <p>We&apos;ll email you a secure login link. Click it and you&apos;re in.</p>
+                {/* Trust Elements */}
+                <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <span>No credit card required</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+                    <span>Free tier includes 3 agents</span>
                   </div>
                 </div>
 
-                {/* New here? */}
-                <p className="text-center text-sm text-muted-foreground pt-2 border-t border-border/50">
-                  New here?{' '}
+                {/* Social Proof */}
+                <div className="flex items-center justify-center gap-2 pt-2 border-t border-border/50">
+                  <div className="flex -space-x-2">
+                    {[...Array(4)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-7 h-7 rounded-full bg-gradient-to-br from-pink-400 to-violet-500 border-2 border-background flex items-center justify-center"
+                      >
+                        <Users className="w-3 h-3 text-white" />
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    Join <span className="font-medium text-foreground">100+</span> AI-native founders
+                  </span>
+                </div>
+
+                {/* Already have account */}
+                <p className="text-center text-sm text-muted-foreground">
+                  Already have an account?{' '}
                   <Link 
-                    href={`/signup${redirectTo !== '/portal' ? `?redirect=${redirectTo}` : ''}`}
+                    href={`/login${redirectTo !== '/portal' ? `?redirect=${redirectTo}` : ''}`}
                     className="font-medium text-primary hover:text-primary/80 transition-colors"
                   >
-                    Create an account
+                    Log in
                   </Link>
                 </p>
               </>
@@ -178,7 +242,7 @@ export default function LoginPage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-muted-foreground mt-8">
-          By signing in, you agree to our{' '}
+          By creating an account, you agree to our{' '}
           <Link href="/terms" className="underline hover:text-foreground">
             Terms of Service
           </Link>{' '}
