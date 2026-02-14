@@ -17,7 +17,6 @@ import {
   TrendingDown,
   Minus
 } from 'lucide-react';
-import { LiveSparkline } from './LiveLineChart';
 import type { AgentMetricsCardProps, AgentLiveMetrics } from './types';
 
 // ============================================================================
@@ -186,7 +185,6 @@ interface AgentMetricsCompactProps {
   isSelected?: boolean;
   onClick?: () => void;
   className?: string;
-  sparklineData?: number[];
 }
 
 export function AgentMetricsCompact({
@@ -194,7 +192,6 @@ export function AgentMetricsCompact({
   isSelected = false,
   onClick,
   className,
-  sparklineData,
 }: AgentMetricsCompactProps) {
   const statusColor = getStatusColor(agent.status);
 
@@ -216,17 +213,6 @@ export function AgentMetricsCompact({
         <p className="font-medium text-sm truncate">{agent.agentName}</p>
         <p className="text-xs text-muted-foreground truncate">{agent.agentId}</p>
       </div>
-
-      {/* Sparkline */}
-      {sparklineData && sparklineData.length > 0 && (
-        <div className="w-20 h-8">
-          <LiveSparkline
-            data={sparklineData.map((v, i) => ({ timestamp: i, value: v }))}
-            color={agent.successRate > 90 ? '#22c55e' : '#eab308'}
-            height={32}
-          />
-        </div>
-      )}
 
       {/* Key metric */}
       <div className="text-right">

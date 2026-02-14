@@ -1,50 +1,32 @@
-/**
- * Realtime Metrics Dashboard
- * 
- * Main dashboard component for real-time metrics featuring:
- * - Live updating charts (tasks/min, success rate, agent load)
- * - Agent performance cards with real-time updates
- * - System health indicators
- * - Aggregated metrics grid
- * - WebSocket connection status
- */
-
 'use client';
 
 import * as React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-import {
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { 
+  RefreshCw, 
+  Wifi, 
+  WifiOff, 
   Activity,
   BarChart3,
-  Cpu,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-  Users,
-  Zap,
-  LayoutDashboard,
+  LayoutGrid,
   Settings,
+  Filter
 } from 'lucide-react';
 
-// Hooks
 import { useRealtimeMetrics } from './useRealtimeMetrics';
-
-// Components
 import { LiveLineChart } from './LiveLineChart';
 import { AgentMetricsCard, AgentMetricsCompact } from './AgentMetricsCard';
-import { SystemHealthIndicator, SystemHealthCompact } from './SystemHealthIndicator';
+import { SystemHealthIndicator, SystemHealthCompact, HealthStatusBadge } from './SystemHealthIndicator';
 import { MetricsGrid, MetricsSummary } from './MetricsGrid';
 
-// Types
-import type { RealtimeMetricsDashboardProps, MetricTimeRange, AgentLiveMetrics } from './types';
+import type { RealtimeMetricsDashboardProps, MetricTimeRange } from './types';
 
 // ============================================================================
-// Time Range Selector
+// TimeRangeSelector Component
 // ============================================================================
 
 interface TimeRangeSelectorProps {
@@ -67,7 +49,7 @@ function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
           key={range.value}
           onClick={() => onChange(range.value)}
           className={cn(
-            'px-3 py-1 text-xs font-medium rounded-md transition-all',
+            'px-3 py-1 text-sm font-medium rounded-md transition-all',
             value === range.value
               ? 'bg-background text-foreground shadow-sm'
               : 'text-muted-foreground hover:text-foreground'
@@ -81,33 +63,27 @@ function TimeRangeSelector({ value, onChange }: TimeRangeSelectorProps) {
 }
 
 // ============================================================================
-// Live Indicator
+// EmptyState Component
 // ============================================================================
 
-function LiveIndicator({ isLive, lastUpdate }: { isLive: boolean; lastUpdate: Date | null }) {
+function EmptyState({ message }: { message: string }) {
   return (
-    <div className="flex items-center gap-2">
-      <div className={cn(
-        'w-2 h-2 rounded-full animate-pulse',
-        isLive ? 'bg-green-500' : 'bg-amber-500'
-      )} />
-      <span className={cn(
-        'text-xs font-medium',
-        isLive ? 'text-green-600' : 'text-amber-600'
-      )}>
-        {isLive ? 'LIVE' : 'POLLING'}
-      </span>
-      {lastUpdate && (
-        <span className="text-xs text-muted-foreground">
-          Updated {lastUpdate.toLocaleTimeString()}
-        </span>
-      )}
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+        <Activity className="w-8 h-8 text-muted-foreground" />
+      </div>
+      <h3 className="text-lg font-medium text-foreground mb-1">
+        {message}
+      </h3>
+      <p className="text-sm text-muted-foreground">
+        Metrics will appear here when data is available.
+      </p>
     </div>
   );
 }
 
 // ============================================================================
-// Main Dashboard Component
+// RealtimeMetricsDashboard Component
 // ============================================================================
 
 export function RealtimeMetricsDashboard({
@@ -117,9 +93,9 @@ export function RealtimeMetricsDashboard({
   showAgentList = true,
 }: RealtimeMetricsDashboardProps) {
   const [timeRange, setTimeRange] = React.useState<MetricTimeRange>(defaultTimeRange);
-  const [isRefreshing, setIsRefreshing] = React.useState(false);
+  const [viewMode, setViewMode] = React.useState<'grid' | 'list'>('grid');
+  const [showSummary, setShowSummary] = React.useState(false);
 
-  // Use the realtime metrics hook
   const {
     agentMetrics,
     selectedAgent,
@@ -135,247 +111,263 @@ export function RealtimeMetricsDashboard({
     refresh,
   } = useRealtimeMetrics({
     enabled: true,
-    maxDataPoints: timeRange === 'live' ? 60 : timeRange === '1h' ? 60 : 24,
+    refreshInterval: timeRange === 'live' ? 1000 : 5000,
   });
 
-  // Handle manual refresh
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    await refresh();
-    setTimeout(() => setIsRefreshing(false), 500);
+  const handleRefresh = () => {
+    refresh();
+  };
+
+  const formatLastUpdate = () => {
+    if (!lastUpdateAt) return 'Never';
+    return lastUpdateAt.toLocaleTimeString();
   };
 
   return (
     <div className={cn('space-y-6', className)}>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Real-time Metrics</h1>
-          <div className="flex items-center gap-4 mt-1">
-            <LiveIndicator isLive={isRealtime} lastUpdate={lastUpdateAt} />
-            {aggregated && <MetricsSummary metrics={aggregated} />}
-          </div>
+          <h1 className="text-2xl font-bold text-foreground">Real-time Metrics</h1>
+          <p className="text-sm text-muted-foreground">
+            Live agent performance and system health monitoring
+          </p>
         </div>
-        
+
         <div className="flex items-center gap-3">
-          <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
-          <Badge variant={isRealtime ? 'default' : 'secondary'} className="gap-1">
+          {/* Realtime indicator */}
+          <div
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium',
+              isRealtime
+                ? 'bg-green-500/10 text-green-600'
+                : 'bg-amber-500/10 text-amber-600'
+            )}
+          >
             {isRealtime ? (
               <>
-                <Wifi className="w-3 h-3" />
-                Live
+                <Wifi className="w-4 h-4" />
+                <span>Live</span>
               </>
             ) : (
               <>
-                <WifiOff className="w-3 h-3" />
-                Polling
+                <WifiOff className="w-4 h-4" />
+                <span>Offline</span>
               </>
             )}
-          </Badge>
+          </div>
+
+          {/* Time range selector */}
+          <TimeRangeSelector value={timeRange} onChange={setTimeRange} />
+
+          {/* Refresh button */}
           <Button
             variant="outline"
             size="icon"
             onClick={handleRefresh}
-            disabled={isRefreshing}
+            className="h-9 w-9"
           >
-            <RefreshCw className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+            <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
       </div>
 
-      {/* Main Content Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="overview" className="gap-2">
-            <LayoutDashboard className="h-4 w-4" />
-            Overview
-          </TabsTrigger>
-          <TabsTrigger value="agents" className="gap-2">
-            <Users className="h-4 w-4" />
-            Agents
-          </TabsTrigger>
-          <TabsTrigger value="system" className="gap-2">
-            <Cpu className="h-4 w-4" />
-            System
-          </TabsTrigger>
-        </TabsList>
+      {/* System Health */}
+      {showSystemHealth && systemHealth && (
+        <SystemHealthIndicator
+          health={systemHealth}
+          showDetails
+        />
+      )}
 
-        {/* Overview Tab */}
-        <TabsContent value="overview" className="space-y-6">
-          {/* Live Charts Row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Aggregated Metrics */}
+      {aggregated && (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Overview</h2>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={showSummary ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setShowSummary(!showSummary)}
+              >
+                {showSummary ? 'Compact View' : 'Detailed View'}
+              </Button>
+            </div>
+          </div>
+
+          {showSummary ? (
+            <MetricsSummary metrics={aggregated} />
+          ) : (
+            <MetricsGrid metrics={aggregated} />
+          )}
+        </>
+      )}
+
+      {/* Charts & Agent List */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Charts */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Performance Charts</h2>
+            <span className="text-xs text-muted-foreground">
+              Last updated: {formatLastUpdate()}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <LiveLineChart
-              title="Tasks per Minute"
               data={tasksPerMinuteHistory}
-              color="#ec4899"
-              valueFormatter={(v: number) => v.toFixed(1)}
+              title="Tasks per Minute"
+              valueFormatter={(v) => `${v.toFixed(1)}/min`}
+              color="#3b82f6"
               showArea
-              height={180}
             />
+
             <LiveLineChart
-              title="Success Rate"
               data={successRateHistory}
+              title="Success Rate"
+              valueFormatter={(v) => `${v.toFixed(1)}%`}
               color="#22c55e"
-              valueFormatter={(v: number) => `${v.toFixed(0)}%`}
               yAxisMin={0}
               yAxisMax={100}
               showArea
-              height={180}
             />
+
             <LiveLineChart
-              title="Agent Load"
               data={agentLoadHistory}
-              color="#3b82f6"
-              valueFormatter={(v: number) => v.toFixed(1)}
+              title="Agent Load Average"
+              valueFormatter={(v) => `${v.toFixed(0)}%`}
+              color="#f59e0b"
+              yAxisMin={0}
+              yAxisMax={100}
               showArea
-              height={180}
+              className="md:col-span-2"
             />
           </div>
+        </div>
 
-          {/* Main Content Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Agent List */}
-            {showAgentList && (
-              <Card className="lg:col-span-1">
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Users className="w-4 h-4 text-pink-500" />
-                    Active Agents
-                    <Badge variant="secondary" className="ml-auto">
-                      {agentMetrics.length}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-[400px]">
-                    <div className="space-y-2">
-                      {agentMetrics.map((agent: AgentLiveMetrics) => (
-                        <AgentMetricsCompact
-                          key={agent.agentId}
-                          agent={agent}
-                          isSelected={selectedAgent?.agentId === agent.agentId}
-                          onClick={() => setSelectedAgent(
-                            selectedAgent?.agentId === agent.agentId ? null : agent
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Metrics Grid */}
-            <div className="lg:col-span-2 space-y-6">
-              {aggregated && <MetricsGrid metrics={aggregated} />}
-              
-              {showSystemHealth && systemHealth && (
-                <SystemHealthCompact health={systemHealth} />
-              )}
+        {/* Agent List */}
+        {showAgentList && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Agents</h2>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setViewMode('grid')}
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setViewMode('list')}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
-          </div>
-        </TabsContent>
 
-        {/* Agents Tab */}
-        <TabsContent value="agents" className="space-y-6">
-          {/* Selected Agent Detail */}
-          {selectedAgent && (
-            <Card className="border-pink-200 bg-pink-50/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-pink-500" />
-                  {selectedAgent.agentName} - Detailed View
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tasks/Min</p>
-                    <p className="text-2xl font-bold">{selectedAgent.tasksPerMinute.toFixed(2)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Success Rate</p>
-                    <p className="text-2xl font-bold">{selectedAgent.successRate.toFixed(1)}%</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Current Load</p>
-                    <p className="text-2xl font-bold">{selectedAgent.currentLoad.toFixed(0)}%</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Avg Response</p>
-                    <p className="text-2xl font-bold">{Math.round(selectedAgent.avgResponseTime)}ms</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Agent Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {agentMetrics.map((agent: AgentLiveMetrics) => (
-              <AgentMetricsCard
-                key={agent.agentId}
-                agent={agent}
-                isSelected={selectedAgent?.agentId === agent.agentId}
-                onClick={() => setSelectedAgent(
-                  selectedAgent?.agentId === agent.agentId ? null : agent
-                )}
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* System Tab */}
-        <TabsContent value="system" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {systemHealth && (
-              <SystemHealthIndicator health={systemHealth} showDetails />
-            )}
-            
-            {/* Connection Stats */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Wifi className="w-4 h-4 text-pink-500" />
-                  Connection Status
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">WebSocket Status</span>
-                  <Badge variant={isRealtime ? 'default' : 'secondary'}>
-                    {isRealtime ? 'Connected' : 'Disconnected'}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">Data Source</span>
-                  <Badge variant={isRealtime ? 'default' : 'secondary'}>
-                    {isRealtime ? 'Realtime' : 'Polling'}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between py-2">
-                  <span className="text-sm text-muted-foreground">Last Update</span>
-                  <span className="text-sm">
-                    {lastUpdateAt?.toLocaleTimeString() || 'Never'}
-                  </span>
-                </div>
+              <CardContent className="p-4 space-y-3 max-h-[600px] overflow-y-auto scrollbar-thin">
+                {agentMetrics.length === 0 ? (
+                  <EmptyState message="No agents found" />
+                ) : (
+                  agentMetrics.map((agent) => (
+                    viewMode === 'grid' ? (
+                      <AgentMetricsCard
+                        key={agent.agentId}
+                        agent={agent}
+                        isSelected={selectedAgent?.agentId === agent.agentId}
+                        onClick={() => setSelectedAgent(
+                          selectedAgent?.agentId === agent.agentId ? null : agent
+                        )}
+                      />
+                    ) : (
+                      <AgentMetricsCompact
+                        key={agent.agentId}
+                        agent={agent}
+                        isSelected={selectedAgent?.agentId === agent.agentId}
+                        onClick={() => setSelectedAgent(
+                          selectedAgent?.agentId === agent.agentId ? null : agent
+                        )}
+                      />
+                    )
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
+
+      {/* Selected Agent Details */}
+      {selectedAgent && (
+        <Card className="border-primary/50">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CardTitle>{selectedAgent.agentName}</CardTitle>
+                <HealthStatusBadge 
+                  status={selectedAgent.status === 'active' ? 'healthy' : 
+                          selectedAgent.status === 'error' ? 'critical' : 
+                          selectedAgent.status === 'paused' ? 'degraded' : 'unknown'} 
+                  size="sm"
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedAgent(null)}
+              >
+                Close
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground">Agent ID</p>
+                <p className="font-mono text-sm">{selectedAgent.agentId}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Tasks/min</p>
+                <p className="text-lg font-semibold">{selectedAgent.tasksPerMinute.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Success Rate</p>
+                <p className={cn(
+                  'text-lg font-semibold',
+                  selectedAgent.successRate >= 95 ? 'text-green-600' :
+                  selectedAgent.successRate >= 80 ? 'text-amber-600' : 'text-red-600'
+                )}>
+                  {selectedAgent.successRate.toFixed(1)}%
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Avg Response</p>
+                <p className="text-lg font-semibold">{selectedAgent.avgResponseTime.toFixed(0)}ms</p>
+              </div>
+            </div>
+
+            {selectedAgent.errorRate > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-red-500/10 text-red-600 text-sm">
+                <strong>Error Rate:</strong> {selectedAgent.errorRate.toFixed(2)}% - 
+                {selectedAgent.errorRate > 5 
+                  ? ' Elevated error rate detected. Consider investigating.' 
+                  : ' Within normal range.'}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-// ============================================================================
-// Page Wrapper for Next.js App Router
-// ============================================================================
-
-export default function RealtimeMetricsPage() {
-  return (
-    <div className="space-y-6">
-      <RealtimeMetricsDashboard />
-    </div>
-  );
-}
+// Default export
+export default RealtimeMetricsDashboard;

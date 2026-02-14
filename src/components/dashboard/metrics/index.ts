@@ -35,7 +35,7 @@ export type {
 export { useRealtimeMetrics } from './useRealtimeMetrics';
 
 // Components
-export { LiveLineChart } from './LiveLineChart';
+export { LiveLineChart, LiveSparkline } from './LiveLineChart';
 export { AgentMetricsCard, AgentMetricsCompact } from './AgentMetricsCard';
 export { 
   SystemHealthIndicator, 
