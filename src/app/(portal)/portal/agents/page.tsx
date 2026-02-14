@@ -1,18 +1,16 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, Users, Network } from 'lucide-react';
+import { Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
-import { AgentHierarchy } from '@/components/agents';
 import { ChatPanel } from '@/components/chat';
 import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent } from '@/lib/hooks/useAgents';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, CreateAgentInput } from '@/types';
 
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
@@ -89,66 +87,46 @@ export default function AgentsPage() {
           <StatCard label="Error" value={stats.error} color="red" />
         </div>
 
-        <Tabs defaultValue="list" className="space-y-6">
-          <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:inline-flex">
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Agent List
-            </TabsTrigger>
-            <TabsTrigger value="hierarchy" className="flex items-center gap-2">
-              <Network className="h-4 w-4" />
-              Hierarchy
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="list" className="space-y-6">
-            <AgentFilters
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              roleFilter={roleFilter}
-              onRoleFilterChange={setRoleFilter}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              sortField={sortField}
-              onSortFieldChange={setSortField}
-              sortOrder={sortOrder}
-              onSortOrderChange={setSortOrder}
-            />
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
-                <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
-              </div>
-            )}
-            <AgentList
-              agents={filteredAgents}
-              loading={loading}
-              viewMode={viewMode}
-              selectedAgentId={selectedAgent?.id}
-              onSelectAgent={handleSelectAgent}
-            />
-          </TabsContent>
-
-          <TabsContent value="hierarchy" className="space-y-6">
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
-                <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
-              </div>
-            )}
-            <div className="border rounded-lg bg-card" style={{ height: '600px' }}>
-              <AgentHierarchy agents={agents} selectedAgentId={selectedAgent?.id} onSelectAgent={handleSelectAgent} showStats={true} />
+        <div className="space-y-6">
+          <AgentFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            roleFilter={roleFilter}
+            onRoleFilterChange={setRoleFilter}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            sortField={sortField}
+            onSortFieldChange={setSortField}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+          />
+          {error && (
+            <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
+              <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+          <AgentList
+            agents={filteredAgents}
+            loading={loading}
+            viewMode={viewMode}
+            selectedAgentId={selectedAgent?.id}
+            onSelectAgent={handleSelectAgent}
+            onEditAgent={() => {}}
+            onToggleStatus={() => {}}
+            onDeleteAgent={() => {}}
+          />
+        </div>
 
         <AgentDetailPanel
           agent={selectedAgent}
           loading={updateLoading || deleteLoading}
           open={detailOpen}
           onOpenChange={setDetailOpen}
+          onChat={() => {}}
+          onToggleStatus={() => {}}
         />
 
         <CreateAgentModal

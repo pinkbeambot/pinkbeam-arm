@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { AgentHierarchy } from '@/components/agents/AgentHierarchy';
+import { AgentHierarchy } from '@/components/agents';
 import type { Agent, AgentStatus, AgentRole } from '@/types';
 
 // Mock data

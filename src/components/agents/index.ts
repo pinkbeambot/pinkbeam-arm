@@ -20,3 +20,11 @@ export {
   AgentActivityGrid,
   type AgentActivityPulseProps,
 } from "./AgentActivityPulse";
+
+// Agent Hierarchy Components
+export {
+  AgentHierarchy,
+  type AgentHierarchyProps,
+  type AgentHierarchyNodeProps,
+  type AgentHierarchyStats,
+} from "./AgentHierarchy";
