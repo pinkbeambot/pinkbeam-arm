@@ -8,7 +8,7 @@ import { FadeIn } from "@/components/animations";
 
 const employeeTabs = [
   {
-    id: "researcher",
+    id: "sarah",
     label: "Researcher",
     icon: Search,
     name: "Sarah",
@@ -23,7 +23,7 @@ const employeeTabs = [
     color: "bg-pink-500",
   },
   {
-    id: "sdr",
+    id: "mike",
     label: "SDR",
     icon: Users,
     name: "Mike",
@@ -38,7 +38,7 @@ const employeeTabs = [
     color: "bg-purple-500",
   },
   {
-    id: "support",
+    id: "alex",
     label: "Support",
     icon: Headphones,
     name: "Alex",
@@ -53,7 +53,7 @@ const employeeTabs = [
     color: "bg-cyan-500",
   },
   {
-    id: "content",
+    id: "casey",
     label: "Content",
     icon: PenTool,
     name: "Casey",
@@ -68,7 +68,7 @@ const employeeTabs = [
     color: "bg-amber-500",
   },
   {
-    id: "designer",
+    id: "lumen",
     label: "Designer",
     icon: Palette,
     name: "LUMEN",
@@ -83,7 +83,7 @@ const employeeTabs = [
     color: "bg-indigo-500",
   },
   {
-    id: "video",
+    id: "flux",
     label: "Video",
     icon: Video,
     name: "FLUX",
