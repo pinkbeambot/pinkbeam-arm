@@ -1,19 +1,20 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Network } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
+import { AgentHierarchy } from '@/components/agents';
 import { ChatPanel } from '@/components/chat';
 import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent } from '@/lib/hooks/useAgents';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, CreateAgentInput } from '@/types';
 
-// Demo tenant ID - in production, this would come from auth context
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 export default function AgentsPage() {
@@ -23,7 +24,6 @@ export default function AgentsPage() {
   const { deleteAgent, loading: deleteLoading } = useDeleteAgent();
   const { createAgent, loading: createLoading } = useCreateAgent();
 
-  // UI State
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all');
@@ -31,110 +31,35 @@ export default function AgentsPage() {
   const [sortField, setSortField] = useState<SortField>('name');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   
-  // Modal State
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
   
-  // Chat State
   const [chatOpen, setChatOpen] = useState(false);
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
 
-  // Filter and sort agents
   const filteredAgents = useMemo(() => 
     filterAndSortAgents(agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder),
     [agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder]
   );
 
-  // Handlers
   const handleSelectAgent = useCallback((agent: Agent) => {
     setSelectedAgent(agent);
     setDetailOpen(true);
   }, []);
 
-  const handleEditAgent = useCallback((agent: Agent) => {
-    setSelectedAgent(agent);
-    setDetailOpen(false);
-    // Navigate to edit page or open edit modal
-    toast({
-      title: 'Edit Agent',
-      description: `Editing ${agent.name} - This feature is coming soon.`,
-    });
-  }, [toast]);
-
-  const handleToggleStatus = useCallback(async (agent: Agent) => {
-    try {
-      const newStatus = agent.status === 'paused' ? 'idle' : 'paused';
-      await updateAgent(agent.id, { status: newStatus });
-      toast({
-        title: 'Status Updated',
-        description: `${agent.name} is now ${newStatus === 'paused' ? 'paused' : 'active'}.`,
-      });
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update agent status.',
-        variant: 'destructive',
-      });
-    }
-  }, [updateAgent, toast]);
-
-  const handleDeleteAgent = useCallback(async (agent: Agent) => {
-    if (!confirm(`Are you sure you want to delete ${agent.name}? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await deleteAgent(agent.id);
-      toast({
-        title: 'Agent Deleted',
-        description: `${agent.name} has been deleted.`,
-      });
-      if (selectedAgent?.id === agent.id) {
-        setDetailOpen(false);
-        setSelectedAgent(null);
-      }
-    } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete agent.',
-        variant: 'destructive',
-      });
-    }
-  }, [deleteAgent, selectedAgent, toast]);
-
   const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
     try {
-      await createAgent({
-        ...data,
-        tenant_id: DEMO_TENANT_ID,
-      });
-      toast({
-        title: 'Agent Created',
-        description: `${data.name} has been created and is ready for configuration.`,
-      });
+      await createAgent({ ...data, tenant_id: DEMO_TENANT_ID });
+      toast({ title: 'Agent Created', description: `${data.name} has been created.` });
       setCreateModalOpen(false);
       refetch();
     } catch (err) {
-      toast({
-        title: 'Error',
-        description: 'Failed to create agent.',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to create agent.', variant: 'destructive' });
       throw err;
     }
   }, [createAgent, refetch, toast]);
 
-  const handleChat = useCallback(() => {
-    if (selectedAgent) {
-      setChatAgentId(selectedAgent.id);
-      setChatOpen(true);
-      // Close detail panel when opening chat
-      setDetailOpen(false);
-    }
-  }, [selectedAgent]);
-
-  // Stats
   const stats = useMemo(() => ({
     total: agents.length,
     active: agents.filter(a => a.status === 'active').length,
@@ -156,7 +81,6 @@ export default function AgentsPage() {
           </Button>
         </PageHeader>
 
-        {/* Stats Bar */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
           <StatCard label="Total" value={stats.total} icon={Users} />
           <StatCard label="Active" value={stats.active} color="emerald" />
@@ -165,90 +89,83 @@ export default function AgentsPage() {
           <StatCard label="Error" value={stats.error} color="red" />
         </div>
 
-        {/* Filters */}
-        <div className="mb-6">
-          <AgentFilters
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            roleFilter={roleFilter}
-            onRoleFilterChange={setRoleFilter}
-            viewMode={viewMode}
-            onViewModeChange={setViewMode}
-            sortField={sortField}
-            onSortFieldChange={setSortField}
-            sortOrder={sortOrder}
-            onSortOrderChange={setSortOrder}
-          />
-        </div>
+        <Tabs defaultValue="list" className="space-y-6">
+          <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:inline-flex">
+            <TabsTrigger value="list" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Agent List
+            </TabsTrigger>
+            <TabsTrigger value="hierarchy" className="flex items-center gap-2">
+              <Network className="h-4 w-4" />
+              Hierarchy
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-800 dark:text-red-200">
-              Failed to load agents: {error.message}
-            </p>
-            <Button variant="outline" size="sm" onClick={refetch} className="mt-2">
-              Retry
-            </Button>
-          </div>
-        )}
+          <TabsContent value="list" className="space-y-6">
+            <AgentFilters
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              roleFilter={roleFilter}
+              onRoleFilterChange={setRoleFilter}
+              viewMode={viewMode}
+              onViewModeChange={setViewMode}
+              sortField={sortField}
+              onSortFieldChange={setSortField}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+            />
+            {error && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
+                <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
+              </div>
+            )}
+            <AgentList
+              agents={filteredAgents}
+              loading={loading}
+              viewMode={viewMode}
+              selectedAgentId={selectedAgent?.id}
+              onSelectAgent={handleSelectAgent}
+            />
+          </TabsContent>
 
-        {/* Agent List */}
-        <AgentList
-          agents={filteredAgents}
-          loading={loading}
-          viewMode={viewMode}
-          selectedAgentId={selectedAgent?.id}
-          onSelectAgent={handleSelectAgent}
-          onEditAgent={handleEditAgent}
-          onToggleStatus={handleToggleStatus}
-          onDeleteAgent={handleDeleteAgent}
-        />
+          <TabsContent value="hierarchy" className="space-y-6">
+            {error && (
+              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
+                <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
+              </div>
+            )}
+            <div className="border rounded-lg bg-card" style={{ height: '600px' }}>
+              <AgentHierarchy agents={agents} selectedAgentId={selectedAgent?.id} onSelectAgent={handleSelectAgent} showStats={true} />
+            </div>
+          </TabsContent>
+        </Tabs>
 
-        {/* Detail Panel */}
         <AgentDetailPanel
           agent={selectedAgent}
           loading={updateLoading || deleteLoading}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onEdit={() => selectedAgent && handleEditAgent(selectedAgent)}
-          onChat={handleChat}
-          onToggleStatus={() => selectedAgent && handleToggleStatus(selectedAgent)}
         />
 
-        {/* Create Modal */}
         <CreateAgentModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
           onCreate={handleCreateAgent}
           loading={createLoading}
+          existingAgents={agents}
         />
 
-        {/* Chat Panel */}
-        <ChatPanel
-          chatId={null}
-          agentId={chatAgentId || undefined}
-          open={chatOpen}
-          onOpenChange={setChatOpen}
-        />
+        <ChatPanel chatId={null} agentId={chatAgentId || undefined} open={chatOpen} onOpenChange={setChatOpen} />
       </PageContainer>
     </DashboardLayout>
   );
 }
 
-function StatCard({ 
-  label, 
-  value, 
-  icon: Icon,
-  color = 'gray'
-}: { 
-  label: string; 
-  value: number; 
-  icon?: React.ElementType;
-  color?: 'gray' | 'emerald' | 'amber' | 'slate' | 'red';
-}) {
+function StatCard({ label, value, icon: Icon, color = 'gray' }: { label: string; value: number; icon?: React.ElementType; color?: 'gray' | 'emerald' | 'amber' | 'slate' | 'red'; }) {
   const colorClasses = {
     gray: 'bg-card border-border',
     emerald: 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800',
@@ -256,7 +173,6 @@ function StatCard({
     slate: 'bg-slate-50 dark:bg-slate-950/30 border-slate-200 dark:border-slate-800',
     red: 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800',
   };
-
   const textColors = {
     gray: 'text-foreground',
     emerald: 'text-emerald-600 dark:text-emerald-400',
