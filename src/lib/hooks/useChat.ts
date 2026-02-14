@@ -188,7 +188,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     const channel = supabase
       .channel(`chat:${chat.id}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as const,
         {
           event: 'INSERT',
           schema: 'public',
@@ -207,7 +207,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         }
       )
       .on(
-        'postgres_changes',
+        'postgres_changes' as const,
         {
           event: 'DELETE',
           schema: 'public',
@@ -278,7 +278,7 @@ export function useChats() {
     const channel = supabase
       .channel(`user_chats:${DEMO_TENANT_ID}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as const,
         {
           event: '*',
           schema: 'public',
