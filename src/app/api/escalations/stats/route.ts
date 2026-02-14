@@ -28,10 +28,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
+      .from('users').select('tenant_id').eq('auth_id', user.id).single();
 
     if (profileError || !userProfile?.tenant_id) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
@@ -56,12 +53,12 @@ export async function GET(request: NextRequest) {
       .gte('created_at', dateFromStr);
 
     if (error) {
-      console.error('Error fetching escalation stats:', error);
       return NextResponse.json({ error: 'Failed to fetch stats', details: error.message }, { status: 500 });
     }
 
     const list = escalations || [];
 
+    // Calculate statistics
     const byStatus: Record<string, number> = {};
     const byUrgency: Record<string, number> = {};
     const byType: Record<string, number> = {};
@@ -79,6 +76,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // Daily timeline
     const dailyCounts: Record<string, { created: number; resolved: number }> = {};
     list.forEach((e) => {
       const date = e.created_at.split('T')[0];
@@ -110,7 +108,6 @@ export async function GET(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation error', details: error.issues }, { status: 400 });
     }
-    console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
