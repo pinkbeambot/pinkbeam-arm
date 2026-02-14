@@ -1,14 +1,12 @@
-import { createSwaggerSpec } from 'next-swagger-doc';
+import { allPaths } from './openapi';
 
 export const getApiDocs = async () => {
-  const spec = createSwaggerSpec({
-    apiFolder: 'src/app/api',
-    definition: {
+  const spec = {
       openapi: '3.0.0',
       info: {
         title: 'ARM API - Agent Relationship Management',
         version: '1.0.0',
-        description: 'REST API for managing AI agents, tasks, decisions, escalations, and messages in the ARM platform.',
+        description: 'REST API for managing AI agents, tasks, decisions, escalations, and messages in the Pink Beam ARM platform. All endpoints require JWT authentication via Supabase Auth unless otherwise noted.',
         contact: {
           name: 'Pink Beam',
           url: 'https://pinkbeam.ai',
@@ -21,14 +19,18 @@ export const getApiDocs = async () => {
         },
       ],
       tags: [
-        { name: 'Agents', description: 'Agent management and configuration' },
-        { name: 'Tasks', description: 'Task creation, assignment, and tracking' },
-        { name: 'Decisions', description: 'Decision proposal and approval workflow' },
-        { name: 'Escalations', description: 'Escalation handling and resolution' },
-        { name: 'Messages', description: 'Inter-agent messaging system' },
-        { name: 'Activities', description: 'Activity feed and logging' },
-        { name: 'Analytics', description: 'Analytics and reporting' },
+        { name: 'Agents', description: 'Agent management, configuration, and version history' },
+        { name: 'Tasks', description: 'Task creation, assignment, tracking, batch operations, and dependency management' },
+        { name: 'Decisions', description: 'Decision proposal, approval workflow, and audit trail' },
+        { name: 'Escalations', description: 'Escalation handling, resolution, and statistics' },
+        { name: 'Messages', description: 'Inter-agent messaging protocol (AAP)' },
+        { name: 'Activities', description: 'Activity feed and event logging' },
+        { name: 'Chats', description: 'User-agent chat conversations' },
+        { name: 'Agent Templates', description: 'Reusable agent configuration templates' },
+        { name: 'Analytics', description: 'Dashboard metrics, agent performance, leaderboards, and ROI analysis' },
+        { name: 'Meta-Agent', description: 'VALIS natural language command interface for CEO operations' },
       ],
+      paths: allPaths,
       components: {
         securitySchemes: {
           BearerAuth: {
@@ -572,6 +574,46 @@ export const getApiDocs = async () => {
             },
             required: ['page', 'limit', 'total', 'totalPages'],
           },
+          // Agent Config Schemas
+          AgentConfig: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              agent_id: { type: 'string', format: 'uuid' },
+              version: { type: 'integer' },
+              config: { type: 'object', additionalProperties: true },
+              created_at: { type: 'string', format: 'date-time' },
+              updated_at: { type: 'string', format: 'date-time' },
+            },
+            required: ['id', 'agent_id', 'version', 'config'],
+          },
+          UpdateAgentConfigInput: {
+            type: 'object',
+            properties: {
+              config: { type: 'object', additionalProperties: true },
+              change_note: { type: 'string' },
+            },
+          },
+          TestAgentConfigInput: {
+            type: 'object',
+            properties: {
+              config: { type: 'object', additionalProperties: true },
+            },
+            required: ['config'],
+          },
+          ConfigVersion: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              agent_id: { type: 'string', format: 'uuid' },
+              version: { type: 'integer' },
+              config: { type: 'object', additionalProperties: true },
+              change_note: { type: 'string', nullable: true },
+              created_by: { type: 'string', format: 'uuid', nullable: true },
+              created_at: { type: 'string', format: 'date-time' },
+            },
+            required: ['id', 'agent_id', 'version', 'config', 'created_at'],
+          },
         },
       },
       security: [
@@ -579,7 +621,6 @@ export const getApiDocs = async () => {
           BearerAuth: [],
         },
       ],
-    },
-  });
+  };
   return spec;
 };
