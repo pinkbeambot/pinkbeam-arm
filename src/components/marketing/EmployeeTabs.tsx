@@ -119,7 +119,7 @@ export function EmployeeTabs() {
 
         {/* Tabs */}
         <FadeIn delay={0.1}>
-          <Tabs defaultValue="researcher" className="w-full">
+          <Tabs defaultValue="sarah" className="w-full">
             <TabsList className="w-full flex flex-wrap justify-center h-auto gap-2 bg-transparent mb-8">
               {employeeTabs.map((tab) => {
                 const Icon = tab.icon;

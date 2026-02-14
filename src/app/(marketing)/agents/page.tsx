@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const employees = [
   {
-    id: "researcher",
+    id: "sarah",
     name: "Sarah",
     role: "Market Intelligence Analyst",
     description: "Monitors competitors, tracks industry trends, and delivers weekly briefs with actionable insights.",
@@ -26,7 +26,7 @@ const employees = [
     ],
   },
   {
-    id: "sdr",
+    id: "mike",
     name: "Mike",
     role: "Sales Development Representative",
     description: "Identifies prospects, crafts personalized outreach, and books meetings on your calendar.",
@@ -40,7 +40,7 @@ const employees = [
     ],
   },
   {
-    id: "support",
+    id: "alex",
     name: "Alex",
     role: "Customer Support Specialist",
     description: "Handles tier-1 support tickets, answers FAQs, and escalates only what needs human judgment.",
@@ -54,7 +54,7 @@ const employees = [
     ],
   },
   {
-    id: "content",
+    id: "casey",
     name: "Casey",
     role: "Content Marketing Specialist",
     description: "Writes blog posts, social content, email sequences, and ad copy in your brand voice.",
@@ -68,7 +68,7 @@ const employees = [
     ],
   },
   {
-    id: "designer",
+    id: "lumen",
     name: "LUMEN",
     role: "Visual Designer",
     description: "Creates social graphics, presentation decks, ad creatives, and brand assets.",
@@ -82,7 +82,7 @@ const employees = [
     ],
   },
   {
-    id: "video",
+    id: "flux",
     name: "FLUX",
     role: "Motion Designer",
     description: "Produces short-form video content, animated explainers, and social clips.",

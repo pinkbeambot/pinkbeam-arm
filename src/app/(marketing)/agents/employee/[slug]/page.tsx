@@ -4,8 +4,14 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Users, Headphones, PenTool, Palette, Video, ArrowLeft, Check, ArrowRight } from "lucide-react";
+import { Search, Users, Headphones, PenTool, Palette, Video, ArrowLeft, Check, ArrowRight, HelpCircle } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import type { Metadata } from "next";
 
 // Agent data with name-based slugs as per assignment
@@ -511,8 +517,131 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
         </div>
       </div>
 
-      {/* CTA Section */}
+      {/* FAQ Section */}
       <section className="py-20 md:py-32 bg-muted/30">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
+          {/* Section Header */}
+          <FadeIn className="text-center mb-12">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-6">
+              <HelpCircle className="w-7 h-7 text-primary" />
+            </div>
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+              Frequently Asked{" "}
+              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+                Questions
+              </span>
+            </h2>
+            <p className="text-lg md:text-xl text-muted-foreground">
+              Everything you need to know about hiring {agent.name}.
+            </p>
+          </FadeIn>
+
+          {/* FAQ Accordion */}
+          <FadeIn delay={0.1}>
+            <Accordion type="single" collapsible className="space-y-4">
+              <AccordionItem
+                value="how-it-works"
+                className="bg-card rounded-xl border border-border px-6 data-[state=open]:border-primary/30 transition-colors"
+              >
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline py-5">
+                  How does {agent.name} work?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-5">
+                  {agent.name} integrates with your existing tools and workflows. After a quick 
+                  5-minute setup, {agent.name} begins working autonomously based on your 
+                  configured preferences. You can monitor progress, provide feedback, and 
+                  adjust settings through the Pink Beam portal.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="setup-time"
+                className="bg-card rounded-xl border border-border px-6 data-[state=open]:border-primary/30 transition-colors"
+              >
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline py-5">
+                  How long does setup take?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-5">
+                  Initial setup takes about 5 minutes. Connect your tools, define your 
+                  preferences and brand voice, and set any guardrails. {agent.name} starts 
+                  working immediately and learns from your feedback over time to improve 
+                  performance.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="integrations"
+                className="bg-card rounded-xl border border-border px-6 data-[state=open]:border-primary/30 transition-colors"
+              >
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline py-5">
+                  What integrations are supported?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-5">
+                  {agent.name} integrates with {agent.integrations.slice(0, 4).join(", ")}, 
+                  and many more. We support 100+ tools and add new integrations weekly. 
+                  If you need a specific integration, contact us and we&apos;ll prioritize it.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="security"
+                className="bg-card rounded-xl border border-border px-6 data-[state=open]:border-primary/30 transition-colors"
+              >
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline py-5">
+                  Is my data secure with {agent.name}?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-5">
+                  Yes. We&apos;re SOC 2 Type II certified with AES-256 encryption. Your proprietary 
+                  data is never used to train models. We operate under strict zero data retention 
+                  policies and can deploy in isolated environments for enterprise customers.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="human-override"
+                className="bg-card rounded-xl border border-border px-6 data-[state=open]:border-primary/30 transition-colors"
+              >
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline py-5">
+                  Can I override or adjust {agent.name}&apos;s work?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-5">
+                  Absolutely. You have full visibility into everything {agent.name} does. 
+                  Set up approval workflows for critical actions, provide feedback to improve 
+                  results, and adjust settings anytime. You&apos;re always in control.
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem
+                value="cancellation"
+                className="bg-card rounded-xl border border-border px-6 data-[state=open]:border-primary/30 transition-colors"
+              >
+                <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline py-5">
+                  Can I cancel anytime?
+                </AccordionTrigger>
+                <AccordionContent className="text-muted-foreground pb-5">
+                  Yes. Monthly plans can be canceled with 7 days notice. Annual plans can be 
+                  downgraded at renewal. No long-term contracts, no hidden fees. We offer a 
+                  7-day free trial so you can try {agent.name} risk-free.
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </FadeIn>
+
+          {/* Contact CTA */}
+          <FadeIn delay={0.2} className="mt-12 text-center">
+            <p className="text-muted-foreground">
+              Still have questions?{" "}
+              <Link href="/pricing" className="text-primary hover:text-primary/80 font-medium">
+                Book a demo
+              </Link>{" "}
+              and we&apos;ll answer everything.
+            </p>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-20 md:py-32 bg-background">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <FadeIn>
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
