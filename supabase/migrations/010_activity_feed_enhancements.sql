@@ -427,10 +427,9 @@ CREATE INDEX IF NOT EXISTS idx_activities_actor
 CREATE INDEX IF NOT EXISTS idx_activities_target 
     ON activities(target_type, target_id, created_at DESC);
 
--- Partial index for recent activities (last 7 days) - for fast recent feed queries
-CREATE INDEX IF NOT EXISTS idx_activities_recent 
-    ON activities(tenant_id, sequence_number DESC)
-    WHERE created_at > NOW() - INTERVAL '7 days';
+-- Index for recent feed queries (filter by created_at in query)
+CREATE INDEX IF NOT EXISTS idx_activities_recent
+    ON activities(tenant_id, created_at DESC);
 
 -- ============================================================================
 -- COMMENTS

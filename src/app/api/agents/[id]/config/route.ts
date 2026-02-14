@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import {
   updateAgentConfigSchema,
   validateAgentConfig,
@@ -8,61 +8,10 @@ import {
 } from '@/lib/validation';
 import { z } from 'zod';
 
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
 interface RouteParams {
   params: Promise<{
     id: string;
   }>;
-}
-
-/**
- * Helper to create Supabase client with auth
- */
-async function createAuthClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  return supabase;
-}
-
-/**
- * Helper to get tenant ID from user
- */
-async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return null;
-  }
-
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile?.tenant_id) {
-    return null;
-  }
-
-  return { tenantId: userProfile.tenant_id, user };
 }
 
 /**
@@ -73,19 +22,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -170,23 +109,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId, user } = tenantResult;
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = updateAgentConfigSchema.parse(body);
 
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -270,7 +199,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         .update({
           name: validatedData.version_name || null,
           description: validatedData.version_description || null,
-          changed_by: user.id,
+          changed_by: userId,
         })
         .eq('id', result.version_id);
     }
@@ -326,19 +255,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId, user } = tenantResult;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -380,7 +299,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .update({
         name: 'Reset to defaults',
         description: 'Configuration reset to default values',
-        changed_by: user.id,
+        changed_by: userId,
       })
       .eq('id', data.version_id);
 

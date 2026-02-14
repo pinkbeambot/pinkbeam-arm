@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse, type AuthContext } from '@/lib/api/auth';
 import { testAgentConfigSchema, type AgentConfig } from '@/lib/validation';
 import { generateConfigDiff, type ConfigDiffResult } from '@/lib/config-utils';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // LLM API configuration
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
@@ -28,53 +24,6 @@ interface TestResult {
   model_used: string;
   error_message?: string;
   error_details?: unknown;
-}
-
-/**
- * Helper to create Supabase client with auth
- */
-async function createAuthClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  return supabase;
-}
-
-/**
- * Helper to get tenant ID from user
- */
-async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return null;
-  }
-
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
-    return null;
-  }
-
-  return { tenantId: userProfile.tenant_id, user };
 }
 
 /**
@@ -128,7 +77,7 @@ async function testConfigWithLLM(
     }
 
     const data = await response.json();
-    
+
     // Calculate approximate cost (Claude 3.5 Sonnet rates)
     const inputTokens = data.usage?.input_tokens || 0;
     const outputTokens = data.usage?.output_tokens || 0;
@@ -190,7 +139,7 @@ function buildSystemPrompt(config: AgentConfig): string {
     const triggers = Object.entries(config.escalation.triggers)
       .filter(([, value]) => value)
       .map(([key]) => key.replace(/_/g, ' '));
-    
+
     if (triggers.length > 0) {
       parts.push(`\nEscalate to human when: ${triggers.join(', ')}`);
     }
@@ -207,24 +156,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
-    
+
     // Parse query parameters
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -294,23 +233,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId, user } = tenantResult;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse and validate request body
     const body = await request.json();
     const validatedData = testAgentConfigSchema.parse(body);
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -326,7 +255,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Determine which config to test
     let configToTest: AgentConfig;
-    
+
     if (validatedData.use_current && !validatedData.config) {
       // Use current config from agent
       configToTest = (agent.config as AgentConfig) || {};
@@ -341,7 +270,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         .eq('agent_id', id)
         .eq('tenant_id', tenantId)
         .single();
-      
+
       configToTest = (currentConfig?.config as AgentConfig) || {};
     }
 
@@ -452,7 +381,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * Store test result in database
  */
 async function storeTestResult(
-  supabase: Awaited<ReturnType<typeof createAuthClient>>,
+  supabase: AuthContext['supabase'],
   result: {
     tenant_id: string;
     agent_id: string;
@@ -467,7 +396,6 @@ async function storeTestResult(
     error_details?: unknown;
   }
 ) {
-  if (!supabase) return;
   try {
     await supabase.from('config_test_results').insert({
       tenant_id: result.tenant_id,

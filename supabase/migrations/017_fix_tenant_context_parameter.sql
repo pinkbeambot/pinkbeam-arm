@@ -10,6 +10,9 @@
 -- Migration 011 changed it to 'p_tenant_id' which broke the API calls
 -- This migration restores the correct parameter name
 
+-- Must drop first since we can't change parameter names with CREATE OR REPLACE
+DROP FUNCTION IF EXISTS set_tenant_context(UUID);
+
 CREATE OR REPLACE FUNCTION set_tenant_context(tenant_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE

@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 
 interface RouteParams {
   params: Promise<{
@@ -14,7 +10,7 @@ interface RouteParams {
 /**
  * POST /api/messages/:id/read
  * Mark a message as read (acknowledged)
- * 
+ *
  * This endpoint updates the acked_at timestamp for messages that require acknowledgment.
  * If the message doesn't require acknowledgment, it returns the message unchanged.
  */
@@ -22,47 +18,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Check if message exists and get current state
     const { data: existingMessage, error: fetchError } = await supabase

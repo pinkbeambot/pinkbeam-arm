@@ -1,62 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
-import { 
-  batchCreateTaskSchema, 
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import {
+  batchCreateTaskSchema,
   batchUpdateTaskSchema,
   batchDeleteTaskSchema,
-  createTaskSchema,
-  updateTaskSchema
 } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Helper to get authenticated supabase client
-async function getAuthenticatedClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return { error: 'Unauthorized', status: 401 };
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  // Get current user
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return { error: 'Unauthorized', status: 401 };
-  }
-
-  // Get user's tenant
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile?.tenant_id) {
-    return { error: 'Tenant not found', status: 403 };
-  }
-
-  const tenantId = userProfile.tenant_id;
-
-  // Set tenant context for RLS
-  await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-  return { supabase, tenantId, userId: user.id };
-}
 
 /**
  * POST /api/tasks/batch
@@ -64,11 +13,9 @@ async function getAuthenticatedClient(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const auth = await getAuthenticatedClient(request);
-    if ('error' in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
-    const { supabase, tenantId, userId } = auth;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Parse and validate request body
     const body = await request.json();
@@ -194,11 +141,9 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await getAuthenticatedClient(request);
-    if ('error' in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
-    const { supabase, tenantId } = auth;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse and validate request body
     const body = await request.json();
@@ -331,11 +276,9 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await getAuthenticatedClient(request);
-    if ('error' in auth) {
-      return NextResponse.json({ error: auth.error }, { status: auth.status });
-    }
-    const { supabase, tenantId } = auth;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse request body (DELETE can have body in Next.js)
     const body = await request.json();
@@ -370,8 +313,8 @@ export async function DELETE(request: NextRequest) {
       const inProgressTasks = existingTasks?.filter(t => t.status === 'in_progress') || [];
       if (inProgressTasks.length > 0) {
         return NextResponse.json(
-          { 
-            error: 'Cannot delete in-progress tasks', 
+          {
+            error: 'Cannot delete in-progress tasks',
             message: 'Some tasks are in progress. Set force=true to override or cancel them first.',
             in_progress_tasks: inProgressTasks.map(t => ({ id: t.id, title: t.title }))
           },

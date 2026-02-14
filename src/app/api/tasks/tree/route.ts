@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { taskTreeQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface TaskNode {
   id: string;
@@ -31,47 +27,9 @@ interface TaskNode {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -118,9 +76,9 @@ export async function GET(request: NextRequest) {
 
     // Build the tree using a recursive CTE (Common Table Expression) via the database function
     // Or fetch all descendants and build tree in memory
-    
+
     // Get all descendants up to max_depth
-    let descendantsQuery = supabase
+    const descendantsQuery = supabase
       .from('tasks')
       .select(`
         id,
@@ -140,14 +98,13 @@ export async function GET(request: NextRequest) {
     // Filter by root - get task and all descendants
     // We need to find the path from root to all descendants
     // Using the get_task_chain database function if available, otherwise fetch all and filter
-    
+
     // Strategy: Get all tasks where the path includes the root
     // Since we have parent_task_id and depth, we can query for tasks with depth > root.depth
     // and then build the tree structure
-    
+
     // First get the root's depth
     const rootDepth = rootTask.depth || 0;
-    const maxDepthToFetch = Math.min(rootDepth + max_depth, rootDepth + 10);
 
     // Fetch potential descendants (this is a simplified approach - fetches all tasks in tenant)
     // In production, you'd want a proper tree query using ltree or recursive CTE
@@ -164,7 +121,7 @@ export async function GET(request: NextRequest) {
     // Filter to only include tasks that are descendants of the root
     // Build a map of all tasks for quick lookup
     const taskMap = new Map(allTasks?.map(t => [t.id, t]) || []);
-    
+
     // Helper to check if a task is a descendant of the root
     function isDescendantOf(taskId: string, ancestorId: string): boolean {
       const task = taskMap.get(taskId);
@@ -175,13 +132,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter tasks to only include root and its descendants
-    const descendantTasks = (allTasks || []).filter(t => 
+    const descendantTasks = (allTasks || []).filter(t =>
       t.id === root_id || isDescendantOf(t.id, root_id)
     );
 
     // Filter out completed tasks if not included
-    const filteredTasks = include_completed 
-      ? descendantTasks 
+    const filteredTasks = include_completed
+      ? descendantTasks
       : descendantTasks.filter(t => t.status !== 'completed');
 
     // Helper to extract single assignee from array response
@@ -195,9 +152,9 @@ export async function GET(request: NextRequest) {
     // Build tree structure
     function buildTree(parentId: string | null, currentDepth: number): TaskNode[] {
       if (currentDepth > max_depth) return [];
-      
+
       const children = filteredTasks.filter(t => t.parent_task_id === parentId);
-      
+
       return children.map(child => ({
         id: child.id,
         title: child.title,
@@ -242,7 +199,7 @@ export async function GET(request: NextRequest) {
       in_progress_tasks: allNodes.filter(n => n.status === 'in_progress').length,
       blocked_tasks: allNodes.filter(n => n.status === 'blocked').length,
       max_depth_reached: Math.max(...allNodes.map(n => n.depth)) - rootDepth,
-      completion_percentage: allNodes.length > 0 
+      completion_percentage: allNodes.length > 0
         ? Math.round((allNodes.filter(n => n.status === 'completed').length / allNodes.length) * 100)
         : 0,
     };

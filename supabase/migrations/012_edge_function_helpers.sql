@@ -6,7 +6,7 @@
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS webhook_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Event details
@@ -46,7 +46,7 @@ CREATE POLICY service_role_bypass_webhook_events ON webhook_events
 -- ============================================================================
 
 CREATE TABLE IF NOT EXISTS tenant_webhook_configs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     webhook_type VARCHAR(50) NOT NULL, -- 'github', 'stripe', 'slack', 'custom'
@@ -186,7 +186,7 @@ BEGIN
 
     -- If no existing session, create one
     IF v_session_id IS NULL THEN
-        v_session_id := uuid_generate_v4();
+        v_session_id := gen_random_uuid();
         
         INSERT INTO agent_sessions (
             id,

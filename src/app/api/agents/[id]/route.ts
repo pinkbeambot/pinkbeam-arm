@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { updateAgentSchema } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
@@ -73,55 +69,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
-    }
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch agent with all related data
     const { data: agent, error } = await supabase
@@ -257,59 +207,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = updateAgentSchema.parse(body);
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
-    }
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Check if agent exists and belongs to tenant
     const { data: existingAgent, error: fetchError } = await supabase
@@ -431,55 +335,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
-    }
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Check if agent exists and get its status
     const { data: existingAgent, error: fetchError } = await supabase
@@ -574,7 +432,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     return NextResponse.json(
-      { 
+      {
         message: 'Agent deleted successfully',
         deleted_agent: {
           id,

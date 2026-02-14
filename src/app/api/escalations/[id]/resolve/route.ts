@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { z } from 'zod';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -21,38 +18,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     const body = await request.json();
     const validatedData = resolveEscalationSchema.parse(body);
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-    const userId = userProfile.id;
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     const { data: existingEscalation, error: fetchError } = await supabase
       .from('escalations')
@@ -69,6 +40,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Escalation already resolved' }, { status: 400 });
     }
 
+    // Look up the users table row ID for resolved_by (references users.id, not auth.users.id)
+    const { data: userRow } = await supabase
+      .from('users').select('id').eq('auth_id', userId).single();
+
+    const profileUserId = userRow?.id;
+
     const createdAt = new Date(existingEscalation.created_at);
     const resolvedAt = new Date();
     const timeToResolveSeconds = Math.floor((resolvedAt.getTime() - createdAt.getTime()) / 1000);
@@ -81,7 +58,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         resolution_answer: validatedData.resolution_answer,
         resolution_resources: validatedData.resolution_resources || {},
         learning_notes: validatedData.learning_notes,
-        resolved_by: userId,
+        resolved_by: profileUserId,
         resolved_at: resolvedAt.toISOString(),
         time_to_resolve_seconds: timeToResolveSeconds,
       })

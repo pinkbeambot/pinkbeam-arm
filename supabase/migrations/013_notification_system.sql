@@ -8,7 +8,7 @@
 CREATE TYPE notification_type AS ENUM ('info', 'success', 'warning', 'error');
 
 CREATE TABLE notifications (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     type notification_type NOT NULL DEFAULT 'info',

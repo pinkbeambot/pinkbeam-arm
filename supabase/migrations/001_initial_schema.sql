@@ -2,7 +2,6 @@
 -- Description: Core ARM database schema with multi-tenancy support
 
 -- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
@@ -10,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- ============================================================================
 
 CREATE TABLE tenants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(100) UNIQUE NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deleted')),
@@ -40,9 +39,9 @@ COMMENT ON TABLE tenants IS 'Workspace isolation - each customer gets a tenant';
 -- ============================================================================
 
 CREATE TABLE users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    
+
     -- Auth (managed by Supabase Auth, this is extended profile)
     auth_id UUID UNIQUE, -- Links to auth.users
     email VARCHAR(255) NOT NULL,
@@ -83,7 +82,7 @@ CREATE TYPE agent_role AS ENUM ('ceo', 'manager', 'worker', 'specialist', 'syste
 CREATE TYPE agent_status AS ENUM ('initializing', 'idle', 'active', 'paused', 'blocked', 'error', 'escaped', 'terminated');
 
 CREATE TABLE agents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Identity
@@ -162,7 +161,7 @@ CREATE TYPE task_status AS ENUM ('queued', 'in_progress', 'blocked', 'review', '
 CREATE TYPE task_priority AS ENUM ('low', 'normal', 'high', 'urgent');
 
 CREATE TABLE tasks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Identity
@@ -223,7 +222,7 @@ COMMENT ON TABLE tasks IS 'Work items assigned to agents';
 -- ============================================================================
 
 CREATE TABLE task_dependencies (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
@@ -247,7 +246,7 @@ CREATE TYPE decision_status AS ENUM ('proposed', 'approved', 'rejected', 'overri
 CREATE TYPE decision_category AS ENUM ('action', 'resource', 'escalation', 'strategy', 'system');
 
 CREATE TABLE decisions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Who made the decision
@@ -308,7 +307,7 @@ CREATE TYPE escalation_status AS ENUM ('open', 'in_progress', 'resolved', 'dismi
 CREATE TYPE escalation_urgency AS ENUM ('low', 'normal', 'high', 'critical');
 
 CREATE TABLE escalations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Raised by
@@ -371,7 +370,7 @@ CREATE TYPE activity_type AS ENUM (
 );
 
 CREATE TABLE activities (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Event classification
@@ -429,7 +428,7 @@ CREATE TYPE message_type AS ENUM (
 CREATE TYPE message_priority AS ENUM ('low', 'normal', 'high', 'urgent');
 
 CREATE TABLE messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Protocol
@@ -477,7 +476,7 @@ COMMENT ON TABLE messages IS 'Agent-to-agent message protocol storage';
 -- ============================================================================
 
 CREATE TABLE agent_sessions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
     
@@ -510,7 +509,7 @@ COMMENT ON TABLE agent_sessions IS 'Active agent runtime sessions';
 -- ============================================================================
 
 CREATE TABLE analytics_daily (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     date DATE NOT NULL,
     
@@ -556,7 +555,7 @@ COMMENT ON TABLE analytics_daily IS 'Daily aggregated metrics per tenant';
 -- ============================================================================
 
 CREATE TABLE files (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Ownership

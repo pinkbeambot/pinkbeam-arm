@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { z } from 'zod';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const listEscalationsQuerySchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']).optional(),
@@ -91,34 +88,9 @@ const listEscalationsQuerySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     const { searchParams } = new URL(request.url);
     const queryParams = {
@@ -223,37 +195,12 @@ const createEscalationSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     const body = await request.json();
     const validatedData = createEscalationSchema.parse(body);
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     const { data: agent, error: agentError } = await supabase
       .from('agents')

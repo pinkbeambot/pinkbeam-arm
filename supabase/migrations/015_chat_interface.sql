@@ -6,7 +6,7 @@
 -- ============================================================================
 
 CREATE TABLE chats (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -37,7 +37,7 @@ COMMENT ON TABLE chats IS 'Chat sessions between users and agents';
 CREATE TYPE chat_message_role AS ENUM ('user', 'agent', 'system');
 
 CREATE TABLE chat_messages (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_id UUID NOT NULL REFERENCES chats(id) ON DELETE CASCADE,
     role chat_message_role NOT NULL,
     content TEXT NOT NULL,

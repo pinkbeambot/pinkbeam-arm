@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
-import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { 
-  createTaskSchema, 
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import {
+  createTaskSchema,
   listTasksQuerySchema,
-  enhancedListTasksQuerySchema 
+  enhancedListTasksQuerySchema
 } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables for auth validation
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Priority order mapping for sorting
 const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
@@ -135,47 +130,9 @@ const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token for auth validation
-    const authClient = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await authClient
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Use service role client for database queries (bypasses RLS)
-    const supabase = createServiceRoleClient();
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -404,51 +361,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = createTaskSchema.parse(body);
 
-    // Create Supabase client with user's token for auth validation
-    const authClient = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await authClient
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Use service role client for database queries (bypasses RLS)
-    const supabase = createServiceRoleClient();
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Validate assignee exists and belongs to tenant (if provided)
     if (validatedData.assignee_id) {
@@ -493,7 +412,7 @@ export async function POST(request: NextRequest) {
       .insert({
         ...validatedData,
         tenant_id: tenantId,
-        assigner_id: user.id, // Set the user who created the task
+        assigner_id: auth.userId, // Set the user who created the task
         depth: parentDepth + 1,
       })
       .select(

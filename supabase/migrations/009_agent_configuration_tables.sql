@@ -6,7 +6,7 @@
 -- ============================================================================
 
 CREATE TABLE agent_configs (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
     
@@ -51,7 +51,7 @@ COMMENT ON TABLE agent_configs IS 'Current configuration for each agent';
 -- ============================================================================
 
 CREATE TABLE agent_config_versions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
     
@@ -89,7 +89,7 @@ COMMENT ON TABLE agent_config_versions IS 'Version history for agent configurati
 -- ============================================================================
 
 CREATE TABLE agent_templates (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID, -- NULL for system-wide templates
     
     -- Template info
@@ -135,7 +135,7 @@ COMMENT ON TABLE agent_templates IS 'Reusable agent configuration templates';
 -- ============================================================================
 
 CREATE TABLE config_test_results (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
     config_version_id UUID REFERENCES agent_config_versions(id) ON DELETE SET NULL,

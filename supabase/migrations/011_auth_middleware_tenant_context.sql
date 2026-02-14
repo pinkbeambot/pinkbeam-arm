@@ -116,6 +116,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- HELPER FUNCTION: Set tenant context with validation
 -- ============================================================================
 
+-- Drop old version with void return type
+DROP FUNCTION IF EXISTS set_tenant_context(UUID);
+
 CREATE OR REPLACE FUNCTION set_tenant_context(p_tenant_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
