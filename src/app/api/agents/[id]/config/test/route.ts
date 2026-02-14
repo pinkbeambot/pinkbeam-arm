@@ -200,6 +200,93 @@ function buildSystemPrompt(config: AgentConfig): string {
 }
 
 /**
+ * GET /api/agents/:id/config/test
+ * Get test history for an agent
+ */
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    
+    // Parse query parameters
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
+
+    const supabase = await createAuthClient(request);
+    if (!supabase) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const tenantResult = await getTenantId(supabase);
+    if (!tenantResult) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    }
+    const { tenantId } = tenantResult;
+
+    // Set tenant context for RLS
+    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+
+    // Verify agent exists and belongs to tenant
+    const { data: agent, error: agentError } = await supabase
+      .from('agents')
+      .select('id')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (agentError || !agent) {
+      return NextResponse.json({ error: 'Agent not found' }, { status: 404 });
+    }
+
+    // Fetch test history
+    const { data: testResults, error: resultsError } = await supabase
+      .from('config_test_results')
+      .select('*')
+      .eq('agent_id', id)
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (resultsError) {
+      console.error('Error fetching test results:', resultsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch test history' },
+        { status: 500 }
+      );
+    }
+
+    // Get total count for pagination
+    const { count: totalCount, error: countError } = await supabase
+      .from('config_test_results')
+      .select('*', { count: 'exact', head: true })
+      .eq('agent_id', id)
+      .eq('tenant_id', tenantId);
+
+    if (countError) {
+      console.error('Error counting test results:', countError);
+    }
+
+    return NextResponse.json({
+      data: testResults || [],
+      meta: {
+        pagination: {
+          limit,
+          offset,
+          total: totalCount || 0,
+          hasMore: (totalCount || 0) > offset + limit,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Unexpected error in GET /api/agents/:id/config/test:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * POST /api/agents/:id/config/test
  * Test an agent's configuration with a dry run
  */
