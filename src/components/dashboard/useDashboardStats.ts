@@ -16,7 +16,7 @@
  */
 
 import * as React from 'react';
-import { supabaseClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase/client';
 
 export interface DashboardStats {
   activeAgents: number;
@@ -57,6 +57,9 @@ export function useDashboardStats(): UseDashboardStatsReturn {
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
       const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
 
+      // Create browser client
+      const supabase = createClient();
+
       // Fetch all stats in parallel
       const [
         { count: activeAgentsCount, error: agentsError },
@@ -64,13 +67,13 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         { count: escalationsCount, error: escalationsError },
       ] = await Promise.all([
         // Active agents (status = active, idle, or initializing)
-        supabaseClient
+        supabase
           .from('agents')
           .select('*', { count: 'exact', head: true })
           .in('status', ['active', 'idle', 'initializing']),
         
         // Tasks completed today
-        supabaseClient
+        supabase
           .from('tasks')
           .select('*', { count: 'exact', head: true })
           .eq('status', 'completed')
@@ -78,7 +81,7 @@ export function useDashboardStats(): UseDashboardStatsReturn {
           .lt('updated_at', endOfDay),
         
         // Pending escalations (status = open or in_progress)
-        supabaseClient
+        supabase
           .from('escalations')
           .select('*', { count: 'exact', head: true })
           .in('status', ['open', 'in_progress']),

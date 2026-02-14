@@ -1,10 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from './database';
 
-// Environment variables
+// Environment variables - safe for client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Client-side Supabase client (RLS enforced)
 export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
@@ -26,14 +25,6 @@ export function createServerClient(authToken?: string) {
   }
   return createClient<Database>(supabaseUrl, supabaseAnonKey);
 }
-
-// Service role client (bypasses RLS - use only in Edge Functions/secure contexts)
-export const supabaseService = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
 
 // Helper to set tenant context for RLS
 export async function setTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
