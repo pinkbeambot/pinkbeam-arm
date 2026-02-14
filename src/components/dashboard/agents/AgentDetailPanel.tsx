@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Bot, Calendar, Activity, CheckCircle2, Clock, AlertCircle, MessageSquare, Play, Pause, Pencil } from 'lucide-react';
+import { X, Bot, Calendar, Activity, MessageSquare, Play, Pause, Pencil } from 'lucide-react';
 import { cn, formatDateTime, getAgentStatusColor, getAgentStatusLabel, getRoleLabel, getRoleBadgeColor, getInitials, getAvatarColor, formatRelativeTime } from '@/lib/utils';
 import type { Agent } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -15,6 +15,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { EditAgentModal } from './EditAgentModal';
 import { useUpdateAgent } from '@/lib/hooks/useAgents';
 import { useToast } from '@/components/ui/use-toast';
+import { useAgentAnalytics } from '@/lib/hooks/useAgentAnalytics';
+import { PerformanceTab } from './PerformanceTab';
+import { ActivityTab } from './ActivityTab';
 
 interface AgentDetailPanelProps {
   agent: Agent | null;
@@ -112,6 +115,17 @@ function AgentDetailContent({
   onToggleStatus: () => void;
   onClose: () => void;
 }) {
+  // Fetch analytics data for the Performance tab
+  const {
+    data: analyticsData,
+    isLoading: analyticsLoading,
+    error: analyticsError,
+  } = useAgentAnalytics({
+    agentId: agent.id,
+    days: 30,
+    enabled: !!agent.id,
+  });
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -196,11 +210,15 @@ function AgentDetailContent({
           </TabsContent>
 
           <TabsContent value="performance" className="m-0 px-6 py-4">
-            <PerformanceTab agent={agent} />
+            <PerformanceTab 
+              data={analyticsData} 
+              isLoading={analyticsLoading} 
+              error={analyticsError} 
+            />
           </TabsContent>
 
           <TabsContent value="activity" className="m-0 px-6 py-4">
-            <ActivityTab agent={agent} />
+            <ActivityTab agentId={agent.id} />
           </TabsContent>
         </ScrollArea>
       </Tabs>
@@ -285,53 +303,11 @@ function OverviewTab({ agent }: { agent: Agent }) {
         </div>
         {agent.last_active_at && (
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Clock className="h-4 w-4" />
+            <Bot className="h-4 w-4" />
             <span>Last active {formatRelativeTime(agent.last_active_at)}</span>
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function PerformanceTab({ agent }: { agent: Agent }) {
-  const stats = [
-    { label: 'Tasks Completed', value: (agent.metadata?.tasks_completed as number) || 0, icon: CheckCircle2 },
-    { label: 'Success Rate', value: `${(((agent.metadata?.success_rate as number) || 0) * 100).toFixed(0)}%`, icon: Activity },
-    { label: 'Escalations', value: (agent.metadata?.escalation_count as number) || 0, icon: AlertCircle },
-    { label: 'Avg Response Time', value: (agent.metadata?.avg_response_time as number) ? `${agent.metadata?.avg_response_time}s` : 'N/A', icon: Clock },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        {stats.map((stat) => (
-          <div key={stat.label} className="bg-muted rounded-lg p-4">
-            <div className="flex items-center gap-2 text-muted-foreground mb-2">
-              <stat.icon className="h-4 w-4" />
-              <span className="text-xs">{stat.label}</span>
-            </div>
-            <p className="text-2xl font-bold">{stat.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="bg-muted rounded-lg p-4">
-        <h4 className="text-sm font-medium mb-4">Recent Performance</h4>
-        <p className="text-sm text-muted-foreground text-center py-8">
-          Performance charts will appear here once the agent has completed more tasks.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function ActivityTab({ agent }: { agent: Agent }) {
-  return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground text-center py-8">
-        Activity feed for this agent will appear here.
-      </p>
     </div>
   );
 }
@@ -373,3 +349,5 @@ function AgentDetailSkeleton() {
     </div>
   );
 }
+
+export default AgentDetailPanel;

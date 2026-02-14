@@ -83,6 +83,7 @@ describe('AgentHierarchy', () => {
       render(<AgentHierarchy agents={mockAgents} />);
       
       expect(screen.getByText('Agent Hierarchy')).toBeInTheDocument();
+      expect(screen.getByText('5')).toBeInTheDocument(); // Agent count badge
     });
 
     it('renders view mode toggle buttons', () => {
@@ -97,9 +98,11 @@ describe('AgentHierarchy', () => {
       render(<AgentHierarchy agents={mockAgents} showStats={true} />);
       
       expect(screen.getByText('Total Agents')).toBeInTheDocument();
-      // Check for stats text instead of specific numbers
+      expect(screen.getByText('5')).toBeInTheDocument();
       expect(screen.getByText('Hierarchy Levels')).toBeInTheDocument();
+      expect(screen.getByText('3')).toBeInTheDocument(); // maxDepth + 1
       expect(screen.getByText('Root Agents')).toBeInTheDocument();
+      expect(screen.getByText('1')).toBeInTheDocument();
     });
 
     it('does not render stats when showStats is false', () => {
@@ -133,10 +136,8 @@ describe('AgentHierarchy', () => {
     it('displays correct role badges', () => {
       render(<AgentHierarchy agents={mockAgents} viewMode="tree" />);
       
-      const ceoBadge = screen.getAllByText('ceo')[0];
-      expect(ceoBadge).toBeInTheDocument();
-      const managerBadges = screen.getAllByText('manager');
-      expect(managerBadges.length).toBeGreaterThan(0);
+      expect(screen.getByText('ceo')).toBeInTheDocument();
+      expect(screen.getByText('manager')).toBeInTheDocument();
     });
 
     it('shows root badge for root agents', () => {
@@ -283,8 +284,7 @@ describe('AgentHierarchy', () => {
       render(<AgentHierarchy agents={mockAgents} viewMode="tree" />);
       
       // Should render without error when no onViewModeChange
-      const treeButton = screen.getByRole('button', { name: /tree/i });
-      expect(treeButton).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /tree/i })).toHaveAttribute('data-state', 'active');
     });
 
     it('respects controlled viewMode prop', () => {
@@ -296,8 +296,7 @@ describe('AgentHierarchy', () => {
         />
       );
       
-      const treeButton = screen.getByRole('button', { name: /tree/i });
-      expect(treeButton).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /tree/i })).toHaveAttribute('data-state', 'active');
       
       rerender(
         <AgentHierarchy 
@@ -307,8 +306,7 @@ describe('AgentHierarchy', () => {
         />
       );
       
-      const orgButton = screen.getByRole('button', { name: /org/i });
-      expect(orgButton).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /org/i })).toHaveAttribute('data-state', 'active');
     });
   });
 });
