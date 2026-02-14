@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Check, ArrowRight, HelpCircle } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
-import { MarketingNav, MarketingFooter } from "@/components/marketing";
 import {
   Accordion,
   AccordionContent,
@@ -114,7 +113,6 @@ const faqItems = [
 export default function PricingPage() {
   return (
     <div className="min-h-screen bg-background">
-      <MarketingNav currentPath="/pricing" />
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-background via-muted/30 to-background">
@@ -282,7 +280,6 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <MarketingFooter />
     </div>
   );
 }

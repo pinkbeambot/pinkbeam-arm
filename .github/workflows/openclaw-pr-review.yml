@@ -1,0 +1,70 @@
+name: OpenClaw CTO PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+jobs:
+  notify-cto:
+    name: Notify CTO Agent
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather PR metadata
+        id: pr
+        run: |
+          echo "pr_number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "pr_title=${{ github.event.pull_request.title }}" >> "$GITHUB_OUTPUT"
+          echo "pr_author=${{ github.event.pull_request.user.login }}" >> "$GITHUB_OUTPUT"
+          echo "pr_branch=${{ github.event.pull_request.head.ref }}" >> "$GITHUB_OUTPUT"
+          echo "pr_url=${{ github.event.pull_request.html_url }}" >> "$GITHUB_OUTPUT"
+          echo "pr_action=${{ github.event.action }}" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger CTO review
+        env:
+          OPENCLAW_HOOKS_TOKEN: ${{ secrets.OPENCLAW_HOOKS_TOKEN }}
+          OPENCLAW_GATEWAY_URL: ${{ secrets.OPENCLAW_GATEWAY_URL }}
+        run: |
+          ACTION="${{ steps.pr.outputs.pr_action }}"
+          if [ "$ACTION" = "opened" ]; then
+            EVENT_TYPE="NEW PR OPENED"
+          else
+            EVENT_TYPE="PR UPDATED (new commits pushed)"
+          fi
+
+          MESSAGE=$(cat <<'EOFMSG'
+          [GITHUB WEBHOOK — $EVENT_TYPE]
+
+          PR #${{ steps.pr.outputs.pr_number }}: ${{ steps.pr.outputs.pr_title }}
+          Author: ${{ steps.pr.outputs.pr_author }}
+          Branch: ${{ steps.pr.outputs.pr_branch }}
+          URL: ${{ steps.pr.outputs.pr_url }}
+
+          ACTION REQUIRED: Review this PR per your PR Review Checklist in SOUL.md.
+
+          Steps:
+          1. cd ~/code/arm && git fetch origin
+          2. git checkout ${{ steps.pr.outputs.pr_branch }}
+          3. Review code: correctness, type safety, tests, coverage, attribution, security
+          4. Run tests: npm run test:coverage
+          5. Verify the feature/fix personally
+          6. Use gh pr review ${{ steps.pr.outputs.pr_number }} --approve (or --request-changes with comments)
+          7. If approved and CI green: gh pr merge ${{ steps.pr.outputs.pr_number }} --squash
+          8. Report result to VALIS via sessions_send()
+          EOFMSG
+          )
+
+          # Substitute EVENT_TYPE into message
+          MESSAGE=$(echo "$MESSAGE" | sed "s/\$EVENT_TYPE/$EVENT_TYPE/g")
+
+          curl -sf -X POST "${OPENCLAW_GATEWAY_URL}/hooks/agent" \
+            -H "Authorization: Bearer ${OPENCLAW_HOOKS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg message "$MESSAGE" \
+              --arg agentId "cto" \
+              --arg name "github-pr-review" \
+              '{message: $message, agentId: $agentId, name: $name}'
+            )"
+
+          echo "CTO agent notified for PR #${{ steps.pr.outputs.pr_number }}"

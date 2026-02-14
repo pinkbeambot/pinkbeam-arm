@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MarketingNav, MarketingFooter } from "@/components/marketing";
 import { FadeIn } from "@/components/animations";
 import {
   Mail,
@@ -97,8 +96,6 @@ export function ContactPageClient() {
 
   return (
     <div className="min-h-screen bg-background">
-      <MarketingNav currentPath="/contact" />
-
       {/* Hero Section */}
       <section className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-background via-muted/30 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -330,7 +327,6 @@ export function ContactPageClient() {
         </div>
       </section>
 
-      <MarketingFooter />
     </div>
   );
 }
