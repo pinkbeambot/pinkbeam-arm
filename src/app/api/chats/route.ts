@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Demo tenant ID - in production, this would come from auth context
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
@@ -12,8 +11,7 @@ const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
  */
 export async function GET(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     // Call the database function to get user chats with agent info
     const { data: chats, error } = await supabase.rpc('get_user_chats', {
@@ -65,8 +63,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     const body = await request.json();
     const { agent_id } = body;

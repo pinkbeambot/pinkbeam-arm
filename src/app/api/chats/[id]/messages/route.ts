@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Demo tenant ID - in production, this would come from auth context
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
@@ -17,8 +16,7 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: chatId } = await params;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -91,8 +89,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: chatId } = await params;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     const body = await request.json();
     const { content } = body;
@@ -146,8 +143,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Trigger agent response (async - don't wait for it)
     // In production, this would be an Edge Function or background job
-    triggerAgentResponse(chatId, chat.agent_id, DEMO_TENANT_ID, content.trim())
-      .catch(err => console.error('Error triggering agent response:', err));
+    triggerAgentResponse(supabase, chatId, chat.agent_id, DEMO_TENANT_ID, content.trim())
+      .catch((err: Error) => console.error('Error triggering agent response:', err));
 
     return NextResponse.json({
       message: userMessage,
@@ -165,6 +162,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * Trigger agent response via Edge Function
  */
 async function triggerAgentResponse(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   chatId: string,
   agentId: string,
   tenantId: string,
@@ -177,9 +175,6 @@ async function triggerAgentResponse(
     // 2. Builds system prompt
     // 3. Calls LLM
     // 4. Stores and broadcasts response
-
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
 
     // Get agent details
     const { data: agent } = await supabase
@@ -223,7 +218,7 @@ async function triggerAgentResponse(
  * Fetch context for agent response
  */
 async function fetchAgentContext(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   agentId: string,
   tenantId: string
 ) {
@@ -278,7 +273,12 @@ async function fetchAgentContext(
  */
 function generateAgentResponse(
   agent: Record<string, unknown>,
-  context: Record<string, unknown[]>,
+  context: {
+    activities: Record<string, unknown>[];
+    tasks: Record<string, unknown>[];
+    decisions: Record<string, unknown>[];
+    escalations: Record<string, unknown>[];
+  },
   userMessage: string
 ): string {
   const agentName = agent.name as string;
@@ -293,12 +293,13 @@ function generateAgentResponse(
   // Reference recent activities if relevant
   if (activities.length > 0) {
     const recentActivity = activities[0];
-    response += `I see you've been working on "${recentActivity.title}". `;
+    const title = recentActivity.title as string;
+    response += `I see you've been working on "${title}". `;
   }
 
   // Reference active tasks
   if (tasks.length > 0) {
-    const activeTasks = tasks.filter(t => t.status === 'in_progress');
+    const activeTasks = tasks.filter((t) => t.status === 'in_progress');
     if (activeTasks.length > 0) {
       response += `I'm currently working on ${activeTasks.length} task${activeTasks.length > 1 ? 's' : ''}. `;
     }

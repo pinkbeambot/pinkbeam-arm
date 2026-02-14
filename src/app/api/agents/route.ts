@@ -8,8 +8,78 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
- * GET /api/agents
- * List agents with filtering support
+ * @openapi
+ * /agents:
+ *   get:
+ *     summary: List agents
+ *     description: List agents with filtering support including status, role, and search
+ *     tags:
+ *       - Agents
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [initializing, idle, active, paused, blocked, error, escaped, terminated]
+ *         description: Filter by agent status
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *           enum: [ceo, manager, worker, specialist, system]
+ *         description: Filter by agent role
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in agent name and description
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of agents
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Agent'
+ *                 pagination:
+ *                   $ref: '#/components/schemas/Pagination'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Tenant not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function GET(request: NextRequest) {
   try {
@@ -141,8 +211,61 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/agents
- * Create a new agent
+ * @openapi
+ * /agents:
+ *   post:
+ *     summary: Create a new agent
+ *     description: Create a new agent with the specified configuration. Optionally specify a parent agent for hierarchical relationships.
+ *     tags:
+ *       - Agents
+ *     security:
+ *       - BearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateAgentInput'
+ *     responses:
+ *       201:
+ *         description: Agent created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   $ref: '#/components/schemas/Agent'
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Tenant not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       409:
+ *         description: Agent with this name/slug already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
 export async function POST(request: NextRequest) {
   try {

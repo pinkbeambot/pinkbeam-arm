@@ -14,8 +14,60 @@ interface RouteParams {
 }
 
 /**
- * GET /api/agents/:id
- * Get a single agent by ID
+ * @openapi
+ * /agents/{id}:
+ *   get:
+ *     summary: Get agent by ID
+ *     description: Get a single agent by ID including related data (parent, children, current task, recent activities)
+ *     tags:
+ *       - Agents
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Agent ID
+ *     responses:
+ *       200:
+ *         description: Agent details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   allOf:
+ *                     - $ref: '#/components/schemas/Agent'
+ *                     - type: object
+ *                       properties:
+ *                         recent_tasks:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Task'
+ *                         recent_decisions:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Decision'
+ *                         recent_escalations:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Escalation'
+ *                         recent_activities:
+ *                           type: array
+ *                           items:
+ *                             $ref: '#/components/schemas/Activity'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Tenant not found
+ *       404:
+ *         description: Agent not found
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {

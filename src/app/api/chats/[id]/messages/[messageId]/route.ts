@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 // Demo tenant ID - in production, this would come from auth context
 const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
@@ -17,8 +16,7 @@ interface RouteParams {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: chatId, messageId } = await params;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     // Verify the chat belongs to the current user
     const { data: chat, error: chatError } = await supabase
@@ -91,8 +89,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id: chatId, messageId } = await params;
-    const cookieStore = await cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = await createServerSupabaseClient();
 
     const body = await request.json();
     const { content } = body;

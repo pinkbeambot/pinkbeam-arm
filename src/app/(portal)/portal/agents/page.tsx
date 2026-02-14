@@ -7,6 +7,7 @@ import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboa
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
+import { ChatPanel } from '@/components/chat';
 import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent } from '@/lib/hooks/useAgents';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -34,6 +35,10 @@ export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  
+  // Chat State
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatAgentId, setChatAgentId] = useState<string | null>(null);
 
   // Filter and sort agents
   const filteredAgents = useMemo(() => 
@@ -124,11 +129,13 @@ export default function AgentsPage() {
   }, [createAgent, refetch, toast]);
 
   const handleChat = useCallback(() => {
-    toast({
-      title: 'Chat',
-      description: 'Chat functionality coming soon.',
-    });
-  }, [toast]);
+    if (selectedAgent) {
+      setChatAgentId(selectedAgent.id);
+      setChatOpen(true);
+      // Close detail panel when opening chat
+      setDetailOpen(false);
+    }
+  }, [selectedAgent]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -220,6 +227,14 @@ export default function AgentsPage() {
           onOpenChange={setCreateModalOpen}
           onCreate={handleCreateAgent}
           loading={createLoading}
+        />
+
+        {/* Chat Panel */}
+        <ChatPanel
+          chatId={null}
+          agentId={chatAgentId || undefined}
+          open={chatOpen}
+          onOpenChange={setChatOpen}
         />
       </PageContainer>
     </DashboardLayout>
