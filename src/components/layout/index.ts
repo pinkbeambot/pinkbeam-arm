@@ -6,8 +6,6 @@ export {
   SplitSection,
 } from "./Container";
 
-export { Navigation } from "./Navigation";
-export { Footer } from "./Footer";
 export {
   PageWrapper,
   Section as PageSection,
