@@ -413,3 +413,34 @@ export {
   mergeConfigs,
   stripEmptyValues,
 } from './validation/agent-config';
+
+// ============================================================================
+// Re-export Auth Validation
+// ============================================================================
+
+export {
+  jwtClaimsSchema,
+  authorizationHeaderSchema,
+  tenantContextSchema,
+  authResultSchema,
+  loginRequestSchema,
+  signupRequestSchema,
+  refreshTokenRequestSchema,
+  magicLinkRequestSchema,
+  oauthRequestSchema,
+  inviteUserRequestSchema,
+  apiErrorSchema,
+  validationErrorDetailsSchema,
+  // Types
+  type JWTClaims,
+  type TenantContext,
+  type AuthResult,
+  type LoginRequest,
+  type SignupRequest,
+  type RefreshTokenRequest,
+  type MagicLinkRequest,
+  type OAuthRequest,
+  type InviteUserRequest,
+  type APIError,
+  type ValidationErrorDetails,
+} from './validation/auth';

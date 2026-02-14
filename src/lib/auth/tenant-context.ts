@@ -2,6 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
+import { tenantContextSchema, authorizationHeaderSchema } from '@/lib/validation';
+import { AuthError, authErrors } from './errors';
+import { z } from 'zod';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -33,29 +36,61 @@ export interface AuthResult {
 /**
  * Extract tenant context from request headers
  * Set by the middleware for downstream use
+ * 
+ * @throws AuthError if headers are missing or invalid
  */
-export function getTenantContextFromHeaders(headers: Headers): TenantContext | null {
+export function getTenantContextFromHeaders(headers: Headers): TenantContext {
   const tenantId = headers.get('x-tenant-id');
   const userId = headers.get('x-user-id');
 
   if (!tenantId || !userId) {
-    return null;
+    throw authErrors.unauthorized('No tenant context found. Ensure you are authenticated.');
   }
 
-  return {
-    tenantId,
-    userId,
-  };
+  // Validate with Zod
+  const result = tenantContextSchema.safeParse({ tenantId, userId });
+  
+  if (!result.success) {
+    throw authErrors.validationError(result.error.issues);
+  }
+
+  return result.data;
+}
+
+/**
+ * Safely extract tenant context from request headers
+ * Returns null instead of throwing
+ */
+export function getTenantContextFromHeadersSafe(headers: Headers): TenantContext | null {
+  try {
+    return getTenantContextFromHeaders(headers);
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Set tenant context for RLS in Supabase
  * This should be called after creating a server client
+ * 
+ * @throws AuthError if setting context fails
  */
 export async function setTenantContext(
   supabase: TypedSupabaseClient,
   tenantId: string
 ): Promise<void> {
+  // Validate tenantId format
+  const uuidSchema = z.string().uuid();
+  const validation = uuidSchema.safeParse(tenantId);
+  
+  if (!validation.success) {
+    throw authErrors.validationError([{
+      path: ['tenantId'],
+      message: 'Invalid tenant ID format',
+      code: 'invalid_string',
+    }]);
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase.rpc as any)('set_tenant_context', { 
     tenant_id: tenantId 
@@ -63,13 +98,19 @@ export async function setTenantContext(
 
   if (error) {
     console.error('Failed to set tenant context:', error);
-    throw new Error(`Failed to set tenant context: ${error.message}`);
+    throw new AuthError(
+      `Failed to set tenant context: ${error.message}`,
+      'INTERNAL_ERROR',
+      500
+    );
   }
 }
 
 /**
  * Create a server-side Supabase client with tenant context set
  * For use in API routes that need RLS-enforced access
+ * 
+ * @throws AuthError if client creation or context setting fails
  */
 export async function createServerClientWithContext(
   authToken?: string,
@@ -144,23 +185,58 @@ export async function createClientFromCookies() {
 }
 
 /**
+ * Extract and validate bearer token from authorization header
+ * 
+ * @throws AuthError if header is missing or invalid
+ */
+export function extractBearerToken(request: Request): string {
+  const authHeader = request.headers.get('authorization');
+  
+  if (!authHeader) {
+    throw authErrors.unauthorized('Missing authorization header');
+  }
+
+  // Validate header format with Zod
+  const result = authorizationHeaderSchema.safeParse(authHeader);
+  
+  if (!result.success) {
+    throw authErrors.validationError(result.error.issues);
+  }
+
+  return authHeader.split(' ')[1];
+}
+
+/**
+ * Safely extract bearer token
+ * Returns null instead of throwing
+ */
+export function extractBearerTokenSafe(request: Request): string | null {
+  try {
+    return extractBearerToken(request);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Validate authentication and extract tenant context
  * For use in API route handlers
+ * 
+ * @throws AuthError if validation fails
  */
 export async function validateAuthAndGetContext(
   request: Request
 ): Promise<AuthResult> {
   try {
     // First check for middleware-set headers
-    const context = getTenantContextFromHeaders(request.headers);
+    const context = getTenantContextFromHeadersSafe(request.headers);
     
     if (context) {
       // Get user email from auth if available
-      const authHeader = request.headers.get('authorization');
+      const token = extractBearerTokenSafe(request);
       let email: string | undefined;
       
-      if (authHeader?.startsWith('Bearer ')) {
-        const token = authHeader.split(' ')[1];
+      if (token) {
         const supabase = createClient(supabaseUrl, supabaseAnonKey, {
           auth: {
             persistSession: false,
@@ -189,16 +265,8 @@ export async function validateAuthAndGetContext(
     }
 
     // Fallback: validate token directly
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return {
-        user: null,
-        error: 'Missing or invalid authorization header',
-        status: 401,
-      };
-    }
-
-    const token = authHeader.split(' ')[1];
+    const token = extractBearerToken(request);
+    
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
@@ -215,11 +283,7 @@ export async function validateAuthAndGetContext(
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
-      return {
-        user: null,
-        error: 'Invalid or expired token',
-        status: 401,
-      };
+      throw authErrors.invalidToken(authError?.message || 'Invalid or expired token');
     }
 
     // Get tenant_id from user metadata or database
@@ -236,11 +300,7 @@ export async function validateAuthAndGetContext(
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       if (profileError || !(userProfile as any)?.tenant_id) {
-        return {
-          user: null,
-          error: 'Tenant not found',
-          status: 403,
-        };
+        throw authErrors.tenantNotFound();
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -261,6 +321,14 @@ export async function validateAuthAndGetContext(
     };
 
   } catch (error) {
+    if (error instanceof AuthError) {
+      return {
+        user: null,
+        error: error.message,
+        status: error.statusCode as 401 | 403 | 500,
+      };
+    }
+    
     console.error('Auth validation error:', error);
     return {
       user: null,
@@ -382,20 +450,28 @@ export function withAuth(
   handler: (request: Request, context: TenantContext) => Promise<Response>
 ): (request: Request) => Promise<Response> {
   return async (request: Request): Promise<Response> => {
-    const authResult = await validateAuthAndGetContext(request);
-
-    if (authResult.error || !authResult.user) {
+    try {
+      const context = getTenantContextFromHeaders(request.headers);
+      return handler(request, context);
+    } catch (error) {
+      if (error instanceof AuthError) {
+        return new Response(
+          JSON.stringify(error.toAPIError()),
+          { 
+            status: error.statusCode, 
+            headers: { 'Content-Type': 'application/json' } 
+          }
+        );
+      }
+      
+      const internalError = authErrors.internalError();
       return new Response(
-        JSON.stringify({ error: authResult.error, code: 'UNAUTHORIZED' }),
-        { status: authResult.status, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify(internalError.toAPIError()),
+        { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json' } 
+        }
       );
     }
-
-    const tenantContext: TenantContext = {
-      tenantId: authResult.user.tenantId,
-      userId: authResult.user.id,
-    };
-
-    return handler(request, tenantContext);
   };
 }

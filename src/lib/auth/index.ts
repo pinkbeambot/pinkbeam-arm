@@ -39,11 +39,26 @@ export {
 // API Helpers
 export {
   withAuth,
+  withAuthAndValidation,
+  withAuthAndQueryValidation,
   createAuthClient,
   extractBearerToken,
   createServerClientWithAuth,
-  authErrors,
+  legacyAuthErrors,
   successResponse,
   paginatedResponse,
+  createdResponse,
+  noContentResponse,
+  getPaginationParams,
   type AuthenticatedRequest,
 } from './api-helpers';
+
+// Error Handling
+export {
+  AuthError,
+  authErrors,
+  isAuthError,
+  isZodError,
+  handleAuthError,
+  type AuthErrorCode,
+} from './errors';
