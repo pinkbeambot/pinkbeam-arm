@@ -9,11 +9,10 @@ import { DecisionStats } from '@/components/dashboard/decisions/DecisionStats';
 import { DecisionFilters, type ConfidenceLevel, type DecisionType } from '@/components/dashboard/decisions/DecisionFilters';
 import { useDecisionsRealtime, useOverrideDecision, useExportDecisions } from '@/lib/hooks/useDecisions';
 import { useAgentsRealtime } from '@/lib/hooks/useAgents';
+import { useTenant } from '@/lib/hooks/useTenant';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import type { Decision, DecisionStatus } from '@/types';
-
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 const CONFIDENCE_THRESHOLDS: Record<ConfidenceLevel, number | undefined> = {
   all: undefined, high: 0.9, medium: 0.7, low: 0.5,
@@ -41,6 +40,7 @@ function getDateRange(range: 'all' | 'today' | 'week' | 'month'): { from?: strin
 
 export default function DecisionsPage() {
   const { toast } = useToast();
+  const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [agentFilter, setAgentFilter] = useState<string | 'all'>('all');
@@ -55,7 +55,7 @@ export default function DecisionsPage() {
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const { agents, loading: agentsLoading } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { agents, loading: agentsLoading } = useAgentsRealtime(tenantId);
   const dateRangeParams = useMemo(() => getDateRange(dateRange), [dateRange]);
 
   const { decisions, loading: decisionsLoading, error, refetch, pagination } = useDecisionsRealtime({
@@ -108,7 +108,7 @@ export default function DecisionsPage() {
     setPage(1);
   }, []);
 
-  const loading = decisionsLoading || agentsLoading;
+  const loading = decisionsLoading || agentsLoading || tenantLoading;
 
   return (
     <DashboardLayout>
@@ -138,9 +138,11 @@ export default function DecisionsPage() {
           />
         </div>
 
-        {error && (
+        {(tenantError || error) && (
           <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-800 dark:text-red-200">Failed to load decisions: {error.message}</p>
+            <p className="text-red-800 dark:text-red-200">
+              {tenantError ? `Tenant error: ${tenantError.message}` : `Failed to load decisions: ${error?.message}`}
+            </p>
             <button onClick={refetch} className="mt-2 text-sm text-red-600 dark:text-red-400 underline">Retry</button>
           </div>
         )}

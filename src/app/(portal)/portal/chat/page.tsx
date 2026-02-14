@@ -6,6 +6,7 @@ import { PortalLayout, PageContainer, PageHeader } from '@/components/dashboard/
 import { ChatPanel } from '@/components/chat';
 import { useChats } from '@/lib/hooks/useChat';
 import { useAgentsRealtime } from '@/lib/hooks/useAgents';
+import { useTenant } from '@/lib/hooks/useTenant';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -14,12 +15,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatRelativeTime, getAvatarColor, getInitials } from '@/lib/utils';
 import type { Chat } from '@/types';
 
-// Demo tenant ID - in production, this would come from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-
 export default function ChatPage() {
+  const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
   const { chats, loading: chatsLoading } = useChats();
-  const { agents, loading: agentsLoading } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { agents, loading: agentsLoading } = useAgentsRealtime(tenantId);
   
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
@@ -31,7 +30,7 @@ export default function ChatPage() {
     setChatOpen(true);
   };
 
-  const loading = chatsLoading || agentsLoading;
+  const loading = chatsLoading || agentsLoading || tenantLoading;
 
   return (
     <PortalLayout>
@@ -40,6 +39,14 @@ export default function ChatPage() {
           title="Chat"
           description="Communicate with your AI workforce."
         />
+
+        {tenantError && (
+          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+            <p className="text-red-800 dark:text-red-200">
+              Tenant error: {tenantError.message}
+            </p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Active Chats */}
