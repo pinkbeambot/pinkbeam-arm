@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { RefreshCw, Wifi, WifiOff, AlertCircle } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, AlertCircle, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -43,11 +43,15 @@ export function ActivityFeed({
   maxHeight = '600px',
   onEventClick,
   realtime = true,
-}: ActivityFeedProps) {
+  autoScroll = true,
+}: ActivityFeedProps & { autoScroll?: boolean }) {
   const [filter, setFilter] = React.useState<ActivityFilter>(initialFilter);
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [newEventIds, setNewEventIds] = React.useState<Set<string>>(new Set());
+  const [showScrollButton, setShowScrollButton] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const isUserScrolling = React.useRef(false);
+  const scrollTimeout = React.useRef<NodeJS.Timeout | null>(null);
   
   const {
     events,
@@ -72,6 +76,11 @@ export function ActivityFeed({
           return next;
         });
       }, 5000);
+      
+      // Auto-scroll to newest if enabled and user is not manually scrolling
+      if (autoScroll && !isUserScrolling.current && scrollRef.current) {
+        scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     },
   });
   
@@ -85,15 +94,45 @@ export function ActivityFeed({
     setExpandedId(expandedId === eventId ? null : eventId);
   };
   
-  // Infinite scroll
+  // Scroll to newest
+  const scrollToNewest = React.useCallback(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      setShowScrollButton(false);
+    }
+  }, []);
+  
+  // Handle scroll to detect user scrolling and show/hide scroll button
   const handleScroll = React.useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     const threshold = 100; // pixels from bottom
     
+    // Track user scrolling
+    isUserScrolling.current = true;
+    if (scrollTimeout.current) {
+      clearTimeout(scrollTimeout.current);
+    }
+    scrollTimeout.current = setTimeout(() => {
+      isUserScrolling.current = false;
+    }, 1000);
+    
+    // Show scroll button if scrolled down
+    setShowScrollButton(scrollTop > 100);
+    
+    // Infinite scroll for loading more
     if (scrollHeight - scrollTop - clientHeight < threshold && hasMore && !isLoading) {
       loadMore();
     }
   }, [hasMore, isLoading, loadMore]);
+  
+  // Cleanup scroll timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (scrollTimeout.current) {
+        clearTimeout(scrollTimeout.current);
+      }
+    };
+  }, []);
   
   return (
     <Card className={cn('overflow-hidden', className)}>
@@ -152,7 +191,20 @@ export function ActivityFeed({
       </CardHeader>
       
       {/* Content */}
-      <CardContent className="p-0">
+      <CardContent className="p-0 relative">
+        {/* Scroll to newest button */}
+        {showScrollButton && (
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={scrollToNewest}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-10 shadow-lg animate-fade-in"
+          >
+            <ChevronDown className="w-4 h-4 mr-1 rotate-180" />
+            New activity
+          </Button>
+        )}
+        
         {error ? (
           <div className="flex flex-col items-center justify-center py-12 text-center px-6">
             <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">

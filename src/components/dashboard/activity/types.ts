@@ -80,6 +80,8 @@ export interface ActivityFeedProps {
   maxHeight?: string;
   onEventClick?: (event: ActivityEvent) => void;
   realtime?: boolean;
+  /** Enable auto-scroll to newest activity (default: true) */
+  autoScroll?: boolean;
 }
 
 export interface ActivityItemProps {
@@ -116,6 +118,19 @@ export interface UseRealtimeActivitiesOptions {
   enabled?: boolean;
   filter?: ActivityFilter;
   onNewActivity?: (activity: Activity) => void;
+}
+
+// Alias types for useActivityFeed hook
+export type UseActivityFeedOptions = UseRealtimeActivitiesOptions;
+
+export interface UseActivityFeedReturn {
+  events: ActivityEvent[];
+  isLoading: boolean;
+  isRealtime: boolean;
+  error: Error | null;
+  hasMore: boolean;
+  loadMore: () => void;
+  refetch: () => void;
 }
 
 // ============================================================================
