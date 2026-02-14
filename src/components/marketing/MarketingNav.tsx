@@ -1,16 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-
-interface MarketingNavProps {
-  currentPath?: string;
-}
 
 const navLinks = [
   { href: "/agents", label: "AI Employees" },
@@ -19,7 +16,8 @@ const navLinks = [
   { href: "/contact", label: "Contact" },
 ];
 
-export function MarketingNav({ currentPath }: MarketingNavProps) {
+export function MarketingNav() {
+  const pathname = usePathname();
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -33,8 +31,8 @@ export function MarketingNav({ currentPath }: MarketingNavProps) {
   }, []);
 
   const isActive = (href: string) => {
-    if (href === "/" && currentPath === "/") return true;
-    if (href !== "/" && currentPath?.startsWith(href)) return true;
+    if (href === "/" && pathname === "/") return true;
+    if (href !== "/" && pathname?.startsWith(href)) return true;
     return false;
   };
 
