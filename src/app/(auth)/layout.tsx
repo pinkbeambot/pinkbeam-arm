@@ -1,13 +1,8 @@
-import { AuthProvider } from '@/components/auth/AuthProvider';
-
 export default function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <AuthProvider>
-      {children}
-    </AuthProvider>
-  );
+  // AuthProvider is already provided by root layout
+  return children;
 }
