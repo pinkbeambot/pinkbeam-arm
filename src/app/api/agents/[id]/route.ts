@@ -113,7 +113,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const tenantId = userProfile.tenant_id;
 
     // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+
+    if (contextError || contextSet !== true) {
+      console.error('Failed to set tenant context:', contextError);
+      return NextResponse.json(
+        { error: 'Failed to set tenant context', details: contextError?.message },
+        { status: 500 }
+      );
+    }
 
     // Fetch agent with all related data
     const { data: agent, error } = await supabase
@@ -293,7 +301,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const tenantId = userProfile.tenant_id;
 
     // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+
+    if (contextError || contextSet !== true) {
+      console.error('Failed to set tenant context:', contextError);
+      return NextResponse.json(
+        { error: 'Failed to set tenant context', details: contextError?.message },
+        { status: 500 }
+      );
+    }
 
     // Check if agent exists and belongs to tenant
     const { data: existingAgent, error: fetchError } = await supabase
@@ -455,7 +471,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const tenantId = userProfile.tenant_id;
 
     // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+
+    if (contextError || contextSet !== true) {
+      console.error('Failed to set tenant context:', contextError);
+      return NextResponse.json(
+        { error: 'Failed to set tenant context', details: contextError?.message },
+        { status: 500 }
+      );
+    }
 
     // Check if agent exists and get its status
     const { data: existingAgent, error: fetchError } = await supabase
