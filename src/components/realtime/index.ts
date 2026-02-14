@@ -1,3 +1,3 @@
 // Real-time Components
-export { ConnectionStatus, ConnectionDot, ConnectionBadge, ConnectionBar } from "./ConnectionStatus";
-export type { ConnectionStatusProps } from "./ConnectionStatus";
+export { ConnectionStatus } from "./ConnectionStatus";
+export type { ConnectionStatusProps, ConnectionState } from "./ConnectionStatus";

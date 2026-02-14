@@ -1,7 +1,21 @@
+/**
+ * useRealtimeMetrics Hook
+ * 
+ * Provides real-time metrics data via WebSocket connection with fallback to polling.
+ * Features:
+ * - WebSocket subscription for live updates
+ * - Automatic reconnection handling
+ * - Rolling window chart data
+ * - Agent-specific filtering
+ * - Fallback polling when WebSocket unavailable
+ */
+
 'use client';
 
 import * as React from 'react';
 import { createClient } from '@/lib/supabase/client';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import type { Activity, Agent } from '@/types';
 import type {
   AgentLiveMetrics,
   SystemHealthMetrics,
@@ -12,115 +26,99 @@ import type {
 } from './types';
 
 // ============================================================================
-// Mock Data Generators (for development/demo purposes)
+// Constants
 // ============================================================================
 
-function generateMockAgentMetrics(agentId: string, agentName: string): AgentLiveMetrics {
-  const statuses = ['idle', 'active', 'paused', 'error'] as const;
-  const status = statuses[Math.floor(Math.random() * statuses.length)];
-  
-  return {
-    agentId,
-    agentName,
-    status: status === 'idle' ? 'idle' : status === 'active' ? 'active' : status === 'paused' ? 'paused' : 'error',
-    tasksPerMinute: Math.random() * 10,
-    successRate: 70 + Math.random() * 25,
-    currentLoad: Math.random() * 100,
-    avgResponseTime: 100 + Math.random() * 500,
-    errorRate: Math.random() * 5,
-    lastActivityAt: new Date().toISOString(),
-    cpuUsage: Math.random() * 80,
-    memoryUsage: Math.random() * 70,
-  };
+const DEFAULT_MAX_DATA_POINTS = 60; // 1 hour at 1 point per minute
+const DEFAULT_REFRESH_INTERVAL = 5000; // 5 seconds for fallback polling
+const METRICS_CHANNEL = 'metrics';
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
+function calculateRollingAverage(values: number[], windowSize: number = 5): number {
+  if (values.length === 0) return 0;
+  const recent = values.slice(-windowSize);
+  return recent.reduce((a, b) => a + b, 0) / recent.length;
 }
 
-function generateMockSystemHealth(): SystemHealthMetrics {
-  return {
-    status: 'healthy',
-    uptime: 86400 + Math.random() * 10000,
-    database: {
-      status: 'healthy',
-      responseTime: 5 + Math.random() * 20,
-      connectionPool: {
-        used: Math.floor(Math.random() * 10),
-        total: 20,
-        utilization: Math.random() * 50,
-      },
-      queryLatency: {
-        p50: 5 + Math.random() * 10,
-        p95: 20 + Math.random() * 30,
-        p99: 50 + Math.random() * 50,
-      },
-    },
-    realtime: {
-      status: 'healthy',
-      connections: Math.floor(Math.random() * 100),
-      messagesPerSecond: Math.random() * 50,
-      latency: Math.random() * 10,
-    },
-    agentRuntime: {
-      status: 'healthy',
-      activeAgents: Math.floor(Math.random() * 20),
-      queuedTasks: Math.floor(Math.random() * 50),
-      processingTasks: Math.floor(Math.random() * 30),
-      avgTaskWaitTime: Math.random() * 5,
-    },
-    resources: {
-      cpu: {
-        usage: Math.random() * 60,
-        cores: 8,
-      },
-      memory: {
-        used: 4000 + Math.random() * 2000,
-        total: 16000,
-        usage: Math.random() * 40,
-      },
-      disk: {
-        used: 100 + Math.random() * 50,
-        total: 500,
-        usage: Math.random() * 30,
-      },
-    },
-  };
-}
-
-function generateMockAggregatedMetrics(): AggregatedMetrics {
-  return {
-    tasks: {
-      total: 1000 + Math.floor(Math.random() * 500),
-      completed: 800 + Math.floor(Math.random() * 200),
-      failed: 20 + Math.floor(Math.random() * 30),
-      inProgress: 30 + Math.floor(Math.random() * 50),
-      queued: 10 + Math.floor(Math.random() * 40),
-      completionRate: 5 + Math.random() * 10,
-      successRate: 90 + Math.random() * 8,
-      avgDuration: 30 + Math.random() * 60,
-    },
-    agents: {
-      total: 10 + Math.floor(Math.random() * 10),
-      active: 5 + Math.floor(Math.random() * 5),
-      idle: 3 + Math.floor(Math.random() * 3),
-      error: Math.floor(Math.random() * 2),
-      avgTasksPerMinute: 5 + Math.random() * 5,
-      avgSuccessRate: 85 + Math.random() * 10,
-    },
-    decisions: {
-      total: 500 + Math.floor(Math.random() * 200),
-      approved: 400 + Math.floor(Math.random() * 100),
-      rejected: 50 + Math.floor(Math.random() * 50),
-      avgConfidence: 0.8 + Math.random() * 0.15,
-    },
-    escalations: {
-      total: 30 + Math.floor(Math.random() * 20),
-      open: 5 + Math.floor(Math.random() * 10),
-      resolved: 25 + Math.floor(Math.random() * 15),
-      avgResolutionTime: 15 + Math.random() * 30,
-    },
-  };
+function formatTimestamp(date: Date): string {
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
 }
 
 // ============================================================================
-// useRealtimeMetrics Hook
+// Initial Data
+// ============================================================================
+
+const initialSystemHealth: SystemHealthMetrics = {
+  status: 'unknown',
+  uptime: 0,
+  database: {
+    status: 'unknown',
+    responseTime: 0,
+    connectionPool: { used: 0, total: 100, utilization: 0 },
+    queryLatency: { p50: 0, p95: 0, p99: 0 },
+  },
+  realtime: {
+    status: 'unknown',
+    connections: 0,
+    messagesPerSecond: 0,
+    latency: 0,
+  },
+  agentRuntime: {
+    status: 'unknown',
+    activeAgents: 0,
+    queuedTasks: 0,
+    processingTasks: 0,
+    avgTaskWaitTime: 0,
+  },
+  resources: {
+    cpu: { usage: 0, cores: 0 },
+    memory: { used: 0, total: 0, usage: 0 },
+    disk: { used: 0, total: 0, usage: 0 },
+  },
+};
+
+const initialAggregatedMetrics: AggregatedMetrics = {
+  tasks: {
+    total: 0,
+    completed: 0,
+    failed: 0,
+    inProgress: 0,
+    queued: 0,
+    completionRate: 0,
+    successRate: 0,
+    avgDuration: 0,
+  },
+  agents: {
+    total: 0,
+    active: 0,
+    idle: 0,
+    error: 0,
+    avgTasksPerMinute: 0,
+    avgSuccessRate: 0,
+  },
+  decisions: {
+    total: 0,
+    approved: 0,
+    rejected: 0,
+    avgConfidence: 0,
+  },
+  escalations: {
+    total: 0,
+    open: 0,
+    resolved: 0,
+    avgResolutionTime: 0,
+  },
+};
+
+// ============================================================================
+// Hook Implementation
 // ============================================================================
 
 export function useRealtimeMetrics(
@@ -128,26 +126,31 @@ export function useRealtimeMetrics(
 ): UseRealtimeMetricsReturn {
   const {
     enabled = true,
-    refreshInterval = 5000,
-    maxDataPoints = 50,
+    refreshInterval = DEFAULT_REFRESH_INTERVAL,
+    maxDataPoints = DEFAULT_MAX_DATA_POINTS,
     agentIds,
   } = options;
 
+  const supabase = createClient();
+  
+  // State
   const [agentMetrics, setAgentMetrics] = React.useState<AgentLiveMetrics[]>([]);
   const [selectedAgent, setSelectedAgent] = React.useState<AgentLiveMetrics | null>(null);
   const [systemHealth, setSystemHealth] = React.useState<SystemHealthMetrics | null>(null);
   const [aggregated, setAggregated] = React.useState<AggregatedMetrics | null>(null);
-  const [tasksPerMinuteHistory, setTasksPerMinuteHistory] = React.useState<LiveMetricPoint[]>([]);
-  const [successRateHistory, setSuccessRateHistory] = React.useState<LiveMetricPoint[]>([]);
-  const [agentLoadHistory, setAgentLoadHistory] = React.useState<LiveMetricPoint[]>([]);
   const [isConnected, setIsConnected] = React.useState(false);
   const [isRealtime, setIsRealtime] = React.useState(false);
   const [lastUpdateAt, setLastUpdateAt] = React.useState<Date | null>(null);
-  const [subscribedAgents, setSubscribedAgents] = React.useState<Set<string>>(new Set());
+  
+  // Chart history state (rolling window)
+  const [tasksPerMinuteHistory, setTasksPerMinuteHistory] = React.useState<LiveMetricPoint[]>([]);
+  const [successRateHistory, setSuccessRateHistory] = React.useState<LiveMetricPoint[]>([]);
+  const [agentLoadHistory, setAgentLoadHistory] = React.useState<LiveMetricPoint[]>([]);
+  
+  // Refs for managing subscriptions
+  const subscribedAgents = React.useRef<Set<string>>(new Set());
+  const metricsChannelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-<<<<<<< HEAD
-  const supabase = createClient();
-=======
   // ============================================================================
   // Data Fetching Functions
   // ============================================================================
@@ -321,139 +324,35 @@ export function useRealtimeMetrics(
   // ============================================================================
   // Realtime Subscription
   // ============================================================================
->>>>>>> eng-be/task-25-edge-functions
 
-  // Initialize with mock data for development
   React.useEffect(() => {
     if (!enabled) return;
 
-    // Initial mock data
-    const mockAgents = [
-      generateMockAgentMetrics('agent-1', 'Data Processor'),
-      generateMockAgentMetrics('agent-2', 'Content Analyzer'),
-      generateMockAgentMetrics('agent-3', 'Task Router'),
-      generateMockAgentMetrics('agent-4', 'Notification Agent'),
-      generateMockAgentMetrics('agent-5', 'Report Generator'),
-    ];
-
-    setAgentMetrics(mockAgents);
-    setSystemHealth(generateMockSystemHealth());
-    setAggregated(generateMockAggregatedMetrics());
-    setLastUpdateAt(new Date());
-
-    // Generate initial history
-    const now = Date.now();
-    const initialHistory: LiveMetricPoint[] = Array.from({ length: maxDataPoints }, (_, i) => ({
-      timestamp: now - (maxDataPoints - i) * 1000,
-      value: 5 + Math.random() * 10,
-    }));
-
-    setTasksPerMinuteHistory(initialHistory);
-    setSuccessRateHistory(initialHistory.map(p => ({ ...p, value: 85 + Math.random() * 10 })));
-    setAgentLoadHistory(initialHistory.map(p => ({ ...p, value: Math.random() * 100 })));
-  }, [enabled, maxDataPoints]);
-
-  // Fallback polling for metrics updates
-  React.useEffect(() => {
-    if (!enabled) return;
-
-    const interval = setInterval(() => {
-      const now = Date.now();
-
-      // Update agent metrics
-      setAgentMetrics(prev =>
-        prev.map(agent => ({
-          ...agent,
-          tasksPerMinute: Math.max(0, agent.tasksPerMinute + (Math.random() - 0.5) * 2),
-          successRate: Math.min(100, Math.max(0, agent.successRate + (Math.random() - 0.5) * 2)),
-          currentLoad: Math.min(100, Math.max(0, agent.currentLoad + (Math.random() - 0.5) * 10)),
-          avgResponseTime: Math.max(50, agent.avgResponseTime + (Math.random() - 0.5) * 50),
-          lastActivityAt: new Date().toISOString(),
-        }))
-      );
-
-      // Update system health
-      setSystemHealth(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          uptime: prev.uptime + refreshInterval / 1000,
-          database: {
-            ...prev.database,
-            responseTime: Math.max(1, prev.database.responseTime + (Math.random() - 0.5) * 5),
-          },
-          realtime: {
-            ...prev.realtime,
-            messagesPerSecond: Math.max(0, prev.realtime.messagesPerSecond + (Math.random() - 0.5) * 10),
-          },
-        };
-      });
-
-      // Update aggregated metrics
-      setAggregated(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          tasks: {
-            ...prev.tasks,
-            completionRate: Math.max(0, prev.tasks.completionRate + (Math.random() - 0.5) * 0.5),
-          },
-        };
-      });
-
-      // Update history
-      setTasksPerMinuteHistory(prev => {
-        const newPoint: LiveMetricPoint = {
-          timestamp: now,
-          value: 5 + Math.random() * 10,
-        };
-        return [...prev.slice(-maxDataPoints + 1), newPoint];
-      });
-
-      setSuccessRateHistory(prev => {
-        const newPoint: LiveMetricPoint = {
-          timestamp: now,
-          value: 85 + Math.random() * 10,
-        };
-        return [...prev.slice(-maxDataPoints + 1), newPoint];
-      });
-
-      setAgentLoadHistory(prev => {
-        const newPoint: LiveMetricPoint = {
-          timestamp: now,
-          value: Math.random() * 100,
-        };
-        return [...prev.slice(-maxDataPoints + 1), newPoint];
-      });
-
-      setLastUpdateAt(new Date());
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [enabled, refreshInterval, maxDataPoints]);
-
-  // Supabase Realtime subscription
-  React.useEffect(() => {
-    if (!enabled) return;
-
-    // Subscribe to metrics channel
+    // Subscribe to activities for real-time updates
     const channel = supabase
-      .channel('metrics')
+      .channel(METRICS_CHANNEL)
       .on(
-        'broadcast',
-        { event: 'metrics.update' },
-        (payload) => {
-          // Handle realtime metrics updates
-          if (payload.payload?.agentMetrics) {
-            setAgentMetrics(payload.payload.agentMetrics);
-          }
-          if (payload.payload?.systemHealth) {
-            setSystemHealth(payload.payload.systemHealth);
-          }
-          if (payload.payload?.aggregated) {
-            setAggregated(payload.payload.aggregated);
-          }
-          setLastUpdateAt(new Date());
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'activities',
+        },
+        (payload: RealtimePostgresChangesPayload<Activity>) => {
+          // Trigger refresh when new activities arrive
+          fetchMetricsSnapshot();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'agents',
+        },
+        () => {
+          // Trigger refresh when agents update
+          fetchMetricsSnapshot();
         }
       )
       .subscribe((status) => {
@@ -461,31 +360,58 @@ export function useRealtimeMetrics(
         setIsRealtime(status === 'SUBSCRIBED');
       });
 
+    metricsChannelRef.current = channel;
+
     return () => {
       channel.unsubscribe();
     };
-  }, [enabled, supabase]);
+  }, [enabled, supabase, fetchMetricsSnapshot]);
 
-  // Refresh function
-  const refresh = React.useCallback(() => {
-    setSystemHealth(generateMockSystemHealth());
-    setAggregated(generateMockAggregatedMetrics());
-    setLastUpdateAt(new Date());
-  }, []);
+  // ============================================================================
+  // Polling Fallback
+  // ============================================================================
 
-  // Subscribe to specific agent
+  React.useEffect(() => {
+    if (!enabled) return;
+
+    // Initial fetch
+    fetchMetricsSnapshot();
+
+    // Set up polling as fallback when realtime is not connected
+    const intervalId = setInterval(() => {
+      if (!isRealtime) {
+        fetchMetricsSnapshot();
+      }
+    }, refreshInterval);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [enabled, refreshInterval, isRealtime, fetchMetricsSnapshot]);
+
+  // ============================================================================
+  // Agent Subscription Actions
+  // ============================================================================
+
   const subscribeToAgent = React.useCallback((agentId: string) => {
-    setSubscribedAgents(prev => new Set(prev).add(agentId));
+    if (!subscribedAgents.current.has(agentId)) {
+      subscribedAgents.current.add(agentId);
+      // Would subscribe to specific agent channel here
+    }
   }, []);
 
-  // Unsubscribe from specific agent
   const unsubscribeFromAgent = React.useCallback((agentId: string) => {
-    setSubscribedAgents(prev => {
-      const next = new Set(prev);
-      next.delete(agentId);
-      return next;
-    });
+    subscribedAgents.current.delete(agentId);
+    // Would unsubscribe from specific agent channel here
   }, []);
+
+  // ============================================================================
+  // Refresh Action
+  // ============================================================================
+
+  const refresh = React.useCallback(() => {
+    fetchMetricsSnapshot();
+  }, [fetchMetricsSnapshot]);
 
   return {
     agentMetrics,
