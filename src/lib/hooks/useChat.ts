@@ -188,13 +188,13 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     const channel = supabase
       .channel(`chat:${chat.id}`)
       .on(
-        'postgres_changes' as const,
+        'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
-        },
+        } as any,
         (payload: { new: ChatMessage }) => {
           setMessages(current => {
             // Check if message already exists
@@ -207,13 +207,13 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         }
       )
       .on(
-        'postgres_changes' as const,
+        'postgres_changes',
         {
           event: 'DELETE',
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
-        },
+        } as any,
         (payload: { old: ChatMessage }) => {
           setMessages(current =>
             current.filter(m => m.id !== payload.old.id)
