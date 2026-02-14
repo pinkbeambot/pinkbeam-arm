@@ -6,7 +6,7 @@ import {
   ConnectionState,
   WSMessage,
   WebSocketConfig,
-} from "@/lib/realtime/websocket";
+} from "@/lib/websocket/websocket";
 
 export interface UseWebSocketOptions extends Partial<Omit<WebSocketConfig, 'url'>> {
   url?: string;
