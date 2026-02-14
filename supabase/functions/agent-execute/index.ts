@@ -1,16 +1,13 @@
 /**
- * Agent Spawn Edge Function
+ * Agent Execute Edge Function
+ * Handles agent task execution delegation
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
-import { createAdminClient, generateUUID, nowISO, createLogger, logActivity, getDefaultAgentConfig, spawnRequestSchema, uuidSchema } from '../_shared/utils.ts';
+import { createAdminClient, generateUUID, nowISO, createLogger, logActivity } from '../_shared/utils.ts';
 
-const logger = createLogger('agent-spawn');
-
-const hierarchicalSpawnSchema = spawnRequestSchema.extend({
-  parent_agent_id: uuidSchema.optional(),
-});
+const logger = createLogger('agent-execute');
 
 interface AuthContext {
   userId: string;
@@ -40,45 +37,25 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleSpawn(auth: AuthContext, body: any): Promise<Response> {
+async function handleExecute(auth: AuthContext, body: any): Promise<Response> {
   const supabase = createAdminClient();
-  
-  let parentAgent: any = null;
-  if (body.parent_agent_id) {
-    const { data } = await supabase.from('agents').select('id, root_id, depth, capabilities').eq('id', body.parent_agent_id).eq('tenant_id', auth.tenantId).single();
-    if (data) parentAgent = data;
-  }
-
-  const defaultConfig = getDefaultAgentConfig(body.role);
-  const agentId = generateUUID();
+  const executionId = generateUUID();
   const now = nowISO();
 
-  const { error } = await supabase.from('agents').insert({
-    id: agentId,
-    tenant_id: auth.tenantId,
-    parent_id: parentAgent?.id || null,
-    root_id: parentAgent?.root_id || agentId,
-    depth: parentAgent ? parentAgent.depth + 1 : 0,
-    name: body.name,
-    role: body.role,
-    description: body.goal,
-    status: 'idle',
-    capabilities: body.config?.capabilities || (defaultConfig.capabilities as string[]),
-    created_at: now,
-    updated_at: now,
-  });
-
-  if (error) return errorResponse('AGENT_CREATE_FAILED', error.message, 500, true);
-
-  await logActivity(supabase, auth.tenantId, 'agent.spawned', 'agent', parentAgent ? 'agent' : 'user', parentAgent?.id || auth.userId,
-    `Agent "${body.name}" spawned`, 'New agent created', { agent_id: agentId, parent_id: parentAgent?.id }, agentId);
+  // Log the execution request
+  await logActivity(supabase, auth.tenantId, 'agent.execute', 'agent', 'agent', body.agent_id,
+    `Agent execution requested`, body.description || '', { execution_id: executionId, agent_id: body.agent_id, task_id: body.task_id });
 
   return jsonResponse({
     success: true,
     data: {
-      agent: { id: agentId, tenant_id: auth.tenantId, parent_id: parentAgent?.id || null, name: body.name, role: body.role, status: 'idle' }
+      execution_id: executionId,
+      agent_id: body.agent_id,
+      task_id: body.task_id,
+      status: 'started',
+      started_at: now
     }
-  }, 201);
+  }, 202);
 }
 
 export default async function handler(req: Request): Promise<Response> {
@@ -87,7 +64,7 @@ export default async function handler(req: Request): Promise<Response> {
   }
 
   const url = new URL(req.url);
-  const path = url.pathname.replace(/^\/agent-spawn\/?/, '') || '';
+  const path = url.pathname.replace(/^\/agent-execute\/?/, '') || '';
 
   if (path === 'health' && req.method === 'GET') {
     return jsonResponse({ success: true, data: { status: 'healthy' } });
@@ -99,7 +76,7 @@ export default async function handler(req: Request): Promise<Response> {
   try {
     if (req.method === 'POST' && !path) {
       const body = await req.json();
-      return await handleSpawn(auth, hierarchicalSpawnSchema.parse(body));
+      return await handleExecute(auth, body);
     }
     return errorResponse('NOT_FOUND', 'Unknown endpoint', 404, false);
   } catch (err) {

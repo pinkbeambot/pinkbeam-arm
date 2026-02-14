@@ -145,7 +145,183 @@ export function useRealtimeMetrics(
   const [lastUpdateAt, setLastUpdateAt] = React.useState<Date | null>(null);
   const [subscribedAgents, setSubscribedAgents] = React.useState<Set<string>>(new Set());
 
+<<<<<<< HEAD
   const supabase = createClient();
+=======
+  // ============================================================================
+  // Data Fetching Functions
+  // ============================================================================
+
+  const fetchMetricsSnapshot = React.useCallback(async () => {
+    try {
+      // Fetch agents
+      const { data: agentsData, error: agentsError } = await supabase
+        .from('agents')
+        .select('*')
+        .order('last_active_at', { ascending: false });
+
+      if (agentsError) throw agentsError;
+
+      // Fetch tasks stats
+      const { data: tasksData, error: tasksError } = await supabase
+        .from('tasks')
+        .select('status');
+
+      if (tasksError) throw tasksError;
+
+      // Fetch recent activities for calculating rates
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from('activities')
+        .select('*')
+        .gte('created_at', fiveMinutesAgo)
+        .order('created_at', { ascending: false });
+
+      if (activitiesError) throw activitiesError;
+
+      // Process agent metrics
+      const agents: AgentLiveMetrics[] = (agentsData || []).map((agent: Agent) => {
+        const agentActivities = (activitiesData || []).filter(
+          (a: Activity) => a.agent_id === agent.id
+        );
+        
+        const completedTasks = agentActivities.filter(
+          (a: Activity) => a.type === 'task_completed'
+        ).length;
+        
+        const failedTasks = agentActivities.filter(
+          (a: Activity) => a.type === 'task_failed'
+        ).length;
+        
+        const totalTasks = completedTasks + failedTasks;
+        const tasksPerMinute = totalTasks / 5; // per 5 minute window
+        const successRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 100;
+
+        return {
+          agentId: agent.id,
+          agentName: agent.name,
+          status: agent.status,
+          tasksPerMinute,
+          successRate,
+          currentLoad: agent.current_task_id ? Math.random() * 40 + 40 : Math.random() * 20, // Simulated load
+          avgResponseTime: Math.random() * 500 + 100, // Simulated
+          errorRate: successRate > 0 ? 100 - successRate : 0,
+          lastActivityAt: agent.last_active_at || agent.updated_at,
+          cpuUsage: Math.random() * 30 + 10,
+          memoryUsage: Math.random() * 40 + 20,
+        };
+      });
+
+      // Filter by agentIds if specified
+      const filteredAgents = agentIds 
+        ? agents.filter(a => agentIds.includes(a.agentId))
+        : agents;
+
+      // Calculate aggregated metrics
+      const completedCount = (activitiesData || []).filter(
+        (a: Activity) => a.type === 'task_completed'
+      ).length;
+      
+      const failedCount = (activitiesData || []).filter(
+        (a: Activity) => a.type === 'task_failed'
+      ).length;
+      
+      const totalCount = completedCount + failedCount;
+
+      const aggregatedData: AggregatedMetrics = {
+        tasks: {
+          total: totalCount,
+          completed: completedCount,
+          failed: failedCount,
+          inProgress: filteredAgents.filter(a => a.currentLoad > 50).length,
+          queued: Math.floor(Math.random() * 10), // Simulated
+          completionRate: totalCount / 5, // per 5 minutes
+          successRate: totalCount > 0 ? (completedCount / totalCount) * 100 : 100,
+          avgDuration: Math.random() * 120 + 30, // Simulated
+        },
+        agents: {
+          total: filteredAgents.length,
+          active: filteredAgents.filter(a => a.status === 'active').length,
+          idle: filteredAgents.filter(a => a.status === 'idle').length,
+          error: filteredAgents.filter(a => a.status === 'error').length,
+          avgTasksPerMinute: filteredAgents.reduce((acc, a) => acc + a.tasksPerMinute, 0) / (filteredAgents.length || 1),
+          avgSuccessRate: filteredAgents.reduce((acc, a) => acc + a.successRate, 0) / (filteredAgents.length || 1),
+        },
+        decisions: {
+          total: (activitiesData || []).filter((a: Activity) => a.type === 'decision_made').length,
+          approved: 0, // Would need decisions table
+          rejected: 0,
+          avgConfidence: 85, // Simulated
+        },
+        escalations: {
+          total: (activitiesData || []).filter(
+            (a: Activity) => a.type === 'escalation_raised' || a.type === 'escalation_created'
+          ).length,
+          open: 0, // Would need escalations table
+          resolved: 0,
+          avgResolutionTime: 0,
+        },
+      };
+
+      // Calculate system health
+      const avgResponseTime = filteredAgents.reduce((acc, a) => acc + a.avgResponseTime, 0) / (filteredAgents.length || 1);
+      const systemStatus: SystemHealthMetrics = {
+        status: avgResponseTime < 500 ? 'healthy' : avgResponseTime < 1000 ? 'degraded' : 'critical',
+        uptime: Date.now() / 1000, // Simulated
+        database: {
+          status: 'healthy',
+          responseTime: Math.random() * 50 + 10,
+          connectionPool: { used: 5, total: 100, utilization: 5 },
+          queryLatency: { p50: 10, p95: 25, p99: 50 },
+        },
+        realtime: {
+          status: isRealtime ? 'healthy' : 'degraded',
+          connections: filteredAgents.length,
+          messagesPerSecond: Math.random() * 10,
+          latency: Math.random() * 100,
+        },
+        agentRuntime: {
+          status: filteredAgents.some(a => a.status === 'error') ? 'degraded' : 'healthy',
+          activeAgents: filteredAgents.filter(a => a.status === 'active').length,
+          queuedTasks: aggregatedData.tasks.queued,
+          processingTasks: aggregatedData.tasks.inProgress,
+          avgTaskWaitTime: Math.random() * 30,
+        },
+        resources: {
+          cpu: { usage: Math.random() * 30 + 20, cores: 8 },
+          memory: { used: 4096, total: 16384, usage: 25 },
+          disk: { used: 100, total: 500, usage: 20 },
+        },
+      };
+
+      // Update state
+      setAgentMetrics(filteredAgents);
+      setSystemHealth(systemStatus);
+      setAggregated(aggregatedData);
+      setLastUpdateAt(new Date());
+
+      // Update chart history
+      const now = Date.now();
+      const newPoint: LiveMetricPoint = { timestamp: now, value: aggregatedData.tasks.completionRate };
+      const newSuccessPoint: LiveMetricPoint = { timestamp: now, value: aggregatedData.tasks.successRate };
+      const newLoadPoint: LiveMetricPoint = { 
+        timestamp: now, 
+        value: aggregatedData.agents.avgTasksPerMinute 
+      };
+
+      setTasksPerMinuteHistory(prev => [...prev.slice(-maxDataPoints + 1), newPoint]);
+      setSuccessRateHistory(prev => [...prev.slice(-maxDataPoints + 1), newSuccessPoint]);
+      setAgentLoadHistory(prev => [...prev.slice(-maxDataPoints + 1), newLoadPoint]);
+
+    } catch (error) {
+      console.error('Failed to fetch metrics:', error);
+    }
+  }, [supabase, agentIds, maxDataPoints, isRealtime]);
+
+  // ============================================================================
+  // Realtime Subscription
+  // ============================================================================
+>>>>>>> eng-be/task-25-edge-functions
 
   // Initialize with mock data for development
   React.useEffect(() => {
