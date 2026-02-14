@@ -19,8 +19,6 @@ const CONFIDENCE_THRESHOLDS: Record<ConfidenceLevel, number | undefined> = {
   all: undefined, high: 0.9, medium: 0.7, low: 0.5,
 };
 
-import type { DecisionStatus } from '@/types';
-
 const TYPE_TO_STATUS: Record<DecisionType, DecisionStatus | undefined> = {
   all: undefined, 
   proposed: 'proposed', 

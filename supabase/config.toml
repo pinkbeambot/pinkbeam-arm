@@ -4,7 +4,6 @@ project_id = "arm"
 enabled = true
 port = 54321
 schemas = ["public", "storage", "graphql_public"]
-exposed_schemas = ["public", "storage", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
