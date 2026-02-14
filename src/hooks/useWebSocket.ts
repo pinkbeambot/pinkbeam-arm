@@ -1,16 +1,3 @@
-/**
- * useWebSocket React Hook
- * 
- * Provides React integration for WebSocket Connection Manager
- * 
- * Features:
- * - Connection state management
- * - Auto-connect on mount
- * - Message sending and receiving
- * - Topic subscriptions
- * - Cleanup on unmount
- */
-
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
@@ -19,33 +6,36 @@ import {
   ConnectionState,
   WSMessage,
   WebSocketConfig,
-} from "@/lib/websocket";
+  getGlobalWebSocket,
+} from "@/lib/realtime/websocket";
 
-export interface UseWebSocketOptions extends Partial<Omit<WebSocketConfig, 'url'>> {
-  url?: string;
+export interface UseWebSocketOptions extends Partial<WebSocketConfig> {
   autoConnect?: boolean;
   onMessage?: (message: WSMessage) => void;
   onStateChange?: (state: ConnectionState) => void;
   onError?: (error: Error) => void;
+  onOpen?: () => void;
+  onClose?: () => void;
 }
 
 export interface UseWebSocketReturn {
-  /** Current connection state */
   state: ConnectionState;
-  /** Whether the connection is open */
   isConnected: boolean;
-  /** Manually connect to the WebSocket */
   connect: () => void;
-  /** Disconnect from the WebSocket */
   disconnect: () => void;
-  /** Send a message to the server */
   send: <T>(message: WSMessage<T>) => boolean;
-  /** Subscribe to a topic */
   subscribe: <T>(topic: string, handler: (message: WSMessage<T>) => void) => () => void;
 }
 
 /**
  * React hook for WebSocket connection management
+ * 
+ * Features:
+ * - Auto-reconnection with exponential backoff
+ * - Connection state tracking
+ * - Message sending and receiving
+ * - Topic-based subscriptions
+ * - Cleanup on unmount
  * 
  * @example
  * ```tsx
@@ -74,6 +64,8 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
     onMessage,
     onStateChange,
     onError,
+    onOpen,
+    onClose,
     ...config
   } = options;
 
@@ -84,6 +76,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
   useEffect(() => {
     const ws = new WebSocketManager({
       url: config.url || "",
+      protocols: config.protocols,
       reconnectAttempts: config.reconnectAttempts,
       reconnectInterval: config.reconnectInterval,
       maxReconnectInterval: config.maxReconnectInterval,
@@ -95,10 +88,11 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
     wsRef.current = ws;
 
+    // Set up event handlers
     const unsubscribers: (() => void)[] = [];
 
     unsubscribers.push(
-      ws.onStateChange((newState: ConnectionState) => {
+      ws.onStateChange((newState) => {
         setState(newState);
         onStateChange?.(newState);
       })
@@ -112,16 +106,195 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
       unsubscribers.push(ws.onError(onError));
     }
 
+    if (onOpen) {
+      unsubscribers.push(ws.onOpen(onOpen));
+    }
+
+    if (onClose) {
+      unsubscribers.push(ws.onClose(onClose));
+    }
+
+    // Auto-connect if enabled
     if (autoConnect && config.url) {
       ws.connect();
     }
 
+    // Cleanup on unmount
     return () => {
       unsubscribers.forEach((unsub) => unsub());
       ws.destroy();
       wsRef.current = null;
     };
-  }, [config.url]);
+  }, [config.url]); // Only re-initialize if URL changes
+
+  const connect = useCallback(() => {
+    wsRef.current?.connect();
+  }, []);
+
+  const disconnect = useCallback(() => {
+    wsRef.current?.disconnect();
+  }, []);
+
+  const send = useCallback(<T>(message: WSMessage<T>): boolean => {
+    return wsRef.current?.send(message) ?? false;
+  }, []);
+
+  const subscribe = useCallback(<T>(
+    topic: string,
+    handler: (message: WSMessage<T>) => void
+  ): (() => void) => {
+    return wsRef.current?.subscribe(topic, handler) ?? (() => {});
+  }, []);
+
+  return {
+    state,
+    isConnected: state === "connected",
+    connect,
+    disconnect,
+    send,
+    subscribe,
+  };
+}
+
+/**
+ * Hook for subscribing to a specific topic
+ * 
+ * @example
+ * ```tsx
+ * function AgentUpdates({ agentId }: { agentId: string }) {
+ *   const { messages, isSubscribed } = useTopic(`agent:${agentId}`);
+ *   
+ *   useEffect(() => {
+ *     if (messages.length > 0) {
+ *       const latest = messages[messages.length - 1];
+ *       console.log('Latest update:', latest);
+ *     }
+ *   }, [messages]);
+ *   
+ *   return <div>{isSubscribed ? 'Subscribed' : 'Connecting...'}</div>;
+ * }
+ * ```
+ */
+export function useTopic<T = unknown>(
+  topic: string,
+  options?: Omit<UseWebSocketOptions, "onMessage">
+): {
+  messages: WSMessage<T>[];
+  isSubscribed: boolean;
+  clearMessages: () => void;
+} {
+  const [messages, setMessages] = useState<WSMessage<T>[]>([]);
+  const { subscribe, isConnected } = useWebSocket(options ?? { autoConnect: true });
+
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
+  useEffect(() => {
+    if (!isConnected || !topic) return;
+
+    const unsubscribe = subscribe<T>(topic, (message) => {
+      setMessages((prev) => [...prev, message]);
+    });
+
+    return unsubscribe;
+  }, [topic, isConnected, subscribe]);
+
+  return {
+    messages,
+    isSubscribed: isConnected && !!topic,
+    clearMessages,
+  };
+}
+
+/**
+ * Hook for singleton WebSocket instance (app-wide)
+ * 
+ * Use this when you need a single shared connection across components
+ * 
+ * @example
+ * ```tsx
+ * function App() {
+ *   const { state } = useGlobalWebSocket({
+ *     url: process.env.NEXT_PUBLIC_WS_URL!,
+ *   });
+ *   
+ *   return (
+ *     <ConnectionStatus state={state} />
+ *   );
+ * }
+ * ```
+ */
+export function useGlobalWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
+  const [state, setState] = useState<ConnectionState>("disconnected");
+  const wsRef = useRef<WebSocketManager | null>(null);
+
+  // Initialize global WebSocket
+  useEffect(() => {
+    const ws = getGlobalWebSocket({
+      url: options.url || "",
+      protocols: options.protocols,
+      reconnectAttempts: options.reconnectAttempts,
+      reconnectInterval: options.reconnectInterval,
+      maxReconnectInterval: options.maxReconnectInterval,
+      heartbeatInterval: options.heartbeatInterval,
+      heartbeatTimeout: options.heartbeatTimeout,
+      backoffMultiplier: options.backoffMultiplier,
+      debug: options.debug,
+    });
+
+    wsRef.current = ws;
+
+    const unsubscribers: (() => void)[] = [];
+
+    unsubscribers.push(
+      ws.onStateChange((newState: ConnectionState) => {
+        setState(newState);
+        options.onStateChange?.(newState);
+      })
+    );
+
+    if (options.onMessage) {
+      unsubscribers.push(ws.onMessage(options.onMessage));
+    }
+
+    if (options.onError) {
+      unsubscribers.push(ws.onError(options.onError));
+    }
+
+    if (options.onOpen) {
+      unsubscribers.push(ws.onOpen(options.onOpen));
+    }
+
+    if (options.onClose) {
+      unsubscribers.push(ws.onClose(options.onClose));
+    }
+
+    if (options.autoConnect !== false && options.url) {
+      ws.connect();
+    }
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+      // Don't destroy global instance on unmount
+    };
+  }, [
+    options.url,
+    options.protocols,
+    options.reconnectAttempts,
+    options.reconnectInterval,
+    options.maxReconnectInterval,
+    options.heartbeatInterval,
+    options.heartbeatTimeout,
+    options.backoffMultiplier,
+    options.debug,
+    options.autoConnect,
+    options.onMessage,
+    options.onError,
+    options.onOpen,
+    options.onClose,
+    options.onStateChange,
+  ]);
 
   const connect = useCallback(() => {
     wsRef.current?.connect();
