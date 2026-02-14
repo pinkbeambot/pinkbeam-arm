@@ -138,7 +138,7 @@ export function LiveLineChart({
                 tick={{ fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => valueFormatter(value)}
+                tickFormatter={(value) => valueFormatter(value as number)}
                 domain={[domainMin, domainMax]}
                 width={40}
               />
@@ -168,7 +168,7 @@ export function LiveLineChart({
                 tick={{ fontSize: 10 }}
                 tickLine={false}
                 axisLine={false}
-                tickFormatter={(value) => valueFormatter(value)}
+                tickFormatter={(value) => valueFormatter(value as number)}
                 domain={[domainMin, domainMax]}
                 width={40}
               />

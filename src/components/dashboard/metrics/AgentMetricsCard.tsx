@@ -33,7 +33,7 @@ import type { AgentMetricsCardProps } from './types';
 import type { AgentLiveMetrics } from './types';
 
 // Status configuration
-const statusConfig = {
+const statusConfig: Record<string, { color: string; label: string; icon: typeof Activity }> = {
   initializing: { color: 'bg-blue-500', label: 'Initializing', icon: Clock },
   idle: { color: 'bg-slate-400', label: 'Idle', icon: Clock },
   active: { color: 'bg-green-500', label: 'Active', icon: Activity },
@@ -46,7 +46,7 @@ const statusConfig = {
 
 // Mock trend data (in real implementation, this would come from the API)
 function generateTrendData(successRate: number): { value: number }[] {
-  return Array.from({ length: 20 }, (_, i) => ({
+  return Array.from({ length: 20 }, () => ({
     value: successRate + (Math.random() - 0.5) * 10,
   }));
 }
@@ -57,22 +57,15 @@ export function AgentMetricsCard({
   onClick,
   className,
 }: AgentMetricsCardProps) {
-  const status = statusConfig[agent.status];
+  const status = statusConfig[agent.status] || statusConfig.idle;
   const StatusIcon = status.icon;
   const trendData = generateTrendData(agent.successRate);
 
   // Determine health color based on success rate
-  const getHealthColor = (rate: number) => {
+  const getHealthColor = (rate: number): string => {
     if (rate >= 95) return '#22c55e'; // green
     if (rate >= 80) return '#f59e0b'; // amber
     return '#ef4444'; // red
-  };
-
-  // Determine load color
-  const getLoadColor = (load: number) => {
-    if (load <= 50) return 'bg-green-500';
-    if (load <= 75) return 'bg-amber-500';
-    return 'bg-red-500';
   };
 
   return (
@@ -145,7 +138,6 @@ export function AgentMetricsCard({
           <Progress 
             value={agent.currentLoad} 
             className="h-1.5"
-            // Custom color based on load
           />
         </div>
 
@@ -189,7 +181,7 @@ export function AgentMetricsCompact({
   onClick,
   className,
 }: AgentMetricsCardProps) {
-  const status = statusConfig[agent.status];
+  const status = statusConfig[agent.status] || statusConfig.idle;
 
   return (
     <div
