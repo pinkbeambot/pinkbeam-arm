@@ -10,6 +10,7 @@ const listEscalationsQuerySchema = z.object({
   urgency: z.enum(['low', 'normal', 'high', 'critical']).optional(),
   type: z.enum(['clarification', 'approval', 'error', 'edge_case', 'policy_violation']).optional(),
   agent_id: z.string().uuid().optional(),
+  search: z.string().min(1).max(200).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
@@ -33,7 +34,10 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: userProfile, error: profileError } = await supabase
-      .from('users').select('tenant_id').eq('auth_id', user.id).single();
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_id', user.id)
+      .single();
 
     if (profileError || !userProfile?.tenant_id) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
@@ -48,6 +52,7 @@ export async function GET(request: NextRequest) {
       urgency: searchParams.get('urgency') || undefined,
       type: searchParams.get('type') || undefined,
       agent_id: searchParams.get('agent_id') || undefined,
+      search: searchParams.get('search') || undefined,
       page: searchParams.get('page') || '1',
       limit: searchParams.get('limit') || '20',
     };
@@ -58,7 +63,13 @@ export async function GET(request: NextRequest) {
 
     let dbQuery = supabase
       .from('escalations')
-      .select('*, agent:agent_id(id, name, avatar_url), task:task_id(id, title, status)', { count: 'exact' })
+      .select(
+        `*,
+        agent:agent_id(id, name, avatar_url, role, status),
+        task:task_id(id, title, status),
+        resolver:resolved_by(id, name, avatar_url)`,
+        { count: 'exact' }
+      )
       .eq('tenant_id', tenantId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -67,21 +78,26 @@ export async function GET(request: NextRequest) {
     if (validatedQuery.urgency) dbQuery = dbQuery.eq('urgency', validatedQuery.urgency);
     if (validatedQuery.type) dbQuery = dbQuery.eq('type', validatedQuery.type);
     if (validatedQuery.agent_id) dbQuery = dbQuery.eq('agent_id', validatedQuery.agent_id);
+    if (validatedQuery.search) {
+      dbQuery = dbQuery.or(`title.ilike.%${validatedQuery.search}%,description.ilike.%${validatedQuery.search}%`);
+    }
 
     const { data: escalations, error, count } = await dbQuery;
 
     if (error) {
+      console.error('Error fetching escalations:', error);
       return NextResponse.json({ error: 'Failed to fetch escalations', details: error.message }, { status: 500 });
     }
 
     return NextResponse.json({
-      data: escalations,
+      data: escalations?.map((e) => ({ ...e, agent: e.agent || undefined, task: e.task || undefined, resolver: e.resolver || undefined })),
       pagination: { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit) },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation error', details: error.issues }, { status: 400 });
     }
+    console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -93,6 +109,9 @@ const createEscalationSchema = z.object({
   urgency: z.enum(['low', 'normal', 'high', 'critical']).default('normal'),
   title: z.string().min(1).max(500),
   description: z.string().min(1),
+  situation_context: z.record(z.string(), z.unknown()).optional(),
+  question: z.object({ title: z.string().optional(), details: z.string().optional(), options: z.array(z.string()).optional() }).optional(),
+  agent_analysis: z.object({ what_i_know: z.string().optional(), what_i_dont_know: z.string().optional(), what_i_tried: z.array(z.string()).optional(), suggested_resolution: z.string().optional() }).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -117,7 +136,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: userProfile, error: profileError } = await supabase
-      .from('users').select('tenant_id').eq('auth_id', user.id).single();
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_id', user.id)
+      .single();
 
     if (profileError || !userProfile?.tenant_id) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
@@ -127,7 +149,11 @@ export async function POST(request: NextRequest) {
     await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     const { data: agent, error: agentError } = await supabase
-      .from('agents').select('id').eq('id', validatedData.agent_id).eq('tenant_id', tenantId).single();
+      .from('agents')
+      .select('id')
+      .eq('id', validatedData.agent_id)
+      .eq('tenant_id', tenantId)
+      .single();
 
     if (agentError || !agent) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 400 });
@@ -135,7 +161,11 @@ export async function POST(request: NextRequest) {
 
     if (validatedData.task_id) {
       const { data: task, error: taskError } = await supabase
-        .from('tasks').select('id').eq('id', validatedData.task_id).eq('tenant_id', tenantId).single();
+        .from('tasks')
+        .select('id')
+        .eq('id', validatedData.task_id)
+        .eq('tenant_id', tenantId)
+        .single();
       if (taskError || !task) {
         return NextResponse.json({ error: 'Task not found' }, { status: 400 });
       }
@@ -151,12 +181,16 @@ export async function POST(request: NextRequest) {
         urgency: validatedData.urgency,
         title: validatedData.title,
         description: validatedData.description,
+        situation_context: validatedData.situation_context || {},
+        question: validatedData.question || {},
+        agent_analysis: validatedData.agent_analysis || {},
         status: 'open',
       })
-      .select('*, agent:agent_id(id, name, avatar_url), task:task_id(id, title, status)')
+      .select(`*, agent:agent_id(id, name, avatar_url, role, status), task:task_id(id, title, status)`)
       .single();
 
     if (error) {
+      console.error('Error creating escalation:', error);
       return NextResponse.json({ error: 'Failed to create escalation', details: error.message }, { status: 500 });
     }
 
@@ -165,6 +199,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: 'Validation error', details: error.issues }, { status: 400 });
     }
+    console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
