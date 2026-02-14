@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MarketingNav, MarketingFooter } from "@/components/marketing";
 
 export const metadata: Metadata = {
   title: {
@@ -60,7 +61,9 @@ export default function MarketingLayout({
 }) {
   return (
     <div className="min-h-screen bg-background">
+      <MarketingNav />
       {children}
+      <MarketingFooter />
     </div>
   );
 }

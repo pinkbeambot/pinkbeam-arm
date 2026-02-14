@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MarketingNav, MarketingFooter } from "@/components/marketing";
 import { FadeIn, StaggerContainer } from "@/components/animations";
 import {
   Target,
@@ -118,8 +117,6 @@ const stats = [
 export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
-      <MarketingNav currentPath="/about" />
-
       {/* Hero Section */}
       <section className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-background via-muted/30 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -307,7 +304,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <MarketingFooter />
     </div>
   );
 }
