@@ -24,9 +24,10 @@ import type { DateRange, ExportOptions } from './types';
 interface ExportButtonProps {
   dateRange: DateRange;
   className?: string;
+  disabled?: boolean;
 }
 
-export function ExportButton({ dateRange, className }: ExportButtonProps) {
+export function ExportButton({ dateRange, className, disabled }: ExportButtonProps) {
   const [isExporting, setIsExporting] = React.useState(false);
   const [selectedSections, setSelectedSections] = React.useState<Set<string>>(
     new Set(['metrics', 'leaderboard', 'roi', 'bottlenecks'])
@@ -82,7 +83,7 @@ export function ExportButton({ dateRange, className }: ExportButtonProps) {
         <Button 
           variant="outline" 
           className={cn("gap-2", className)}
-          disabled={isExporting}
+          disabled={isExporting || disabled}
         >
           {isExporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

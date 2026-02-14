@@ -1,7 +1,7 @@
 'use client';
 
-import { X, Bot, Calendar, Activity, CheckCircle2, Clock, AlertCircle, Settings, MessageSquare, Play, Pause, ExternalLink } from 'lucide-react';
-import Link from 'next/link';
+import { useState } from 'react';
+import { X, Bot, Calendar, Activity, CheckCircle2, Clock, AlertCircle, MessageSquare, Play, Pause, Pencil } from 'lucide-react';
 import { cn, formatDateTime, getAgentStatusColor, getAgentStatusLabel, getRoleLabel, getRoleBadgeColor, getInitials, getAvatarColor, formatRelativeTime } from '@/lib/utils';
 import type { Agent } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -12,15 +12,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Skeleton } from '@/components/ui/skeleton';
+import { EditAgentModal } from './EditAgentModal';
+import { useUpdateAgent } from '@/lib/hooks/useAgents';
+import { useToast } from '@/components/ui/use-toast';
 
 interface AgentDetailPanelProps {
   agent: Agent | null;
   loading?: boolean;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onEdit: () => void;
+  onEdit?: () => void;
   onChat: () => void;
   onToggleStatus: () => void;
+  onAgentUpdated?: (agent: Agent) => void;
 }
 
 export function AgentDetailPanel({
@@ -31,23 +35,67 @@ export function AgentDetailPanel({
   onEdit,
   onChat,
   onToggleStatus,
+  onAgentUpdated,
 }: AgentDetailPanelProps) {
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const { updateAgent, loading: updating } = useUpdateAgent();
+  const { toast } = useToast();
+
+  const handleEdit = () => {
+    if (onEdit) {
+      onEdit();
+    } else {
+      setEditModalOpen(true);
+    }
+  };
+
+  const handleSave = async (agentId: string, updates: Partial<Agent>) => {
+    try {
+      const updatedAgent = await updateAgent(agentId, updates);
+      toast({
+        title: 'Agent Updated',
+        description: `${updates.name || 'Agent'} has been updated successfully.`,
+      });
+      setEditModalOpen(false);
+      if (onAgentUpdated) {
+        onAgentUpdated(updatedAgent);
+      }
+    } catch (err) {
+      toast({
+        title: 'Error',
+        description: err instanceof Error ? err.message : 'Failed to update agent',
+        variant: 'destructive',
+      });
+      throw err;
+    }
+  };
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-xl p-0">
-        {loading || !agent ? (
-          <AgentDetailSkeleton />
-        ) : (
-          <AgentDetailContent
-            agent={agent}
-            onEdit={onEdit}
-            onChat={onChat}
-            onToggleStatus={onToggleStatus}
-            onClose={() => onOpenChange(false)}
-          />
-        )}
-      </SheetContent>
-    </Sheet>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent className="w-full sm:max-w-xl p-0">
+          {loading || !agent ? (
+            <AgentDetailSkeleton />
+          ) : (
+            <AgentDetailContent
+              agent={agent}
+              onEdit={handleEdit}
+              onChat={onChat}
+              onToggleStatus={onToggleStatus}
+              onClose={() => onOpenChange(false)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <EditAgentModal
+        agent={agent}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        onSave={handleSave}
+        loading={updating}
+      />
+    </>
   );
 }
 
@@ -99,13 +147,10 @@ function AgentDetailContent({
 
         {/* Quick Actions */}
         <div className="flex gap-2">
-          <Link href={`/agents/${agent.id}/configure`} className="flex-1">
-            <Button variant="outline" size="sm" className="w-full">
-              <Settings className="mr-2 h-4 w-4" />
-              Configure
-              <ExternalLink className="ml-2 h-3 w-3" />
-            </Button>
-          </Link>
+          <Button variant="outline" size="sm" onClick={onEdit} className="flex-1">
+            <Pencil className="mr-2 h-4 w-4" />
+            Edit
+          </Button>
           <Button variant="outline" size="sm" onClick={onChat} className="flex-1">
             <MessageSquare className="mr-2 h-4 w-4" />
             Chat
