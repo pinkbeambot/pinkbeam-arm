@@ -415,6 +415,27 @@ export {
 } from './validation/agent-config';
 
 // ============================================================================
+// Chat Validation
+// ============================================================================
+
+export const createChatSchema = z.object({
+  agent_id: z.string().uuid(),
+});
+
+export const sendMessageSchema = z.object({
+  content: z.string().min(1).max(4000),
+});
+
+export const listChatMessagesQuerySchema = z.object({
+  limit: z.coerce.number().int().positive().max(100).default(50),
+  before: z.string().datetime().optional(),
+});
+
+export type CreateChatInput = z.infer<typeof createChatSchema>;
+export type SendMessageInput = z.infer<typeof sendMessageSchema>;
+export type ListChatMessagesQuery = z.infer<typeof listChatMessagesQuerySchema>;
+
+// ============================================================================
 // Re-export Auth Validation
 // ============================================================================
 

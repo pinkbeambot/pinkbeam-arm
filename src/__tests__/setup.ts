@@ -1,10 +1,11 @@
 /**
  * Test Setup
- * 
+ *
  * Shared test configuration and utilities
  */
 
 import { vi } from 'vitest';
+import '@testing-library/jest-dom';
 
 // Mock environment variables
 process.env.ANTHROPIC_API_KEY = 'test-anthropic-key';
