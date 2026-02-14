@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
@@ -17,9 +17,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Menu,
-  Zap
+  Zap,
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 interface NavItem {
   label: string;
@@ -38,7 +41,6 @@ const navItems: NavItem[] = [
   { label: 'Live Metrics', href: '/portal/metrics', icon: Zap },
   { label: 'Performance', href: '/portal/performance', icon: BarChart3 },
   { label: 'Chat', href: '/portal/chat', icon: MessageSquare },
-  { label: 'Settings', href: '/portal/settings', icon: Settings },
 ];
 
 interface PortalSidebarProps {
@@ -53,6 +55,23 @@ export function PortalSidebar({
   className 
 }: PortalSidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useAuth();
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    const { error } = await signOut();
+    
+    if (!error) {
+      router.push('/login');
+    } else {
+      console.error('Logout error:', error);
+      setIsLoggingOut(false);
+    }
+  };
+
+  const isSettingsActive = pathname === '/portal/settings' || pathname?.startsWith('/portal/settings/');
 
   return (
     <aside
@@ -84,7 +103,7 @@ export function PortalSidebar({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
         {navItems.map((item) => {
           const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
           const Icon = item.icon;
@@ -118,6 +137,46 @@ export function PortalSidebar({
           );
         })}
       </nav>
+
+      {/* Settings and Logout Section */}
+      <div className="absolute bottom-16 left-0 right-0 px-2 space-y-1 border-t border-border pt-4">
+        {/* Settings Link */}
+        <Link
+          href="/portal/settings"
+          className={cn(
+            'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+            'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            isSettingsActive 
+              ? 'bg-sidebar-accent text-sidebar-accent-foreground' 
+              : 'text-sidebar-foreground/70',
+            collapsed && 'justify-center px-2'
+          )}
+          title={collapsed ? 'Settings' : undefined}
+        >
+          <Settings className="h-5 w-5 flex-shrink-0" />
+          {!collapsed && <span className="flex-1">Settings</span>}
+        </Link>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className={cn(
+            'w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
+            'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            'text-sidebar-foreground/70 disabled:opacity-50 disabled:cursor-not-allowed',
+            collapsed && 'justify-center px-2'
+          )}
+          title={collapsed ? 'Logout' : undefined}
+        >
+          {isLoggingOut ? (
+            <Loader2 className="h-5 w-5 flex-shrink-0 animate-spin" />
+          ) : (
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+          )}
+          {!collapsed && <span className="flex-1">Logout</span>}
+        </button>
+      </div>
 
       {/* Collapse Toggle */}
       <div className="absolute bottom-4 right-0 translate-x-1/2">

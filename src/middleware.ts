@@ -6,11 +6,24 @@ import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-// Public API routes that don't require authentication or rate limiting
+// Public routes that don't require authentication
 const PUBLIC_ROUTES = [
   '/api/auth',
   '/api/webhooks',
   '/api/health',
+];
+
+// Public page routes
+const PUBLIC_PAGE_ROUTES = [
+  '/login',
+  '/',
+  '/about',
+  '/pricing',
+  '/contact',
+  '/agents',
+  '/terms',
+  '/privacy',
+  '/auth/callback',
 ];
 
 // Routes excluded from rate limiting (but still require auth)
@@ -26,29 +39,40 @@ function isRateLimitExcluded(pathname: string): boolean {
 }
 
 /**
+ * Check if a page route is public
+ */
+function isPublicPageRoute(pathname: string): boolean {
+  return PUBLIC_PAGE_ROUTES.some(route => 
+    pathname === route || pathname.startsWith(`${route}/`)
+  );
+}
+
+/**
  * Next.js Middleware for Authentication, Tenant Context, and Rate Limiting
  * 
  * This middleware:
- * - Validates JWT tokens via Supabase Auth
+ * - Validates JWT tokens via Supabase Auth for API routes
+ * - Redirects unauthenticated users to /login for protected page routes
  * - Extracts tenant_id from JWT claims
  * - Handles token refresh automatically
- * - Returns 401 for invalid/missing tokens
+ * - Returns 401 for invalid/missing tokens on API routes
  * - Applies per-tenant rate limiting (100 req/min free, 1000 req/min pro)
  * - Returns 429 with Retry-After header when limit exceeded
- * - Applies to all /api/* routes except public ones
- * - Sets tenant context headers for downstream RLS
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for non-API routes
-  if (!pathname.startsWith('/api/')) {
-    return NextResponse.next();
-  }
-
-  // Check if this is a public route
-  const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
-  if (isPublicRoute) {
+  // Skip middleware for static files and Next.js internals
+  if (
+    pathname.startsWith('/_next/') ||
+    pathname.startsWith('/static/') ||
+    pathname.startsWith('/favicon.ico') ||
+    pathname.startsWith('/images/') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.jpg') ||
+    pathname.endsWith('.svg')
+  ) {
     return NextResponse.next();
   }
 
@@ -66,7 +90,6 @@ export async function middleware(request: NextRequest) {
         return request.cookies.get(name)?.value;
       },
       set(name: string, value: string, options: CookieOptions) {
-        // If the cookie is updated, update the cookies for the request and response
         request.cookies.set({
           name,
           value,
@@ -84,7 +107,6 @@ export async function middleware(request: NextRequest) {
         });
       },
       remove(name: string, options: CookieOptions) {
-        // If the cookie is removed, update the cookies for the request and response
         request.cookies.set({
           name,
           value: '',
@@ -104,54 +126,31 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  // Get auth token from header (for API requests) or session (for SSR)
-  const authHeader = request.headers.get('authorization');
-  let token: string | undefined;
+  // Get session
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-  if (authHeader?.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1];
+  if (sessionError) {
+    console.error('Session error:', sessionError.message);
   }
 
-  try {
-    // Validate the session/token
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('Session error:', sessionError.message);
-      return NextResponse.json(
-        { error: 'Invalid session', code: 'INVALID_SESSION' },
-        { status: 401 }
-      );
+  // Handle API routes
+  if (pathname.startsWith('/api/')) {
+    // Check if this is a public API route
+    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+    if (isPublicRoute) {
+      return NextResponse.next();
     }
 
-    // If no session from cookies and no bearer token, check for token validity
-    let user = session?.user;
-    
-    if (!user && token) {
-      // Validate the bearer token
-      const { data: { user: tokenUser }, error: tokenError } = await supabase.auth.getUser(token);
-      
-      if (tokenError || !tokenUser) {
-        console.error('Token validation error:', tokenError?.message);
-        return NextResponse.json(
-          { error: 'Invalid or expired token', code: 'INVALID_TOKEN' },
-          { status: 401 }
-        );
-      }
-      
-      user = tokenUser;
-    }
-
-    // If still no user, return 401
-    if (!user) {
+    // API routes require authentication
+    if (!session) {
       return NextResponse.json(
         { error: 'Authentication required', code: 'UNAUTHORIZED' },
         { status: 401 }
       );
     }
 
-    // Get user's tenant_id from JWT claims or user metadata
-    // The tenant_id should be stored in user metadata during signup/onboarding
+    // Get user's tenant_id from session
+    const user = session.user;
     const tenantId = user.user_metadata?.tenant_id || 
                      user.app_metadata?.tenant_id ||
                      (await getTenantIdFromUser(supabase, user.id));
@@ -165,11 +164,8 @@ export async function middleware(request: NextRequest) {
     }
 
     // Set tenant context headers for downstream API routes
-    // These headers can be used by API routes to set RLS context
     response.headers.set('x-tenant-id', tenantId);
     response.headers.set('x-user-id', user.id);
-    
-    // Also set in request headers so API routes can access it
     request.headers.set('x-tenant-id', tenantId);
     request.headers.set('x-user-id', user.id);
 
@@ -178,24 +174,33 @@ export async function middleware(request: NextRequest) {
       const rateLimitResponse = await rateLimitMiddleware(request, tenantId);
       
       if (rateLimitResponse) {
-        // Rate limit exceeded - return the 429 response
         return rateLimitResponse;
       }
       
-      // Add rate limit headers to the response
       response = await addRateLimitHeaders(response, tenantId);
     }
 
-    // If there's a refreshed session, the cookies will be updated via the cookie callbacks
     return response;
-
-  } catch (error) {
-    console.error('Middleware error:', error);
-    return NextResponse.json(
-      { error: 'Internal authentication error', code: 'AUTH_ERROR' },
-      { status: 500 }
-    );
   }
+
+  // Handle page routes - redirect unauthenticated users from /portal/* to /login
+  if (pathname.startsWith('/portal/') || pathname === '/portal') {
+    if (!session) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  // Redirect authenticated users away from /login
+  if (pathname === '/login' || pathname.startsWith('/login/')) {
+    if (session) {
+      const redirectTo = request.nextUrl.searchParams.get('redirect') || '/portal';
+      return NextResponse.redirect(new URL(redirectTo, request.url));
+    }
+  }
+
+  return response;
 }
 
 /**
@@ -227,18 +232,17 @@ async function getTenantIdFromUser(
 
 /**
  * Middleware configuration
- * Match all API routes except public ones
+ * Match all routes except static files
  */
 export const config = {
   matcher: [
     /*
-     * Match all API routes:
-     * - /api/:path*
-     * Exclude:
+     * Match all request paths except:
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - public folder files
      */
-    '/api/:path*',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../globals.css";
 import { DesignSystemProvider } from "@/components/design-system";
+import { AuthProvider } from "@/components/auth/AuthProvider";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,19 +21,30 @@ export const metadata: Metadata = {
   description: "Command center for AI-native businesses",
 };
 
-export default function DashboardLayout({
+export default async function PortalLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Check authentication on the server
+  const supabase = await createServerSupabaseClient();
+  const { data: { session } } = await supabase.auth.getSession();
+
+  // Redirect to login if not authenticated
+  if (!session) {
+    redirect('/login');
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <DesignSystemProvider defaultTheme="system">
-          {children}
-        </DesignSystemProvider>
+        <AuthProvider>
+          <DesignSystemProvider defaultTheme="system">
+            {children}
+          </DesignSystemProvider>
+        </AuthProvider>
       </body>
     </html>
   );
