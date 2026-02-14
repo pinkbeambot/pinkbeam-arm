@@ -25,7 +25,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState } from "react";
-import { sonnerToast } from "@/components/ui/use-toast";
+import { toast } from "sonner";
 
 const inquiryTypes = [
   { value: "sales", label: "Sales Inquiry" },
@@ -83,7 +83,7 @@ export function ContactPageClient() {
 
     setIsSubmitting(false);
     setIsSubmitted(true);
-    sonnerToast.success("Message sent!", {
+    toast.success("Message sent!", {
       description: "We'll get back to you within 24 hours.",
     });
   };
