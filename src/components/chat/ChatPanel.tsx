@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { X, ChevronDown, Trash2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn, formatRelativeTime, getAvatarColor, getInitials, getAgentStatusColor } from '@/lib/utils';
 import { useChat } from '@/lib/hooks/useChat';
 import { Button } from '@/components/ui/button';
