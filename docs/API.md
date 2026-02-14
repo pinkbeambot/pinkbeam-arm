@@ -76,8 +76,98 @@ The following routes do not require authentication:
 | `INSUFFICIENT_PERMISSIONS` | User lacks required capability | 403 |
 | `NOT_FOUND` | Resource not found | 404 |
 | `VALIDATION_ERROR` | Request validation failed | 400 |
-| `RATE_LIMITED` | Too many requests | 429 |
+| `RATE_LIMIT_EXCEEDED` | Too many requests | 429 |
 | `INTERNAL_ERROR` | Internal server error | 500 |
+
+## Rate Limiting
+
+API requests are rate limited per tenant using a sliding window algorithm. Rate limits are enforced via Redis/Upstash for distributed accuracy.
+
+### Rate Limit Tiers
+
+| Tier | Requests/Minute | Description |
+|------|-----------------|-------------|
+| `free` | 100 | Default for starter/free plans |
+| `pro` | 1,000 | Pro and enterprise plans |
+| `custom` | Configurable | Per-tenant override via tenant_settings |
+
+### Rate Limit Headers
+
+All API responses include rate limit information headers:
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `X-RateLimit-Limit` | Maximum requests allowed per window | `100` |
+| `X-RateLimit-Remaining` | Requests remaining in current window | `85` |
+| `X-RateLimit-Reset` | Unix timestamp when window resets | `1707868800` |
+| `X-RateLimit-Tier` | Current rate limit tier | `free` |
+
+### Rate Limit Exceeded (429)
+
+When the rate limit is exceeded, the API returns a `429 Too Many Requests` response:
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "code": "RATE_LIMIT_EXCEEDED",
+  "message": "You have exceeded the 100 requests per minute limit. Please retry after 45 seconds.",
+  "retryAfter": 45
+}
+```
+
+**Response Headers:**
+
+| Header | Description | Example |
+|--------|-------------|---------|
+| `Retry-After` | Seconds until you can retry | `45` |
+| `X-RateLimit-Limit` | Your rate limit | `100` |
+| `X-RateLimit-Remaining` | Always 0 when limited | `0` |
+| `X-RateLimit-Reset` | When limit resets | `1707868800` |
+
+### Excluded Routes
+
+The following routes are excluded from rate limiting:
+
+- `/api/health` - Health check endpoint
+- `/api/auth/*` - Authentication routes (have their own limits)
+- `/api/webhooks/*` - Webhook endpoints
+
+### Configuration
+
+Rate limits are stored in the `tenant_settings` table and can be configured per tenant:
+
+```sql
+-- Get tenant rate limit
+SELECT * FROM get_tenant_rate_limit('tenant-uuid');
+
+-- Update tenant rate limit (requires admin)
+UPDATE tenant_settings 
+SET rate_limit_requests_per_minute = 500,
+    rate_limit_enabled = true
+WHERE tenant_id = 'tenant-uuid';
+```
+
+Default rate limit for new tenants: **100 requests/minute**
+
+### Rate Limit Status Endpoint
+
+Check your current rate limit status:
+
+```
+GET /api/rate-limit/status
+```
+
+**Response:**
+
+```json
+{
+  "tier": "free",
+  "limit": 100,
+  "remaining": 85,
+  "resetTime": 1707868800,
+  "window": 60
+}
+```
 
 ## Authentication Middleware
 
@@ -88,9 +178,10 @@ The ARM platform uses a multi-layer authentication system:
 1. **Middleware Layer** (`src/middleware.ts`):
    - Validates JWT tokens via Supabase Auth
    - Extracts `tenant_id` from JWT claims or user metadata
+   - Applies per-tenant rate limiting
    - Sets `x-tenant-id` and `x-user-id` headers for downstream routes
    - Handles token refresh automatically
-   - Returns 401/403 for invalid/missing credentials
+   - Returns 401/403/429 for invalid/missing credentials or rate limits
 
 2. **Auth Utilities** (`src/lib/auth/`):
    - `withAuth`: Higher-order function to wrap route handlers
@@ -777,16 +868,16 @@ X-XSS-Protection: 1; mode=block
 Referrer-Policy: strict-origin-when-cross-origin
 ```
 
-### Rate Limiting
+### Rate Limiting Implementation
 
-API requests are rate limited per tenant:
+Rate limiting is implemented using:
 
-- 100 requests per minute for standard endpoints
-- 10 requests per minute for analytics endpoints
-- Rate limit headers are included in responses:
-  - `X-RateLimit-Limit`
-  - `X-RateLimit-Remaining`
-  - `X-RateLimit-Reset`
+1. **Upstash Redis** - Distributed Redis for accurate counting across instances
+2. **Sliding Window Algorithm** - Smooth rate limiting without burst issues
+3. **Local Fallback** - In-memory fallback when Redis is unavailable
+4. **Per-Tenant Configuration** - Custom limits via `tenant_settings` table
+
+See `src/lib/rate-limit.ts` and `src/lib/middleware/rate-limit.ts` for implementation details.
 
 ## Validation
 

@@ -3,15 +3,17 @@
  * 
  * Applies per-tenant rate limiting to API routes.
  * Integrates with the existing Next.js middleware.
+ * Supports custom rate limits per tenant via tenant_settings table.
  * 
  * Usage:
  * - Import and use in middleware.ts for API routes
  * - Returns 429 with Retry-After header when limit exceeded
+ * - Adds X-RateLimit-* headers to all responses
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { rateLimitService, RateLimitTier, RATE_LIMITS } from '@/lib/rate-limit';
-import { getTenantTierFromDB, clearTenantTierCache as clearDBTierCache } from '@/lib/tenant-tier';
+import { getTenantTierFromDB, getTenantRateLimit, clearTenantTierCache as clearDBTierCache } from '@/lib/tenant-tier';
 
 // Environment variable for default tier
 const DEFAULT_TIER: RateLimitTier = 'free';
@@ -19,6 +21,8 @@ const DEFAULT_TIER: RateLimitTier = 'free';
 // In-memory cache for tenant tiers (used when DB is unavailable)
 interface TierCacheEntry {
   tier: RateLimitTier;
+  customLimit?: number;
+  enabled: boolean;
   timestamp: number;
 }
 
@@ -26,30 +30,49 @@ const tierCache = new Map<string, TierCacheEntry>();
 const TIER_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Get tenant tier from database or cache
+ * Get tenant tier and rate limit configuration from database or cache
  */
-async function getTenantTier(tenantId: string): Promise<RateLimitTier> {
+async function getTenantTierWithLimit(tenantId: string): Promise<{ 
+  tier: RateLimitTier; 
+  customLimit?: number;
+  enabled: boolean;
+}> {
   // Check environment variable at runtime (for testing)
   const useDbTier = process.env.USE_DB_TIER !== 'false';
   
   if (useDbTier) {
-    return getTenantTierFromDB(tenantId);
+    const rateLimit = await getTenantRateLimit(tenantId);
+    return {
+      tier: rateLimit.tier,
+      customLimit: rateLimit.requestsPerMinute,
+      enabled: rateLimit.enabled,
+    };
   }
 
   // Fallback to local cache
   const cached = tierCache.get(tenantId);
   if (cached && Date.now() - cached.timestamp < TIER_CACHE_TTL) {
-    return cached.tier;
+    return {
+      tier: cached.tier,
+      customLimit: cached.customLimit,
+      enabled: cached.enabled,
+    };
   }
 
   // Check environment variable for pro tenants
   const proTenants = process.env.PRO_TENANT_IDS?.split(',') || [];
   const tier: RateLimitTier = proTenants.includes(tenantId) ? 'pro' : DEFAULT_TIER;
+  const customLimit = tier === 'pro' ? RATE_LIMITS.pro : RATE_LIMITS.free;
   
   // Cache the result
-  tierCache.set(tenantId, { tier, timestamp: Date.now() });
+  tierCache.set(tenantId, { 
+    tier, 
+    customLimit,
+    enabled: true,
+    timestamp: Date.now() 
+  });
   
-  return tier;
+  return { tier, customLimit, enabled: true };
 }
 
 /**
@@ -77,11 +100,16 @@ export async function rateLimitMiddleware(
   tenantId: string
 ): Promise<NextResponse | null> {
   try {
-    // Get tenant's rate limit tier
-    const tier = await getTenantTier(tenantId);
+    // Get tenant's rate limit configuration
+    const { tier, customLimit, enabled } = await getTenantTierWithLimit(tenantId);
     
-    // Check rate limit
-    const result = await rateLimitService.checkLimit(tenantId, tier);
+    // Skip rate limiting if disabled for this tenant
+    if (!enabled) {
+      return null;
+    }
+    
+    // Check rate limit with custom limit if available
+    const result = await rateLimitService.checkLimit(tenantId, tier, customLimit);
     
     // If not allowed, return 429 response
     if (!result.allowed) {
@@ -95,7 +123,7 @@ export async function rateLimitMiddleware(
         {
           error: 'Rate limit exceeded',
           code: 'RATE_LIMIT_EXCEEDED',
-          message: `You have exceeded the ${result.limit} requests per minute limit for your ${tier} plan.`,
+          message: `You have exceeded the ${result.limit} requests per minute limit. Please retry after ${result.retryAfter || 60} seconds.`,
           retryAfter: result.retryAfter || 60,
         },
         { 
@@ -132,8 +160,8 @@ export async function addRateLimitHeaders(
   tenantId: string
 ): Promise<NextResponse> {
   try {
-    const tier = await getTenantTier(tenantId);
-    const status = await rateLimitService.getLimitStatus(tenantId, tier);
+    const { tier, customLimit } = await getTenantTierWithLimit(tenantId);
+    const status = await rateLimitService.getLimitStatus(tenantId, tier, customLimit);
     
     response.headers.set('X-RateLimit-Limit', String(status.limit));
     response.headers.set('X-RateLimit-Remaining', String(status.remaining));

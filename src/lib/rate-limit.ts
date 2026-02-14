@@ -3,10 +3,12 @@
  * 
  * Implements per-tenant rate limiting using Redis/Upstash.
  * Uses a sliding window algorithm for accurate rate limiting.
+ * Supports per-tenant custom limits via tenant_settings table.
  * 
  * Tiers:
- * - Free: 100 requests per minute
+ * - Free: 100 requests per minute (default)
  * - Pro: 1000 requests per minute
+ * - Custom: Configurable per tenant via tenant_settings
  */
 
 import { Redis } from '@upstash/redis';
@@ -15,7 +17,7 @@ import { Redis } from '@upstash/redis';
 const UPSTASH_REDIS_REST_URL = process.env.UPSTASH_REDIS_REST_URL;
 const UPSTASH_REDIS_REST_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// Rate limit tiers (requests per minute)
+// Default rate limit tiers (requests per minute)
 export const RATE_LIMITS = {
   free: 100,
   pro: 1000,
@@ -46,6 +48,12 @@ export interface RateLimitInfo {
  * 
  * Uses sliding window rate limiting with Redis sorted sets.
  * Each request is tracked with a timestamp, and expired entries are removed.
+ * 
+ * Features:
+ * - Per-tenant rate limiting using Redis
+ * - Sliding window algorithm for accuracy
+ * - Local fallback when Redis is unavailable
+ * - Support for custom limits per tenant
  */
 class RateLimitService {
   private redis: Redis | null = null;
@@ -89,11 +97,21 @@ class RateLimitService {
   }
 
   /**
-   * Check if a request is allowed for a tenant
+   * Check if a request is allowed for a tenant with custom limit
    * Uses sliding window algorithm
+   * 
+   * @param tenantId - The tenant ID
+   * @param tier - The rate limit tier ('free' or 'pro')
+   * @param customLimit - Optional custom limit override (from tenant_settings)
+   * @returns RateLimitResult with allowed status and headers info
    */
-  async checkLimit(tenantId: string, tier: RateLimitTier = 'free'): Promise<RateLimitResult> {
-    const limit = this.getLimitForTier(tier);
+  async checkLimit(
+    tenantId: string, 
+    tier: RateLimitTier = 'free',
+    customLimit?: number
+  ): Promise<RateLimitResult> {
+    // Use custom limit if provided, otherwise use tier default
+    const limit = customLimit || this.getLimitForTier(tier);
     const now = Date.now();
     const windowStart = now - (RATE_LIMIT_WINDOW * 1000);
     const key = this.getKey(tenantId);
@@ -196,9 +214,18 @@ class RateLimitService {
 
   /**
    * Get current rate limit status without consuming a request
+   * 
+   * @param tenantId - The tenant ID
+   * @param tier - The rate limit tier
+   * @param customLimit - Optional custom limit override
+   * @returns RateLimitInfo with current status
    */
-  async getLimitStatus(tenantId: string, tier: RateLimitTier = 'free'): Promise<RateLimitInfo> {
-    const limit = this.getLimitForTier(tier);
+  async getLimitStatus(
+    tenantId: string, 
+    tier: RateLimitTier = 'free',
+    customLimit?: number
+  ): Promise<RateLimitInfo> {
+    const limit = customLimit || this.getLimitForTier(tier);
     const now = Date.now();
     const windowStart = now - (RATE_LIMIT_WINDOW * 1000);
     const key = this.getKey(tenantId);
