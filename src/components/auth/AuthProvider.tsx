@@ -62,25 +62,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signInWithMagicLink = async (email: string) => {
     try {
-      console.log('[AuthProvider] Starting signInWithMagicLink for:', email);
-      console.log('[AuthProvider] Redirect URL:', `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`);
-      
-      const { error, data } = await supabase.auth.signInWithOtp({
+      const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
           emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
         },
       });
 
-      if (error) {
-        console.error('[AuthProvider] signInWithOtp error:', error.message, error);
-      } else {
-        console.log('[AuthProvider] signInWithOtp success:', data);
-      }
-
       return { error };
     } catch (error) {
-      console.error('[AuthProvider] signInWithMagicLink exception:', error);
       return { error: error as Error };
     }
   };
