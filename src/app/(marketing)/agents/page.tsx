@@ -1,13 +1,20 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Search, Users, Headphones, PenTool, Palette, Video, ArrowRight, Check } from "lucide-react";
 import { FadeIn, StaggerContainer } from "@/components/animations";
-import type { Metadata } from "next";
+import { MarketingNav, MarketingFooter } from "@/components/marketing";
 
 export const metadata: Metadata = {
   title: "AI Employees | Pink Beam ARM",
-  description: "Meet your AI workforce. Hire autonomous AI employees for research, sales, support, content, design, and video production.",
+  description: "Meet your AI workforce. Hire autonomous AI employees for research, sales, support, content, design, and video production. Start with a 7-day free trial.",
+  keywords: ["AI employees", "autonomous agents", "AI workforce", "virtual employees", "AI sales", "AI support", "AI content"],
+  openGraph: {
+    title: "AI Employees | Pink Beam ARM",
+    description: "Meet your AI workforce. Hire autonomous AI employees for research, sales, support, and more.",
+    images: ["/og-agents.png"],
+  },
 };
 
 const employees = [
@@ -100,33 +107,10 @@ const employees = [
 export default function AgentsPage() {
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-sm">PB</span>
-              </div>
-              <span className="font-bold text-xl">Pink Beam</span>
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/agents" className="text-sm text-foreground font-medium">
-                AI Employees
-              </Link>
-              <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-            </nav>
-            <Button asChild size="sm">
-              <Link href="/portal">Enter Portal</Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+      <MarketingNav currentPath="/agents" />
 
       {/* Hero Section */}
-      <section className="py-20 md:py-32 bg-gradient-to-b from-background via-muted/30 to-background">
+      <section className="pt-32 pb-20 md:pt-40 md:pb-32 bg-gradient-to-b from-background via-muted/30 to-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeIn className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
@@ -230,29 +214,14 @@ export default function AgentsPage() {
                 <Link href="/pricing">View Pricing</Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/">Back to Home</Link>
+                <Link href="/contact">Book a Demo</Link>
               </Button>
             </div>
           </FadeIn>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600">
-                <span className="text-white font-bold text-xs">PB</span>
-              </div>
-              <span className="font-semibold text-sm">Pink Beam</span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              © 2026 Pink Beam. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }
