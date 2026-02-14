@@ -9,15 +9,15 @@ import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
 import { ChatPanel } from '@/components/chat';
 import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent } from '@/lib/hooks/useAgents';
+import { useTenant } from '@/lib/hooks/useTenant';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, CreateAgentInput } from '@/types';
 
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-
 export default function AgentsPage() {
   const { toast } = useToast();
-  const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
+  const { agents, loading: agentsLoading, error: agentsError, refetch } = useAgentsRealtime(tenantId);
   const { updateAgent, loading: updateLoading } = useUpdateAgent();
   const { deleteAgent, loading: deleteLoading } = useDeleteAgent();
   const { createAgent, loading: createLoading } = useCreateAgent();
@@ -47,8 +47,12 @@ export default function AgentsPage() {
   }, []);
 
   const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
+    if (!tenantId) {
+      toast({ title: 'Error', description: 'Tenant not available.', variant: 'destructive' });
+      return;
+    }
     try {
-      await createAgent({ ...data, tenant_id: DEMO_TENANT_ID });
+      await createAgent({ ...data, tenant_id: tenantId });
       toast({ title: 'Agent Created', description: `${data.name} has been created.` });
       setCreateModalOpen(false);
       refetch();
@@ -56,7 +60,7 @@ export default function AgentsPage() {
       toast({ title: 'Error', description: 'Failed to create agent.', variant: 'destructive' });
       throw err;
     }
-  }, [createAgent, refetch, toast]);
+  }, [createAgent, refetch, toast, tenantId]);
 
   const stats = useMemo(() => ({
     total: agents.length,
@@ -102,15 +106,17 @@ export default function AgentsPage() {
             sortOrder={sortOrder}
             onSortOrderChange={setSortOrder}
           />
-          {error && (
+          {(tenantError || agentsError) && (
             <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
+              <p className="text-red-800 dark:text-red-200">
+                {tenantError ? `Tenant error: ${tenantError.message}` : `Failed to load agents: ${agentsError?.message}`}
+              </p>
               <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
             </div>
           )}
           <AgentList
             agents={filteredAgents}
-            loading={loading}
+            loading={agentsLoading || tenantLoading}
             viewMode={viewMode}
             selectedAgentId={selectedAgent?.id}
             onSelectAgent={handleSelectAgent}

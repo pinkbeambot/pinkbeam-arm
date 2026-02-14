@@ -1,11 +1,14 @@
+// Tenant hook
+export { useTenant } from './useTenant';
+
 // Agent hooks
-export { 
-  useAgentsRealtime, 
-  useAgentRealtime, 
-  useCreateAgent, 
-  useUpdateAgent, 
+export {
+  useAgentsRealtime,
+  useAgentRealtime,
+  useCreateAgent,
+  useUpdateAgent,
   useDeleteAgent,
-  useAgents 
+  useAgents
 } from './useAgents';
 
 export { useAgentAnalytics } from './useAgentAnalytics';

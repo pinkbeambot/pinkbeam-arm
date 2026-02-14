@@ -1,58 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@supabase/supabase-js';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { listAgentTemplatesQuerySchema, applyTemplateSchema } from '@/lib/validation';
 import { z } from 'zod';
 
-// Environment variables
+// Environment variables for auth validation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-/**
- * Helper to create Supabase client with auth
- */
-async function createAuthClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  return supabase;
-}
-
-/**
- * Helper to get tenant ID from user
- */
-async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return null;
-  }
-
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
-    return null;
-  }
-
-  return { tenantId: (userProfile as { tenant_id: string }).tenant_id, user };
-}
 
 /**
  * GET /api/agent-templates
@@ -60,16 +14,47 @@ async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof creat
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
+    // Get auth token from header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.split(' ')[1];
+
+    // Create Supabase client with user's token for auth validation
+    const authClient = createServerClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    // Get current user to extract tenant
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
+    // Get user's tenant
+    const { data: userProfile, error: profileError } = await authClient
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (profileError || !userProfile?.tenant_id) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
     }
-    const { tenantId } = tenantResult;
+
+    const tenantId = userProfile.tenant_id;
+
+    // Use service role client for database queries (bypasses RLS)
+    const supabase = createServiceRoleClient();
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -84,9 +69,6 @@ export async function GET(request: NextRequest) {
     const validatedQuery = listAgentTemplatesQuerySchema.parse(queryParams);
     const { category, search, page, limit } = validatedQuery;
     const offset = (page - 1) * limit;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Build query
     let dbQuery = supabase
@@ -187,16 +169,47 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
+    // Get auth token from header
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const token = authHeader.split(' ')[1];
+
+    // Create Supabase client with user's token for auth validation
+    const authClient = createServerClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    // Get current user to extract tenant
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
+    if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
+    // Get user's tenant
+    const { data: userProfile, error: profileError } = await authClient
+      .from('users')
+      .select('tenant_id')
+      .eq('auth_id', user.id)
+      .single();
+
+    if (profileError || !userProfile?.tenant_id) {
       return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
     }
-    const { tenantId, user } = tenantResult;
+
+    const tenantId = userProfile.tenant_id;
+
+    // Use service role client for database queries (bypasses RLS)
+    const supabase = createServiceRoleClient();
 
     // Parse request body
     const body = await request.json();
@@ -216,9 +229,6 @@ export async function POST(request: NextRequest) {
     });
 
     const validatedData = templateSchema.parse(body);
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Check if slug already exists for this tenant
     const { data: existing } = await supabase

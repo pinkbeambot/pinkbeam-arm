@@ -3,20 +3,20 @@
 /**
  * useDashboardStats Hook
  * 
- * Fetches real-time dashboard statistics from Supabase:
+ * Fetches real-time dashboard statistics from the API:
  * - Active Agents count
  * - Tasks completed today
  * - Pending escalations count
  * 
  * Features:
- * - Real-time data fetching
+ * - Uses API endpoint that properly sets tenant context
  * - Auto-refresh every 30 seconds
  * - Loading and error states
- * - Tenant-scoped data (via RLS)
+ * - Tenant-scoped data (via RLS on server)
  */
 
 import * as React from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 export interface DashboardStats {
   activeAgents: number;
@@ -46,57 +46,36 @@ export function useDashboardStats(): UseDashboardStatsReturn {
   const [stats, setStats] = React.useState<DashboardStats>(defaultStats);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
+  const { session } = useAuth();
 
   const fetchStats = React.useCallback(async () => {
+    if (!session?.access_token) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
 
-      // Get current time bounds for "today"
-      const now = new Date();
-      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-      const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString();
+      const response = await fetch('/api/dashboard/stats', {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-      // Create browser client
-      const supabase = createClient();
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to fetch stats: ${response.status}`);
+      }
 
-      // Fetch all stats in parallel
-      const [
-        { count: activeAgentsCount, error: agentsError },
-        { count: tasksCount, error: tasksError },
-        { count: escalationsCount, error: escalationsError },
-      ] = await Promise.all([
-        // Active agents (status = active, idle, or initializing)
-        supabase
-          .from('agents')
-          .select('*', { count: 'exact', head: true })
-          .in('status', ['active', 'idle', 'initializing']),
-        
-        // Tasks completed today
-        supabase
-          .from('tasks')
-          .select('*', { count: 'exact', head: true })
-          .eq('status', 'completed')
-          .gte('updated_at', startOfDay)
-          .lt('updated_at', endOfDay),
-        
-        // Pending escalations (status = open or in_progress)
-        supabase
-          .from('escalations')
-          .select('*', { count: 'exact', head: true })
-          .in('status', ['open', 'in_progress']),
-      ]);
-
-      // Check for errors
-      if (agentsError) throw new Error(`Failed to fetch agents: ${agentsError.message}`);
-      if (tasksError) throw new Error(`Failed to fetch tasks: ${tasksError.message}`);
-      if (escalationsError) throw new Error(`Failed to fetch escalations: ${escalationsError.message}`);
-
+      const data = await response.json();
       setStats({
-        activeAgents: activeAgentsCount || 0,
-        tasksCompletedToday: tasksCount || 0,
-        pendingEscalations: escalationsCount || 0,
-        avgResponseTime: null, // Will be implemented when we have metrics data
+        activeAgents: data.activeAgents || 0,
+        tasksCompletedToday: data.tasksCompletedToday || 0,
+        pendingEscalations: data.pendingEscalations || 0,
+        avgResponseTime: data.avgResponseTime || null,
       });
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
@@ -104,7 +83,7 @@ export function useDashboardStats(): UseDashboardStatsReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session?.access_token]);
 
   // Initial fetch
   React.useEffect(() => {

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@supabase/supabase-js';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { listActivitiesQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
 
-// Environment variables
+// Environment variables for auth validation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
@@ -102,8 +103,8 @@ export async function GET(request: NextRequest) {
     }
     const token = authHeader.split(' ')[1];
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    // Create Supabase client with user's token for auth validation
+    const authClient = createServerClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -116,13 +117,13 @@ export async function GET(request: NextRequest) {
     });
 
     // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await authClient.auth.getUser();
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
+    const { data: userProfile, error: profileError } = await authClient
       .from('users')
       .select('tenant_id')
       .eq('auth_id', user.id)
@@ -134,8 +135,8 @@ export async function GET(request: NextRequest) {
 
     const tenantId = userProfile.tenant_id;
 
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    // Use service role client for database queries (bypasses RLS)
+    const supabase = createServiceRoleClient();
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
