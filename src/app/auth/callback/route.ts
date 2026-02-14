@@ -18,16 +18,25 @@ export async function GET(request: NextRequest) {
   const next = searchParams.get('next') ?? '/portal';
 
   if (code) {
-    // Create a response to modify
-    const response = NextResponse.redirect(`${origin}${next}`);
+    // Create a mutable response (required for Next.js 15 + supabase-ssr)
+    let response = NextResponse.redirect(`${origin}${next}`);
 
     // Create Supabase client with cookie handling
+    // MUST recreate response after each cookie modification for Next.js 15 compatibility
     const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
       cookies: {
         get(name: string) {
           return request.cookies.get(name)?.value;
         },
         set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.redirect(`${origin}${next}`, {
+            headers: request.headers,
+          });
           response.cookies.set({
             name,
             value,
@@ -35,6 +44,14 @@ export async function GET(request: NextRequest) {
           });
         },
         remove(name: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          response = NextResponse.redirect(`${origin}${next}`, {
+            headers: request.headers,
+          });
           response.cookies.set({
             name,
             value: '',
@@ -45,6 +62,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Exchange the code for a session
+    // This triggers the cookie set operations above
     const { data: { session }, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
@@ -62,7 +80,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Successful authentication, redirect to portal
+    // Successful authentication - return the response with cookies set
     return response;
   }
 
