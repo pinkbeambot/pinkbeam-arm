@@ -39,9 +39,6 @@ export default function LandingPage() {
               </Link>
             </nav>
             <div className="flex items-center gap-4">
-              <Link href="/portal" className="text-sm text-muted-foreground hover:text-foreground hidden sm:block">
-                Portal
-              </Link>
               <Button asChild size="sm">
                 <Link href="/portal">Enter Portal</Link>
               </Button>
