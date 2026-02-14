@@ -45,7 +45,7 @@ export function FinalCTA() {
           <FadeInOnMount>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 text-foreground">
               Your AI Workforce Is{" "}
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                 Waiting
               </span>
             </h2>

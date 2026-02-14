@@ -38,7 +38,7 @@ const employees = [
     role: "Sales Development Representative",
     description: "Identifies prospects, crafts personalized outreach, and books meetings on your calendar.",
     icon: Users,
-    color: "bg-purple-500",
+    color: "bg-pink-500",
     capabilities: [
       "Lead generation",
       "Personalized outreach",
@@ -120,7 +120,7 @@ export default function AgentsPage() {
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
               Meet Your{" "}
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                 AI Workforce
               </span>
             </h1>

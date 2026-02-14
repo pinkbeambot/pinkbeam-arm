@@ -105,7 +105,7 @@ export function ContactPageClient() {
           <FadeIn className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
               Get in{" "}
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                 Touch
               </span>
             </h1>
@@ -294,7 +294,7 @@ export function ContactPageClient() {
                 </div>
 
                 {/* Book a Demo CTA */}
-                <Card className="bg-gradient-to-br from-primary/5 to-purple-500/5 border-primary/20">
+                <Card className="bg-gradient-to-br from-primary/5 to-pink-500/5 border-primary/20">
                   <CardContent className="p-6">
                     <h3 className="font-semibold mb-2">Want a Demo?</h3>
                     <p className="text-sm text-muted-foreground mb-4">

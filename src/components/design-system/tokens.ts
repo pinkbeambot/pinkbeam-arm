@@ -12,28 +12,28 @@
 export const colors = {
   // Brand Colors - Pink Beam
   brand: {
-    50: '#FFF0F5',
-    100: '#FFE0EB',
-    200: '#FFC2D6',
-    300: '#FF94B8',
-    400: '#FF5C9A',
-    500: '#FF006E', // Primary brand color
-    600: '#E6005F',
-    700: '#CC0054',
-    800: '#99003F',
-    900: '#66002A',
+    50: '#FDF2F8',
+    100: '#FCE7F3',
+    200: '#FBCFE8',
+    300: '#F9A8D4',
+    400: '#F472B6',
+    500: '#E91E8C', // Primary brand color
+    600: '#DB1A7E',
+    700: '#C41870',
+    800: '#A8145E',
+    900: '#85104B',
   },
   
   // Service Colors
   agents: {
-    DEFAULT: '#FF006E',
-    light: '#FF5C9A',
-    dark: '#CC0054',
+    DEFAULT: '#E91E8C',
+    light: '#F472B6',
+    dark: '#C41870',
   },
   web: {
-    DEFAULT: '#8B5CF6',
-    light: '#A78BFA',
-    dark: '#7C3AED',
+    DEFAULT: '#E91E8C',
+    light: '#F472B6',
+    dark: '#C41870',
   },
   labs: {
     DEFAULT: '#06B6D4',
@@ -308,19 +308,16 @@ export const shadows = {
   
   // Brand glow shadows
   glow: {
-    sm: '0 0 15px rgba(255, 0, 110, 0.3)',
-    md: '0 0 25px rgba(255, 0, 110, 0.4)',
-    lg: '0 0 35px rgba(255, 0, 110, 0.5)',
+    sm: '0 0 15px rgba(233, 30, 140, 0.3)',
+    md: '0 0 25px rgba(233, 30, 140, 0.4)',
+    lg: '0 0 35px rgba(233, 30, 140, 0.5)',
   },
   
   // Colored glows
   'glow-pink': {
-    sm: '0 0 15px rgba(255, 0, 110, 0.3)',
-    md: '0 0 25px rgba(255, 0, 110, 0.4)',
-  },
-  'glow-purple': {
-    sm: '0 0 15px rgba(139, 92, 246, 0.3)',
-    md: '0 0 25px rgba(139, 92, 246, 0.4)',
+    sm: '0 0 15px rgba(233, 30, 140, 0.3)',
+    md: '0 0 25px rgba(233, 30, 140, 0.4)',
+    lg: '0 0 35px rgba(233, 30, 140, 0.5)',
   },
 } as const;
 

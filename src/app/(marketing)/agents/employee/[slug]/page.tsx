@@ -69,8 +69,8 @@ const agents = {
     description: "Mike identifies prospects, crafts personalized outreach, and books meetings on your calendar. He sends personalized emails at scale—and follows up perfectly every time. Your pipeline will never be empty again.",
     avatar: "/agents/mike-avatar.png",
     icon: Users,
-    color: "bg-purple-500",
-    gradient: "from-purple-500 to-violet-500",
+    color: "bg-pink-500",
+    gradient: "from-pink-500 to-rose-500",
     skills: ["Lead Research", "Outreach", "Qualification", "CRM Sync", "Meeting Booking"],
     fullCapabilities: [
       {
@@ -202,7 +202,7 @@ const agents = {
     avatar: "/agents/lumen-avatar.png",
     icon: Palette,
     color: "bg-indigo-500",
-    gradient: "from-indigo-500 to-purple-500",
+    gradient: "from-indigo-500 to-pink-500",
     skills: ["Brand Design", "Social Graphics", "Presentations", "Ad Creatives", "Asset Production"],
     fullCapabilities: [
       {
@@ -505,7 +505,7 @@ export default async function AgentDetailPage({ params }: { params: Promise<{ sl
             </div>
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
               Frequently Asked{" "}
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                 Questions
               </span>
             </h2>

@@ -69,9 +69,9 @@ const statusConfig: Record<AgentStatus, {
     description: "Agent encountered an error",
   },
   escaped: {
-    color: "text-purple-500",
-    bgColor: "bg-purple-500",
-    borderColor: "border-purple-500/30",
+    color: "text-pink-500",
+    bgColor: "bg-pink-500",
+    borderColor: "border-pink-500/30",
     label: "Escaped",
     description: "Agent has escaped its constraints (rare)",
     animate: true,

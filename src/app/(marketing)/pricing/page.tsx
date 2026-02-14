@@ -122,7 +122,7 @@ export default function PricingPage() {
           <FadeIn className="text-center max-w-3xl mx-auto">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
               Simple, Transparent{" "}
-              <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
                 Pricing
               </span>
             </h1>

@@ -47,7 +47,7 @@ describe('Agent Status Configuration', () => {
       idle: 'bg-amber-500',
       active: 'bg-emerald-500',
       paused: 'bg-slate-400',
-      blocked: 'bg-purple-500',
+      blocked: 'bg-pink-500',
       error: 'bg-rose-500',
       escaped: 'bg-orange-600',
       terminated: 'bg-gray-500',

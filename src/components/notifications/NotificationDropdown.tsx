@@ -67,7 +67,7 @@ const notificationIcons: Record<NotificationType, typeof Info> = {
 const notificationColors: Record<NotificationType, string> = {
   task_assigned: 'bg-blue-500 text-white',
   escalation_received: 'bg-amber-500 text-white',
-  decision_required: 'bg-purple-500 text-white',
+  decision_required: 'bg-pink-500 text-white',
   system_alert: 'bg-red-500 text-white',
   info: 'bg-blue-500 text-white',
   success: 'bg-green-500 text-white',

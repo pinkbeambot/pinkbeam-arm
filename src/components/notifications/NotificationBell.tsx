@@ -42,7 +42,7 @@ const notificationIcons: Record<NotificationType, typeof Info> = {
 const notificationColors: Record<NotificationType, string> = {
   task_assigned: 'bg-blue-500 text-white',
   escalation_received: 'bg-amber-500 text-white',
-  decision_required: 'bg-purple-500 text-white',
+  decision_required: 'bg-pink-500 text-white',
   system_alert: 'bg-red-500 text-white',
   info: 'bg-blue-500 text-white',
   success: 'bg-green-500 text-white',
@@ -54,7 +54,7 @@ const notificationColors: Record<NotificationType, string> = {
 const notificationBorderColors: Record<NotificationType, string> = {
   task_assigned: 'border-blue-500/20 hover:border-blue-500/40',
   escalation_received: 'border-amber-500/20 hover:border-amber-500/40',
-  decision_required: 'border-purple-500/20 hover:border-purple-500/40',
+  decision_required: 'border-pink-500/20 hover:border-pink-500/40',
   system_alert: 'border-red-500/20 hover:border-red-500/40',
   info: 'border-blue-500/20 hover:border-blue-500/40',
   success: 'border-green-500/20 hover:border-green-500/40',

@@ -35,7 +35,7 @@ const employeeTabs = [
       "Meeting Booking: Handle objections, answer questions, and schedule qualified calls on your calendar",
       "CRM Sync: Log all activities, update stages, and maintain clean data in your existing tools",
     ],
-    color: "bg-purple-500",
+    color: "bg-pink-500",
   },
   {
     id: "alex",
@@ -107,7 +107,7 @@ export function EmployeeTabs() {
         <FadeIn className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             What Each Employee{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
               Can Do
             </span>
           </h2>

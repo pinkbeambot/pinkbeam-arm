@@ -17,7 +17,7 @@ const employees = [
     role: "Sales Development Representative",
     description: "Identifies prospects, crafts personalized outreach, and books meetings on your calendar. He sends personalized emails at scale—and follows up perfectly every time.",
     icon: Users,
-    color: "bg-purple-500",
+    color: "bg-pink-500",
   },
   {
     name: "Alex",
@@ -57,7 +57,7 @@ export function SolutionSection() {
         <FadeIn className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
             Meet Your{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
               AI Workforce
             </span>
           </h2>

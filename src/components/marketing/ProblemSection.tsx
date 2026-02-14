@@ -18,7 +18,7 @@ const painPoints = [
     title: "The Sales Time Sink",
     headline: "Sales Outreach That Never Ends",
     description: "You know you should be prospecting, but crafting 50 personalized emails takes 4 hours you don't have. So you push it off. And your pipeline dries up. Again.",
-    color: "bg-purple-500",
+    color: "bg-pink-500",
   },
   {
     icon: Headphones,
@@ -51,7 +51,7 @@ export function ProblemSection() {
         <FadeIn className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             You're Doing Work You{" "}
-            <span className="bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
               Shouldn't
             </span>{" "}
             Be Doing

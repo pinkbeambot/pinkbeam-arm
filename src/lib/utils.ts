@@ -121,7 +121,7 @@ export function getRoleLabel(role: string): string {
 
 export function getRoleBadgeColor(role: string): string {
   const colors: Record<string, string> = {
-    ceo: 'bg-purple-500',
+    ceo: 'bg-pink-500',
     manager: 'bg-blue-500',
     worker: 'bg-green-500',
     specialist: 'bg-amber-500',
