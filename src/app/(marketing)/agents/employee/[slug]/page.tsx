@@ -1,4 +1,5 @@
-import type { ReactElement, Metadata } from "next";
+import type { Metadata } from "next";
+import type { ReactElement } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
