@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, ArrowRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 interface MarketingNavProps {
   currentPath?: string;
@@ -75,7 +76,8 @@ export function MarketingNav({ currentPath }: MarketingNavProps) {
           </nav>
 
           {/* Auth Actions */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
             {/* Desktop: Log In link + Get Started button */}
             <Link
               href="/login"

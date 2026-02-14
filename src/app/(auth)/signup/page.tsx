@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { toast } from '@/components/ui/use-toast';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 const valueProps = [
   {
@@ -78,14 +79,17 @@ export default function SignupPage() {
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-violet-500/10 via-transparent to-transparent pointer-events-none" />
       
       <div className="w-full max-w-md relative z-10">
-        {/* Back to home link */}
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to home
-        </Link>
+        {/* Top bar with back link and theme switcher */}
+        <div className="flex items-center justify-between mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
+          <ThemeSwitcher />
+        </div>
 
         <Card className="border-border/50 shadow-xl shadow-pink-500/5">
           <CardHeader className="space-y-1 text-center">

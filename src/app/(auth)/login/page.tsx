@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -52,14 +53,17 @@ export default function LoginPage() {
       <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-violet-500/5 rounded-full blur-3xl pointer-events-none" />
       
       <div className="w-full max-w-md relative z-10">
-        {/* Back to home link */}
-        <Link 
-          href="/"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-8 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to home
-        </Link>
+        {/* Top bar with back link and theme switcher */}
+        <div className="flex items-center justify-between mb-8">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to home
+          </Link>
+          <ThemeSwitcher />
+        </div>
 
         <Card className="border-border/50 shadow-xl">
           <CardHeader className="space-y-1 text-center">

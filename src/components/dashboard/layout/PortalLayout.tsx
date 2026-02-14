@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { ThemeSwitcher } from '@/components/theme-switcher';
 
 interface NavItem {
   label: string;
@@ -222,11 +223,10 @@ export function PortalHeader({
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
-        {children && (
-          <div className="flex items-center gap-4">
-            {children}
-          </div>
-        )}
+        <div className="flex items-center gap-4">
+          <ThemeSwitcher />
+          {children}
+        </div>
       </div>
     </header>
   );
