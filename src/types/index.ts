@@ -516,3 +516,34 @@ export type {
 } from './notification';
 
 export { DEFAULT_NOTIFICATION_PREFERENCES } from './notification';
+
+// ============================================================================
+// Chat Types
+// ============================================================================
+
+export type {
+  Chat,
+  ChatMessage,
+  ChatMessageRole,
+  ChatMetadata,
+  MessageMetadata,
+  CreateChatRequest,
+  CreateChatResponse,
+  GetChatMessagesRequest,
+  GetChatMessagesResponse,
+  SendMessageRequest,
+  SendMessageResponse,
+  ListChatsResponse,
+  ChatContext,
+  ContextActivity,
+  ContextTask,
+  ContextDecision,
+  ContextEscalation,
+  ContextAgent,
+  ChatPanelProps,
+  ChatMessageProps,
+  ChatInputProps,
+  ChatListProps,
+  ChatRealtimeMessage,
+  TypingIndicator,
+} from './chat';
