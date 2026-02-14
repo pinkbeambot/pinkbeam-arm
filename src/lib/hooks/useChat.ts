@@ -37,6 +37,31 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   const [sending, setSending] = useState(false);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
+  // Fetch messages for a chat - defined first to avoid dependency issues
+  const fetchMessages = useCallback(async (id: string, before?: string) => {
+    try {
+      const url = new URL(`/api/chats/${id}/messages`, window.location.origin);
+      url.searchParams.set('limit', '50');
+      if (before) url.searchParams.set('before', before);
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Failed to fetch messages');
+
+      const { messages: newMessages, has_more } = await response.json();
+
+      if (before) {
+        // Prepend older messages
+        setMessages(prev => [...newMessages.reverse(), ...prev]);
+      } else {
+        // Initial load - show newest at bottom
+        setMessages(newMessages.reverse());
+      }
+      setHasMore(has_more);
+    } catch (err) {
+      console.error('Error fetching messages:', err);
+    }
+  }, []);
+
   // Fetch or create chat
   const initChat = useCallback(async () => {
     if (!chatId && !agentId) {
@@ -81,32 +106,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     } finally {
       setLoading(false);
     }
-  }, [chatId, agentId]);
-
-  // Fetch messages for a chat
-  const fetchMessages = useCallback(async (id: string, before?: string) => {
-    try {
-      const url = new URL(`/api/chats/${id}/messages`, window.location.origin);
-      url.searchParams.set('limit', '50');
-      if (before) url.searchParams.set('before', before);
-
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Failed to fetch messages');
-
-      const { messages: newMessages, has_more } = await response.json();
-
-      if (before) {
-        // Prepend older messages
-        setMessages(prev => [...newMessages.reverse(), ...prev]);
-      } else {
-        // Initial load - show newest at bottom
-        setMessages(newMessages.reverse());
-      }
-      setHasMore(has_more);
-    } catch (err) {
-      console.error('Error fetching messages:', err);
-    }
-  }, []);
+  }, [chatId, agentId, fetchMessages]);
 
   // Send a message
   const sendMessage = useCallback(async (content: string) => {
@@ -188,7 +188,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     const channel = supabase
       .channel(`chat:${chat.id}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
@@ -207,7 +207,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         }
       )
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: 'DELETE',
           schema: 'public',
@@ -278,7 +278,7 @@ export function useChats() {
     const channel = supabase
       .channel(`user_chats:${DEMO_TENANT_ID}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
