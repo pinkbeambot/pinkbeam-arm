@@ -8,17 +8,26 @@ import { DecisionDetailPanel } from '@/components/dashboard/decisions/DecisionDe
 import { DecisionStats } from '@/components/dashboard/decisions/DecisionStats';
 import { DecisionFilters, type ConfidenceLevel, type DecisionType } from '@/components/dashboard/decisions/DecisionFilters';
 import { useDecisionsRealtime, useOverrideDecision, useExportDecisions } from '@/lib/hooks/useDecisions';
-import { useAgents } from '@/lib/hooks/useAgents';
+import { useAgentsRealtime } from '@/lib/hooks/useAgents';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import type { Decision } from '@/types';
+import type { Decision, DecisionStatus } from '@/types';
+
+const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 const CONFIDENCE_THRESHOLDS: Record<ConfidenceLevel, number | undefined> = {
   all: undefined, high: 0.9, medium: 0.7, low: 0.5,
 };
 
-const TYPE_TO_STATUS: Record<DecisionType, string | undefined> = {
-  all: undefined, proposed: 'proposed', approved: 'approved', rejected: 'rejected', overridden: 'overridden', executed: 'executed',
+import type { DecisionStatus } from '@/types';
+
+const TYPE_TO_STATUS: Record<DecisionType, DecisionStatus | undefined> = {
+  all: undefined, 
+  proposed: 'proposed', 
+  approved: 'approved', 
+  rejected: 'rejected', 
+  overridden: 'overridden', 
+  executed: 'executed',
 };
 
 function getDateRange(range: 'all' | 'today' | 'week' | 'month'): { from?: string; to?: string } {
@@ -43,33 +52,21 @@ export default function DecisionsPage() {
   const [sortField, setSortField] = useState<'created_at' | 'confidence' | 'title'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [page, setPage] = useState(1);
-  const [limit] = useState(20);
+  const limit = 20;
 
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const { agents, loading: agentsLoading } = useAgents();
+  const { agents, loading: agentsLoading } = useAgentsRealtime(DEMO_TENANT_ID);
   const dateRangeParams = useMemo(() => getDateRange(dateRange), [dateRange]);
-
-  // Map UI sort field to API sort field
-  const apiSortField = useMemo(() => {
-    switch (sortField) {
-      case 'confidence': return 'confidence';
-      case 'title': return 'title';
-      case 'created_at':
-      default: return 'proposed_at';
-    }
-  }, [sortField]);
 
   const { decisions, loading: decisionsLoading, error, refetch, pagination } = useDecisionsRealtime({
     agentId: agentFilter !== 'all' ? agentFilter : undefined,
-    category: TYPE_TO_CATEGORY[typeFilter],
+    status: TYPE_TO_STATUS[typeFilter],
     dateFrom: dateRangeParams.from,
     dateTo: dateRangeParams.to,
     confidenceMin: CONFIDENCE_THRESHOLDS[confidenceFilter],
     search: searchQuery || undefined,
-    sort: apiSortField,
-    order: sortOrder,
     page,
     limit,
   });

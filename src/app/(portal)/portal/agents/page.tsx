@@ -108,9 +108,6 @@ export default function AgentsPage() {
       await createAgent({
         ...data,
         tenant_id: DEMO_TENANT_ID,
-        status: 'paused',
-        depth: 0,
-        root_id: DEMO_TENANT_ID,
       });
       toast({
         title: 'Agent Created',
