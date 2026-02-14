@@ -418,3 +418,79 @@ export interface ConfigTestResult {
   raw_response?: unknown;
   created_at: string;
 }
+
+// ============================================================================
+// Message Types
+// ============================================================================
+
+export type MessageTypeValue =
+  | 'spawn.request' | 'spawn.response'
+  | 'task.assign' | 'task.accept' | 'task.reject' | 'task.progress' | 'task.complete' | 'task.fail'
+  | 'decision.propose' | 'decision.confirm' | 'decision.override'
+  | 'escalate.request' | 'escalate.response'
+  | 'message.direct' | 'message.broadcast'
+  | 'system.ping' | 'system.pong' | 'system.config.update' | 'system.error';
+
+export type MessagePriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface Message {
+  id: string;
+  tenant_id: string;
+  protocol_version: string;
+  message_type: MessageTypeValue;
+  from_agent_id?: string;
+  from_agent?: Agent;
+  to_agent_id?: string;
+  to_agent?: Agent;
+  to_broadcast: boolean;
+  thread_id?: string;
+  correlation_id?: string;
+  payload: Record<string, unknown>;
+  priority: MessagePriority;
+  requires_ack: boolean;
+  acked_at?: string;
+  trace?: unknown[];
+  expires_at?: string;
+  created_at: string;
+  processed_at?: string;
+}
+
+export interface MessageThread {
+  id: string;
+  messages: Message[];
+  participants: Agent[];
+  message_count: number;
+  last_message_at: string;
+}
+
+export interface MessageListResponse {
+  data: Message[];
+  meta: {
+    filters: {
+      agent_id?: string;
+      thread_id?: string;
+      from_agent_id?: string;
+      to_agent_id?: string;
+      message_type?: string;
+      unread?: boolean;
+    };
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface MessageResponse {
+  data: Message;
+}
+
+export interface ThreadMessagesResponse {
+  data: Message[];
+  meta: {
+    thread_id: string;
+    message_count: number;
+  };
+}

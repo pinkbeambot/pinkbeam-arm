@@ -360,7 +360,14 @@ export const listMessagesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(20),
 });
 
+export const updateMessageSchema = z.object({
+  acked_at: z.string().datetime().optional(),
+  processed_at: z.string().datetime().optional(),
+  payload: z.record(z.string(), z.unknown()).optional(),
+});
+
 export type CreateMessageInput = z.infer<typeof createMessageSchema>;
+export type UpdateMessageInput = z.infer<typeof updateMessageSchema>;
 export type ListMessagesQuery = z.infer<typeof listMessagesQuerySchema>;
 export type MessageType = z.infer<typeof messageTypeSchema>;
 export type MessagePriority = z.infer<typeof messagePrioritySchema>;
