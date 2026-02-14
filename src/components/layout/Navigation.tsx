@@ -16,7 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { createClient } from "@/lib/supabase/client";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import { NotificationBell } from "@/components/notifications/NotificationBell";
@@ -548,7 +548,7 @@ export function Navigation() {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeSwitcher />
             
             {user ? (
               <>
