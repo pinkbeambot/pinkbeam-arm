@@ -20,7 +20,7 @@ const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
 const processMessageSchema = z.object({
   message: z.string().min(1).max(2000),
   session_id: z.string().uuid().optional(),
-  context: z.record(z.unknown()).optional(),
+  context: z.object({}).passthrough().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract intent first for logging
-    const { intent, confidence, entities } = extractIntent(validatedData.message, {});
+    const { intent, confidence, entities } = extractIntent(validatedData.message);
 
     // Create command record
     const { data: command, error: commandError } = await supabase

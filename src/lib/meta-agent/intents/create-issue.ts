@@ -120,7 +120,7 @@ function parseIssueParams(message: string, entities: {
   let body = message;
   
   // Try to extract more detailed body if available
-  const bodyMatch = message.match(/(?:details?|description|body):\s*(.+?)(?:\.|$)/is);
+  const bodyMatch = message.match(/(?:details?|description|body):\s*([\s\S]+?)(?:\.|$)/i);
   if (bodyMatch?.[1]) {
     body = bodyMatch[1].trim();
   }

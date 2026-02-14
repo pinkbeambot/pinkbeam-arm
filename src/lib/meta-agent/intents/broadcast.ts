@@ -107,15 +107,16 @@ export async function handleBroadcastIntent(
     
     if (targetAgents.length <= 10) {
       response += '**Recipients:**\n';
+      const statusEmojiMap: Record<string, string> = {
+        active: '🟢',
+        idle: '⚪',
+        paused: '⏸️',
+        error: '🔴',
+        blocked: '🟡',
+        initializing: '🔵',
+      };
       targetAgents.forEach(agent => {
-        const statusEmoji = {
-          active: '🟢',
-          idle: '⚪',
-          paused: '⏸️',
-          error: '🔴',
-          blocked: '🟡',
-          initializing: '🔵',
-        }[agent.status] || '⚪';
+        const statusEmoji = statusEmojiMap[agent.status] || '⚪';
         response += `${statusEmoji} ${agent.name}\n`;
       });
     }

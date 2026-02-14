@@ -6,7 +6,7 @@
  * interface that lets the CEO communicate with the entire agent workforce.
  */
 
-import type { Agent, Task, Escalation, Decision, Activity } from './index';
+import type { Agent, Task, Escalation, Decision, Activity, TaskPriority } from './index';
 
 // ============================================================================
 // Intent Types
@@ -323,7 +323,7 @@ export interface AssignTaskParams {
   parent_task_id?: string;
 }
 
-// TaskPriority is defined in index.ts
+// TaskPriority type is imported from index.ts: 'low' | 'normal' | 'high' | 'urgent'
 
 export interface AssignTaskResult {
   task_id: string;
