@@ -20,6 +20,7 @@ interface CreateAgentModalProps {
   onOpenChange: (open: boolean) => void;
   onCreate: (data: CreateAgentInput) => Promise<void>;
   loading?: boolean;
+  existingAgents?: Agent[];
 }
 
 type Step = 'template' | 'basic' | 'capabilities' | 'review';
