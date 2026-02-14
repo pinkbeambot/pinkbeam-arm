@@ -6,6 +6,7 @@ import {
   ConnectionState,
   WSMessage,
   WebSocketConfig,
+  getGlobalWebSocket,
 } from "@/lib/realtime/websocket";
 
 export interface UseWebSocketOptions extends Partial<WebSocketConfig> {
@@ -185,6 +186,10 @@ export function useTopic<T = unknown>(
   const [messages, setMessages] = useState<WSMessage<T>[]>([]);
   const { subscribe, isConnected } = useWebSocket(options ?? { autoConnect: true });
 
+  const clearMessages = useCallback(() => {
+    setMessages([]);
+  }, []);
+
   useEffect(() => {
     if (!isConnected || !topic) return;
 
@@ -194,10 +199,6 @@ export function useTopic<T = unknown>(
 
     return unsubscribe;
   }, [topic, isConnected, subscribe]);
-
-  const clearMessages = useCallback(() => {
-    setMessages([]);
-  }, []);
 
   return {
     messages,
@@ -225,67 +226,75 @@ export function useTopic<T = unknown>(
  * ```
  */
 export function useGlobalWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
-  const { getGlobalWebSocket, resetGlobalWebSocket } = require("@/lib/realtime/websocket");
-  
   const [state, setState] = useState<ConnectionState>("disconnected");
   const wsRef = useRef<WebSocketManager | null>(null);
 
+  // Initialize global WebSocket
   useEffect(() => {
-    try {
-      const ws = getGlobalWebSocket({
-        url: options.url || "",
-        protocols: options.protocols,
-        reconnectAttempts: options.reconnectAttempts,
-        reconnectInterval: options.reconnectInterval,
-        maxReconnectInterval: options.maxReconnectInterval,
-        heartbeatInterval: options.heartbeatInterval,
-        heartbeatTimeout: options.heartbeatTimeout,
-        backoffMultiplier: options.backoffMultiplier,
-        debug: options.debug,
-      });
+    const ws = getGlobalWebSocket({
+      url: options.url || "",
+      protocols: options.protocols,
+      reconnectAttempts: options.reconnectAttempts,
+      reconnectInterval: options.reconnectInterval,
+      maxReconnectInterval: options.maxReconnectInterval,
+      heartbeatInterval: options.heartbeatInterval,
+      heartbeatTimeout: options.heartbeatTimeout,
+      backoffMultiplier: options.backoffMultiplier,
+      debug: options.debug,
+    });
 
-      wsRef.current = ws;
+    wsRef.current = ws;
 
-      const unsubscribers: (() => void)[] = [];
+    const unsubscribers: (() => void)[] = [];
 
-      unsubscribers.push(
-        ws.onStateChange((newState: ConnectionState) => {
-          setState(newState);
-          options.onStateChange?.(newState);
-        })
-      );
+    unsubscribers.push(
+      ws.onStateChange((newState: ConnectionState) => {
+        setState(newState);
+        options.onStateChange?.(newState);
+      })
+    );
 
-      if (options.onMessage) {
-        unsubscribers.push(ws.onMessage(options.onMessage));
-      }
-
-      if (options.onError) {
-        unsubscribers.push(ws.onError(options.onError));
-      }
-
-      if (options.onOpen) {
-        unsubscribers.push(ws.onOpen(options.onOpen));
-      }
-
-      if (options.onClose) {
-        unsubscribers.push(ws.onClose(options.onClose));
-      }
-
-      if (options.autoConnect !== false && options.url) {
-        ws.connect();
-      }
-
-      return () => {
-        unsubscribers.forEach((unsub) => unsub());
-        // Don't destroy global instance on unmount
-      };
-    } catch (error) {
-      // Global instance not initialized yet
-      if (options.autoConnect !== false && options.url) {
-        // Will be initialized on next render
-      }
+    if (options.onMessage) {
+      unsubscribers.push(ws.onMessage(options.onMessage));
     }
-  }, [options.url]);
+
+    if (options.onError) {
+      unsubscribers.push(ws.onError(options.onError));
+    }
+
+    if (options.onOpen) {
+      unsubscribers.push(ws.onOpen(options.onOpen));
+    }
+
+    if (options.onClose) {
+      unsubscribers.push(ws.onClose(options.onClose));
+    }
+
+    if (options.autoConnect !== false && options.url) {
+      ws.connect();
+    }
+
+    return () => {
+      unsubscribers.forEach((unsub) => unsub());
+      // Don't destroy global instance on unmount
+    };
+  }, [
+    options.url,
+    options.protocols,
+    options.reconnectAttempts,
+    options.reconnectInterval,
+    options.maxReconnectInterval,
+    options.heartbeatInterval,
+    options.heartbeatTimeout,
+    options.backoffMultiplier,
+    options.debug,
+    options.autoConnect,
+    options.onMessage,
+    options.onError,
+    options.onOpen,
+    options.onClose,
+    options.onStateChange,
+  ]);
 
   const connect = useCallback(() => {
     wsRef.current?.connect();
