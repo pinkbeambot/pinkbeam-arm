@@ -28,6 +28,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import type { LiveLineChartProps, LiveMetricPoint } from './types';
 
+// Re-export the props type for consumers
+export type { LiveSparklineProps };
+
 // ============================================================================
 // LiveSparkline Component (Compact variant)
 // ============================================================================
