@@ -579,7 +579,6 @@ export type {
   AgentStatusSummary,
   TaskSummary,
   AssignTaskParams,
-  TaskPriority,
   AssignTaskResult,
   CreateIssueParams,
   CreateIssueResult,

@@ -8,19 +8,90 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
- * GET /api/activities
- * List activities with filtering, pagination, and related entities
- * 
- * Query Parameters:
- * - agent_id: Filter by agent UUID
- * - entity_type: Filter by target type (task, decision, escalation, agent)
- * - action_type: Filter by activity type (agent.spawned, task.created, etc.)
- * - time_range: Filter by time (1h, 24h, 7d, 30d, all)
- * - date_from: ISO date string for start date
- * - date_to: ISO date string for end date
- * - search: Search in title and description
- * - cursor: Pagination cursor (sequence_number)
- * - limit: Items per page (default 50, max 100)
+ * @openapi
+ * /activities:
+ *   get:
+ *     summary: List activities
+ *     description: List activities with filtering, pagination, and related entities. Supports cursor-based pagination.
+ *     tags:
+ *       - Activities
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: agent_id
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Filter by agent ID
+ *       - in: query
+ *         name: entity_type
+ *         schema:
+ *           type: string
+ *           enum: [all, tasks, decisions, escalations, agents, system]
+ *         description: Filter by entity type
+ *       - in: query
+ *         name: action_type
+ *         schema:
+ *           type: string
+ *           enum: [agent.spawned, agent.status_changed, agent.terminated, task.created, task.assigned, task.started, task.progress, task.completed, task.failed, decision.proposed, decision.made, decision.overridden, escalation.created, escalation.resolved, message.sent, message.received, system.error, system.config_changed]
+ *         description: Filter by action type
+ *       - in: query
+ *         name: time_range
+ *         schema:
+ *           type: string
+ *           enum: [1h, 24h, 7d, 30d, all]
+ *         description: Time range shortcut
+ *       - in: query
+ *         name: date_from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Start date for filtering
+ *       - in: query
+ *         name: date_to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: End date for filtering
+ *       - in: query
+ *         name: search
+ *         schema:
+ *           type: string
+ *         description: Search in title and description
+ *       - in: query
+ *         name: cursor
+ *         schema:
+ *           type: string
+ *         description: Pagination cursor (sequence_number)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 50
+ *           maximum: 100
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: List of activities
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Activity'
+ *                 next_cursor:
+ *                   type: string
+ *                   nullable: true
+ *                 has_more:
+ *                   type: boolean
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Internal server error
  */
 export async function GET(request: NextRequest) {
   try {

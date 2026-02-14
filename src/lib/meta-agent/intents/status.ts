@@ -196,16 +196,16 @@ async function getWorkforceStatus(
   
   if (agents && agents.length > 0) {
     response += `\n**Most Recently Active:**\n`;
+    const statusEmojiMap: Record<string, string> = {
+      active: '🟢',
+      idle: '⚪',
+      paused: '⏸️',
+      error: '🔴',
+      blocked: '🟡',
+      initializing: '🔵',
+    };
     agents.slice(0, 5).forEach(agent => {
-      const statusEmoji = {
-        active: '🟢',
-        idle: '⚪',
-        paused: '⏸️',
-        error: '🔴',
-        blocked: '🟡',
-        initializing: '🔵',
-      }[agent.status] || '⚪';
-      
+      const statusEmoji = statusEmojiMap[agent.status] || '⚪';
       const taskInfo = agent.current_task_id ? ' (working)' : '';
       response += `${statusEmoji} **${agent.name}** - ${agent.role}${taskInfo}\n`;
     });
@@ -437,8 +437,9 @@ async function getEscalationsStatus(
   response += `\n**Recent Escalations:**\n`;
   
   if (escalations && escalations.length > 0) {
+    const urgencyEmojiMap: Record<string, string> = { critical: '🔴', high: '🟠', normal: '🟡', low: '🟢' };
     escalations.slice(0, 10).forEach(esc => {
-      const urgencyEmoji = { critical: '🔴', high: '🟠', normal: '🟡', low: '🟢' }[esc.urgency] || '⚪';
+      const urgencyEmoji = urgencyEmojiMap[esc.urgency] || '⚪';
       response += `${urgencyEmoji} **${esc.title}**\n`;
       response += `   From: ${esc.agent?.name || 'Unknown'} | Status: ${esc.status}\n`;
     });

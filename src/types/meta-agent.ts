@@ -249,6 +249,11 @@ export interface IntentHandlerOutput {
   error?: string;
   requires_confirmation?: boolean;
   suggested_followups?: string[];
+  metadata?: {
+    processing_time_ms?: number;
+    intent_confidence?: number;
+    [key: string]: unknown;
+  };
 }
 
 export type IntentHandler = (
@@ -318,7 +323,7 @@ export interface AssignTaskParams {
   parent_task_id?: string;
 }
 
-export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent';
+// TaskPriority is defined in index.ts
 
 export interface AssignTaskResult {
   task_id: string;
