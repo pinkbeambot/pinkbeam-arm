@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract intent first for logging
-    const { intent, confidence, entities } = extractIntent(validatedData.message, {});
+    const { intent, confidence, entities } = extractIntent(validatedData.message);
 
     // Create command record
     const { data: command, error: commandError } = await supabase
