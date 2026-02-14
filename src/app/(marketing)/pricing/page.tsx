@@ -187,7 +187,7 @@ export default function PricingPage() {
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col">
                   <div className="flex-1">
-                    <h4 className="text-sm font-semibold mb-3">What's included:</h4>
+                    <h4 className="text-sm font-semibold mb-3">What&apos;s included:</h4>
                     <ul className="space-y-3 mb-6">
                       {plan.items.map((item) => (
                         <li key={item} className="flex items-start gap-3">
@@ -250,7 +250,7 @@ export default function PricingPage() {
             </div>
             <h2 className="text-3xl font-bold mb-4">Pricing FAQ</h2>
             <p className="text-muted-foreground">
-              Got questions? We've got answers.
+              Got questions? We&apos;ve got answers.
             </p>
           </FadeIn>
 
@@ -283,7 +283,7 @@ export default function PricingPage() {
               Still Have Questions?
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Book a demo and we'll walk you through the platform, answer your questions, 
+              Book a demo and we&apos;ll walk you through the platform, answer your questions, 
               and help you choose the right plan.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
