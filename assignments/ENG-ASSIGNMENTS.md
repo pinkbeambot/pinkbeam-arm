@@ -2,38 +2,25 @@
 
 ## ENG-FE (Frontend Engineer)
 
-### 🔥 URGENT: Marketing Site Implementation (NEW PRIORITY)
-**Assigned:** 2026-02-13 12:35 PST by CTO
-**Context:** Portal is auth-walled; need public `/` for user acquisition
+### ✅ Marketing Site — COMPLETE
 
 | Issue | Title | Status | Route |
 |-------|-------|--------|-------|
-| #34 | Migrate Components from pinkbeam | ✅ Closed 2026-02-13 | `/` |
-| #35 | Landing Page (/) | Open | `/` |
-| #36 | Agent Detail Pages | 🔄 IN PROGRESS | `/agents/employee/[slug]` |
+| #34 | Migrate Components from pinkbeam | ✅ Closed 2026-02-13 — MERGED | `/` |
+| #35 | Landing Page (/) | ✅ Closed 2026-02-13 — MERGED | `/` |
+| #36 | Agent Detail Pages | ✅ Closed 2026-02-13 — MERGED | `/agents/employee/[slug]` |
 | #37 | Pricing Page | ✅ Closed 2026-02-13 — MERGED | `/pricing` |
-| #38 | Visual QA & Testing | Open | All |
+| #38 | Visual QA & Testing | ✅ Closed 2026-02-13 — MERGED | All |
 
-**Key Requirements:**
-- Reference: `~/code/pinkbeam/components/agents/sections/` for components to migrate
-- Routes to implement: `/`, `/agents`, `/agents/employee/[slug]`, `/pricing`
-- Keep `/portal/*` auth-walled (existing)
-- Quality: Responsive (desktop-first), Lighthouse >90, visual regression testing, cross-browser
-- Stack: Next.js 15 + React 19 + TypeScript + Tailwind CSS 4
-
-**START WITH #34** - Component migration is the foundation
-
-### Current Assignments - Phase 4: Real-time Features (PAUSED)
+### Phase 4: Real-time Features — COMPLETE
 | Issue | Title | Status |
 |-------|-------|--------|
-| #27 | WebSocket Connection Manager | Open |
-| #28 | Live Agent Status Indicators | Open |
-| #29 | Real-time Metrics Dashboard | Open |
-| #30 | Real-time Activity Feed | Open |
-| #31 | Notification System | Open |
-| #32 | Live Task Pipeline Updates | Open |
-
-**Note:** Phase 4 work PAUSED pending completion of Marketing Site (#34-#38)
+| #27 | WebSocket Connection Manager | ✅ Closed 2026-02-13 — MERGED |
+| #28 | Live Agent Status Indicators | ✅ Closed 2026-02-13 — MERGED |
+| #29 | Real-time Metrics Dashboard | ✅ Closed 2026-02-13 — MERGED |
+| #30 | Real-time Activity Feed | ✅ Closed 2026-02-13 — MERGED |
+| #31 | Notification System | ✅ Closed 2026-02-13 — MERGED |
+| #32 | Live Task Pipeline Updates | ✅ Closed 2026-02-13 — MERGED |
 
 ### Recently Completed - Phase 2: UI Deliverables
 | Issue | Title | Status |
@@ -57,16 +44,18 @@ None - ENG-FE is unblocked and ready for Phase 4 work.
 
 ## ENG-BE (Backend Engineer)
 
-### Current Assignments
+### ✅ ALL TASKS COMPLETE — v1.0 Feature Complete
+
 | Issue | Title | Status |
 |-------|-------|--------|
-| #20 | /api/agents CRUD Endpoints | ✅ Closed 2026-02-13 — VALIDATED |
-| #21 | /api/tasks Enhancements | ✅ Closed 2026-02-13 — VALIDATED |
-| #22 | /api/decisions Endpoints | Open |
+| #20 | /api/agents CRUD Endpoints | ✅ Closed 2026-02-13 — MERGED |
+| #21 | /api/tasks Enhancements | ✅ Closed 2026-02-13 — MERGED |
+| #22 | /api/decisions Endpoints | ✅ Closed 2026-02-13 — MERGED |
 | #23 | /api/escalations Endpoints | ✅ Closed 2026-02-13 — MERGED |
 | #24 | /api/messages Endpoints | ✅ Closed 2026-02-13 — MERGED |
-| #25 | Supabase Edge Functions - Agent Runtime | 🔄 IN PROGRESS |
-| #26 | Authentication Middleware & Tenant Context | Open |
+| #25 | Supabase Edge Functions - Agent Runtime | ✅ Closed 2026-02-13 — MERGED |
+| #26 | Authentication Middleware & Tenant Context | ✅ Closed 2026-02-13 — MERGED |
+| #18 | Per-Tenant Rate Limiting | ✅ Closed 2026-02-13 — MERGED |
 
 ### Recently Completed
 | Issue | Title | Status |
