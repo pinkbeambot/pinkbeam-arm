@@ -91,13 +91,23 @@ export default function EscalationsPage() {
     }
   }, [resolveEscalation, refetch, toast]);
 
-  const handleTakeOver = useCallback((escalation: Escalation) => {
-    toast({
-      title: 'Task Taken Over',
-      description: `You have taken over ${escalation.title}.`,
-    });
-    setDetailOpen(false);
-  }, [toast]);
+  const handleTakeOver = useCallback(async (escalation: Escalation) => {
+    try {
+      await resolveEscalation(escalation.id, 'Taken over by user', user?.id ?? '');
+      toast({
+        title: 'Task Taken Over',
+        description: `You have taken over ${escalation.title}.`,
+      });
+      setDetailOpen(false);
+      refetch();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to take over escalation.',
+        variant: 'destructive',
+      });
+    }
+  }, [resolveEscalation, refetch, toast, user?.id]);
 
   const handleMarkAllRead = useCallback(() => {
     toast({
@@ -106,11 +116,17 @@ export default function EscalationsPage() {
     });
   }, [toast]);
 
-  const handleEnableNotifications = useCallback(() => {
-    toast({
-      title: 'Notifications Enabled',
-      description: 'You will receive browser notifications for critical escalations.',
-    });
+  const handleEnableNotifications = useCallback(async () => {
+    if (!('Notification' in window)) {
+      toast({ title: 'Not Supported', description: 'Browser notifications are not supported.', variant: 'destructive' });
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      toast({ title: 'Notifications Enabled', description: 'You will receive browser notifications for critical escalations.' });
+    } else {
+      toast({ title: 'Permission Denied', description: 'Notification permission was denied. You can enable it in browser settings.', variant: 'destructive' });
+    }
   }, [toast]);
 
   return (
