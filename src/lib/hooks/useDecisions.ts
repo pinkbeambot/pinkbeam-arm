@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import { ApiError } from '@/lib/errors';
 import type { Decision, DecisionStatus, RealtimeChangePayload } from '@/types';
 
@@ -107,18 +106,18 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
     const subscription = supabase
       .channel('decisions:changes')
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         { event: '*', schema: 'public', table: 'decisions' },
         (payload: RealtimeChangePayload<Decision>) => {
           const currentOpts = optionsRef.current;
           if (currentOpts.page === 1 && !currentOpts.agentId && !currentOpts.status && !currentOpts.search) {
             fetchDecisions();
           } else {
-            if (payload.eventType === 'INSERT') {
-              setDecisions((prev) => [payload.new!, ...prev].slice(0, currentOpts.limit));
-            } else if (payload.eventType === 'UPDATE') {
+            if (payload.eventType === 'INSERT' && payload.new) {
+              setDecisions((prev) => [payload.new, ...prev].slice(0, currentOpts.limit));
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
               setDecisions((prev) => prev.map((d) => (d.id === payload.new?.id ? { ...d, ...payload.new } : d)));
-            } else if (payload.eventType === 'DELETE') {
+            } else if (payload.eventType === 'DELETE' && payload.old) {
               setDecisions((prev) => prev.filter((d) => d.id !== payload.old?.id));
             }
           }

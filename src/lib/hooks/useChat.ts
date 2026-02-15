@@ -195,14 +195,16 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload: { new: ChatMessage }) => {
+        (payload: { new: ChatMessage | null }) => {
+          if (!payload.new) return;
+          const newMessage = payload.new;
           setMessages(current => {
             // Check if message already exists
-            if (current.find(m => m.id === payload.new.id)) {
+            if (current.find(m => m.id === newMessage.id)) {
               return current;
             }
             // Add new message
-            return [...current, payload.new];
+            return [...current, newMessage];
           });
         }
       )
@@ -214,9 +216,11 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload: { old: ChatMessage }) => {
+        (payload: { old: ChatMessage | null }) => {
+          if (!payload.old) return;
+          const deletedId = payload.old.id;
           setMessages(current =>
-            current.filter(m => m.id !== payload.old.id)
+            current.filter(m => m.id !== deletedId)
           );
         }
       )

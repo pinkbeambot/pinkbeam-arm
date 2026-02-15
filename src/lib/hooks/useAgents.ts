@@ -232,7 +232,7 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
         },
         (payload: RealtimeChangePayload<Agent>) => {
           if (payload.eventType === 'UPDATE' && payload.new) {
-            setAgent(current => ({ ...current!, ...payload.new }));
+            setAgent(current => current ? { ...current, ...payload.new } : payload.new);
           } else if (payload.eventType === 'DELETE') {
             setAgent(null);
           }
