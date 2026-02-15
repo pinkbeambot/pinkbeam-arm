@@ -80,6 +80,7 @@ const SORT_OPTIONS: { value: 'created_at' | 'confidence' | 'title'; label: strin
 
 interface DecisionFiltersProps {
   agents: Agent[];
+  decisions: Decision[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   agentFilter: string | 'all';
@@ -139,8 +140,28 @@ export function deletePreset(name: string): void {
   localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
 }
 
+const exportToCSV = (decisions: Decision[]) => {
+  const headers = ['Title', 'Agent', 'Status', 'Confidence', 'Created'];
+  const rows = decisions.map(d => [
+    d.title,
+    d.agent?.name || d.agent_id,
+    d.status,
+    d.confidence,
+    d.created_at
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `decisions-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
+
 export function DecisionFilters({
   agents,
+  decisions,
   searchQuery,
   onSearchChange,
   agentFilter,
@@ -333,6 +354,16 @@ export function DecisionFilters({
             </DropdownMenuCheckboxItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Export CSV */}
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => exportToCSV(decisions)}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          <span>Export CSV</span>
+        </Button>
 
         {/* Export */}
         <DropdownMenu>
