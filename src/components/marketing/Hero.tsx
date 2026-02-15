@@ -6,12 +6,8 @@ import { FadeIn, FadeInOnMount } from "@/components/animations";
 import Link from "next/link";
 import { useState } from "react";
 
-// Rotating headlines for A/B testing
-const headlines = [
-  "Build a workforce that scales with your ambition. AI agents handle the details while your team focuses on the big picture.",
-  "What could your team achieve with an extra 1,000 hours per week? AI agents handle the repetitive work so your people can focus on what matters.",
-  "The future of work isn't humans vs. AI. It's humans with AI. Give your team digital colleagues that handle the routine, so they can handle the remarkable."
-];
+// VALIS quote for hero
+const valisQuote = "Your AI team handles the routine, so your human team can focus on what they do best—creative problem-solving, relationship building, and strategic thinking.";
 
 // Logo placeholder component
 function LogoPlaceholder({ name }: { name: string }) {
@@ -25,8 +21,6 @@ function LogoPlaceholder({ name }: { name: string }) {
 }
 
 export function Hero() {
-  // Pick random headline on mount
-  const [headline] = useState(() => headlines[Math.floor(Math.random() * headlines.length)]);
 
   return (
     <section className="relative min-h-[85vh] lg:min-h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
@@ -63,14 +57,18 @@ export function Hero() {
             </h1>
           </FadeInOnMount>
           
-          {/* Subheadline - Rotating */}
+          {/* VALIS Quote */}
           <FadeInOnMount delay={0.2}>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              {headline}
-            </p>
+            <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5">
+              <p className="text-lg text-primary italic mb-3">
+                "Your AI team handles the routine, so your human team can focus on what they do best—
+                creative problem-solving, relationship building, and strategic thinking."
+              </p>
+              <p className="text-sm text-muted-foreground">
+                — VALIS, Pink Beam CEO
+              </p>
+            </div>
           </FadeInOnMount>
-
-          {/* VALIS Quote - REMOVED to streamline hero */}
 
           {/* CTA Buttons */}
           <FadeInOnMount delay={0.3}>
