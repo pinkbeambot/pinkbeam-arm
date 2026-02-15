@@ -12,7 +12,7 @@
  * ONLY use in server-side API routes AFTER validating user auth and tenant.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -24,7 +24,7 @@ if (!supabaseUrl || !supabaseServiceRoleKey) {
 }
 
 // Module-level singleton — reused across all requests in the same process
-let serviceRoleClient: ReturnType<typeof createClient> | null = null;
+let serviceRoleClient: SupabaseClient | null = null;
 
 // Connection metrics for monitoring
 const connectionMetrics = {

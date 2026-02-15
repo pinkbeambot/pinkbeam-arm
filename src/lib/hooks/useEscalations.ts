@@ -228,7 +228,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
   const resolveEscalation = useCallback(async (id: string, resolution: string, _resolvedBy: string) => {
     await updateEscalation(id, {
       status: 'resolved',
-      resolution_answer: resolution,
+      resolution,
     });
   }, [updateEscalation]);
 
