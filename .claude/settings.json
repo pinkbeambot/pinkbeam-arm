@@ -1,4 +1,26 @@
 {
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run test*)",
+      "Bash(npx tsc*)",
+      "Bash(npx eslint*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git branch*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(ls *)",
+      "Bash(mkdir *)"
+    ]
+  },
   "hooks": {
     "PreToolUse": [
       {
@@ -10,6 +32,10 @@
       {
         "matcher": "Edit|Write",
         "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx eslint --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null; exit 0;; esac"
+      },
+      {
+        "matcher": "Edit|Write",
+        "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx tsc --noEmit --pretty 2>&1 | grep -A 2 \"$CLAUDE_FILE_PATH\" || true;; esac"
       }
     ]
   }
