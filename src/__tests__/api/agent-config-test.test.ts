@@ -1,5 +1,42 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Mock @/lib/api/auth BEFORE importing the route (prevents service-role.ts from throwing)
+vi.mock('@/lib/api/auth', () => ({
+  authenticateRequest: vi.fn(async (request: any) => {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    return {
+      tenantId: 'tenant-123',
+      userId: 'user-123',
+      supabase: {
+        from: vi.fn(() => ({
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn(() => ({ data: null, error: null })),
+              })),
+              single: vi.fn(() => ({ data: null, error: null })),
+              order: vi.fn(() => ({
+                range: vi.fn(() => ({ data: [], error: null })),
+              })),
+            })),
+          })),
+          insert: vi.fn(() => ({ data: null, error: null })),
+          update: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({ data: null, error: null })),
+            })),
+          })),
+        })),
+      },
+    };
+  }),
+  isErrorResponse: vi.fn((result: any) => result instanceof NextResponse),
+}));
+
 import { GET, POST } from '@/app/api/agents/[id]/config/test/route';
 
 // Mock Supabase client

@@ -169,13 +169,16 @@ describe('ChatInput', () => {
 
   it('is accessible with keyboard', async () => {
     render(<ChatInput {...defaultProps} />);
-    
+
     const input = screen.getByPlaceholderText('Type a message...');
-    
+
     // Should be focusable
     input.focus();
     expect(document.activeElement).toBe(input);
-    
+
+    // Type content so the send button becomes enabled (disabled buttons cannot receive focus)
+    await userEvent.type(input, 'Hello');
+
     // Send button should be focusable
     const sendButton = screen.getByRole('button');
     sendButton.focus();

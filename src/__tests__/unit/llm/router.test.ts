@@ -40,6 +40,18 @@ vi.mock('@/lib/llm/claude', () => ({
       costPer1KOutput: 0.015,
       latencyProfile: 'balanced',
     },
+    {
+      id: 'claude-3-opus-20240229',
+      provider: 'anthropic',
+      displayName: 'Claude 3 Opus',
+      contextWindow: 200000,
+      maxOutputTokens: 4096,
+      supportsFunctions: true,
+      supportsVision: true,
+      costPer1KInput: 0.015,
+      costPer1KOutput: 0.075,
+      latencyProfile: 'slow',
+    },
   ],
 }));
 

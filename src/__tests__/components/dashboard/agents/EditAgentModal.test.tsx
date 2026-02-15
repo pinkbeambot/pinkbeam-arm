@@ -109,92 +109,97 @@ describe('EditAgentModal', () => {
 
   it('allows changing role', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
-    const roleTrigger = screen.getByRole('combobox', { name: /role/i });
+
+    const comboboxes = screen.getAllByRole('combobox');
+    const roleTrigger = comboboxes[0]; // Role is the first Select on the form
     fireEvent.click(roleTrigger);
-    
+
     // Select manager role
     const managerOption = await screen.findByText('Manager');
     fireEvent.click(managerOption);
-    
+
     await waitFor(() => {
-      expect(screen.getByRole('combobox', { name: /role/i })).toHaveTextContent('Manager');
+      expect(screen.getAllByRole('combobox')[0]).toHaveTextContent('Manager');
     });
   });
 
   it('allows changing model', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
-    const modelTrigger = screen.getByRole('combobox', { name: /model/i });
+
+    const comboboxes = screen.getAllByRole('combobox');
+    const modelTrigger = comboboxes[1]; // Model is the second Select on the form
     fireEvent.click(modelTrigger);
-    
+
     // Select GPT-4
     const gpt4Option = await screen.findByText('GPT-4');
     fireEvent.click(gpt4Option);
-    
+
     await waitFor(() => {
-      expect(screen.getByRole('combobox', { name: /model/i })).toHaveTextContent('GPT-4');
+      expect(screen.getAllByRole('combobox')[1]).toHaveTextContent('GPT-4');
     });
   });
 
   it('switches to instructions tab', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
+
     const instructionsTab = screen.getByRole('tab', { name: /instructions/i });
-    fireEvent.click(instructionsTab);
-    
-    expect(screen.getByLabelText('Instructions')).toBeInTheDocument();
+    await userEvent.click(instructionsTab);
+
+    expect(screen.getByRole('textbox', { name: /instructions/i })).toBeInTheDocument();
   });
 
   it('allows editing instructions', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
+
     const instructionsTab = screen.getByRole('tab', { name: /instructions/i });
-    fireEvent.click(instructionsTab);
-    
-    const instructionsInput = screen.getByLabelText('Instructions');
+    await userEvent.click(instructionsTab);
+
+    const instructionsInput = screen.getByRole('textbox', { name: /instructions/i });
     await userEvent.clear(instructionsInput);
     await userEvent.type(instructionsInput, 'New instructions');
-    
+
     expect(instructionsInput).toHaveValue('New instructions');
   });
 
   it('switches to capabilities tab', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
+
     const capabilitiesTab = screen.getByRole('tab', { name: /capabilities/i });
-    fireEvent.click(capabilitiesTab);
-    
+    await userEvent.click(capabilitiesTab);
+
     expect(screen.getByText('Spawn Agents')).toBeInTheDocument();
     expect(screen.getByText('Delegate Tasks')).toBeInTheDocument();
   });
 
   it('allows toggling capabilities', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
+
     const capabilitiesTab = screen.getByRole('tab', { name: /capabilities/i });
-    fireEvent.click(capabilitiesTab);
-    
-    const spawnCheckbox = screen.getByRole('checkbox', { name: /spawn agents/i });
+    await userEvent.click(capabilitiesTab);
+
+    // Checkboxes have no accessible name; find Spawn Agents checkbox by its position (first)
+    const checkboxes = screen.getAllByRole('checkbox');
+    const spawnCheckbox = checkboxes[0]; // Spawn Agents is the first capability
     fireEvent.click(spawnCheckbox);
-    
+
     expect(spawnCheckbox).toBeChecked();
   });
 
   it('switches to review tab and shows changes', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
+
     // Make a change
     const nameInput = screen.getByLabelText('Agent Name *');
     await userEvent.clear(nameInput);
     await userEvent.type(nameInput, 'Updated Name');
-    
+
     // Go to review tab
     const reviewTab = screen.getByRole('tab', { name: /review/i });
-    fireEvent.click(reviewTab);
-    
+    await userEvent.click(reviewTab);
+
     expect(screen.getByText('Changes to be saved:')).toBeInTheDocument();
-    expect(screen.getByText('Name')).toBeInTheDocument();
+    // Changed field names are lowercase in the DOM (CSS capitalize for display)
+    expect(screen.getByText('name')).toBeInTheDocument();
   });
 
   it('calls onSave with correct data when save button is clicked', async () => {
@@ -246,22 +251,24 @@ describe('EditAgentModal', () => {
 
   it('shows validation error when no capabilities selected', async () => {
     render(<EditAgentModal {...defaultProps} />);
-    
+
     const capabilitiesTab = screen.getByRole('tab', { name: /capabilities/i });
-    fireEvent.click(capabilitiesTab);
-    
-    // Uncheck all capabilities
+    await userEvent.click(capabilitiesTab);
+
+    // Uncheck all capabilities (Radix checkboxes use data-state, not .checked)
     const checkboxes = screen.getAllByRole('checkbox');
     for (const checkbox of checkboxes) {
-      if ((checkbox as HTMLInputElement).checked) {
-        fireEvent.click(checkbox);
+      if (checkbox.getAttribute('data-state') === 'checked') {
+        await userEvent.click(checkbox);
       }
     }
-    
+
     const saveButton = screen.getByRole('button', { name: /save changes/i });
     fireEvent.click(saveButton);
-    
-    expect(await screen.findByText('At least one capability must be selected')).toBeInTheDocument();
+
+    // Error appears in both the validation banner and the inline capabilities alert
+    const errors = await screen.findAllByText('At least one capability must be selected');
+    expect(errors.length).toBeGreaterThanOrEqual(1);
   });
 
   it('calls onOpenChange when cancel is clicked', () => {
@@ -362,27 +369,28 @@ describe('EditAgentModal', () => {
     await userEvent.type(descriptionInput, 'New Description');
     
     // Change role
-    const roleTrigger = screen.getByRole('combobox', { name: /role/i });
-    fireEvent.click(roleTrigger);
+    const comboboxes = screen.getAllByRole('combobox');
+    fireEvent.click(comboboxes[0]); // Role is the first Select
     const managerOption = await screen.findByText('Manager');
     fireEvent.click(managerOption);
-    
+
     // Change model
-    const modelTrigger = screen.getByRole('combobox', { name: /model/i });
-    fireEvent.click(modelTrigger);
+    const comboboxesAfterRole = screen.getAllByRole('combobox');
+    fireEvent.click(comboboxesAfterRole[1]); // Model is the second Select
     const gpt4Option = await screen.findByText('GPT-4');
     fireEvent.click(gpt4Option);
     
     // Update instructions
     const instructionsTab = screen.getByRole('tab', { name: /instructions/i });
-    fireEvent.click(instructionsTab);
-    const instructionsInput = screen.getByLabelText('Instructions');
+    await userEvent.click(instructionsTab);
+    const instructionsInput = screen.getByRole('textbox', { name: /instructions/i });
     await userEvent.type(instructionsInput, ' New instructions');
-    
+
     // Toggle capability
     const capabilitiesTab = screen.getByRole('tab', { name: /capabilities/i });
-    fireEvent.click(capabilitiesTab);
-    const spawnCheckbox = screen.getByRole('checkbox', { name: /spawn agents/i });
+    await userEvent.click(capabilitiesTab);
+    // Spawn Agents is the first checkbox (no accessible name on Radix Checkbox)
+    const spawnCheckbox = screen.getAllByRole('checkbox')[0];
     fireEvent.click(spawnCheckbox);
     
     // Save

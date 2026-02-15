@@ -81,9 +81,10 @@ describe('AgentHierarchy', () => {
   describe('Rendering', () => {
     it('renders the hierarchy component with header', () => {
       render(<AgentHierarchy agents={mockAgents} />);
-      
+
       expect(screen.getByText('Agent Hierarchy')).toBeInTheDocument();
-      expect(screen.getByText('5')).toBeInTheDocument(); // Agent count badge
+      // Agent count badge - use getAllByText since stats also show '5'
+      expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(1);
     });
 
     it('renders view mode toggle buttons', () => {
@@ -96,13 +97,14 @@ describe('AgentHierarchy', () => {
 
     it('renders stats when showStats is true', () => {
       render(<AgentHierarchy agents={mockAgents} showStats={true} />);
-      
+
       expect(screen.getByText('Total Agents')).toBeInTheDocument();
-      expect(screen.getByText('5')).toBeInTheDocument();
       expect(screen.getByText('Hierarchy Levels')).toBeInTheDocument();
-      expect(screen.getByText('3')).toBeInTheDocument(); // maxDepth + 1
       expect(screen.getByText('Root Agents')).toBeInTheDocument();
-      expect(screen.getByText('1')).toBeInTheDocument();
+      // Values may appear in multiple places (badge + stats), so use getAllByText
+      expect(screen.getAllByText('5').length).toBeGreaterThanOrEqual(1); // total agents
+      expect(screen.getAllByText('3').length).toBeGreaterThanOrEqual(1); // maxDepth + 1
+      expect(screen.getAllByText('1').length).toBeGreaterThanOrEqual(1); // root agents
     });
 
     it('does not render stats when showStats is false', () => {
@@ -135,9 +137,10 @@ describe('AgentHierarchy', () => {
 
     it('displays correct role badges', () => {
       render(<AgentHierarchy agents={mockAgents} viewMode="tree" />);
-      
+
       expect(screen.getByText('ceo')).toBeInTheDocument();
-      expect(screen.getByText('manager')).toBeInTheDocument();
+      // Multiple manager agents exist, so use getAllByText
+      expect(screen.getAllByText('manager').length).toBeGreaterThanOrEqual(1);
     });
 
     it('shows root badge for root agents', () => {
@@ -282,31 +285,32 @@ describe('AgentHierarchy', () => {
   describe('View Mode State Management', () => {
     it('uses internal state when onViewModeChange not provided', () => {
       render(<AgentHierarchy agents={mockAgents} viewMode="tree" />);
-      
-      // Should render without error when no onViewModeChange
-      expect(screen.getByRole('button', { name: /tree/i })).toHaveAttribute('data-state', 'active');
+
+      // Active view mode button uses "default" variant (bg-primary), not Radix data-state
+      expect(screen.getByRole('button', { name: /tree/i })).toHaveClass('bg-primary');
     });
 
     it('respects controlled viewMode prop', () => {
       const { rerender } = render(
-        <AgentHierarchy 
-          agents={mockAgents} 
+        <AgentHierarchy
+          agents={mockAgents}
           viewMode="tree"
           onViewModeChange={mockOnViewModeChange}
         />
       );
-      
-      expect(screen.getByRole('button', { name: /tree/i })).toHaveAttribute('data-state', 'active');
-      
+
+      // Active view mode button uses "default" variant (bg-primary)
+      expect(screen.getByRole('button', { name: /tree/i })).toHaveClass('bg-primary');
+
       rerender(
-        <AgentHierarchy 
-          agents={mockAgents} 
+        <AgentHierarchy
+          agents={mockAgents}
           viewMode="org"
           onViewModeChange={mockOnViewModeChange}
         />
       );
-      
-      expect(screen.getByRole('button', { name: /org/i })).toHaveAttribute('data-state', 'active');
+
+      expect(screen.getByRole('button', { name: /org/i })).toHaveClass('bg-primary');
     });
   });
 });

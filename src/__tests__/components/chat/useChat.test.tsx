@@ -33,8 +33,9 @@ describe('useChat', () => {
 
   it('initializes with correct default state', () => {
     const { result } = renderHook(() => useChat({ chatId: null }));
-    
-    expect(result.current.loading).toBe(true);
+
+    // When chatId is null, loading is set to false immediately
+    expect(result.current.loading).toBe(false);
     expect(result.current.messages).toEqual([]);
     expect(result.current.chat).toBeNull();
     expect(result.current.sending).toBe(false);
