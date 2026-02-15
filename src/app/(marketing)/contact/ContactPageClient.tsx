@@ -207,7 +207,6 @@ export function ContactPageClient() {
                           placeholder="Tell us about your needs..."
                           rows={5}
                           required
-                          disabled={isSubmitting}
                         />
                       </div>
 

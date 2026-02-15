@@ -128,7 +128,7 @@ export function useAgentsRealtime(tenantId: string | null) {
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
@@ -224,7 +224,7 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',

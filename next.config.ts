@@ -13,38 +13,103 @@ if (isVercelProd && process.env.DEV_AUTH_BYPASS === 'true') {
   );
 }
 
+// Build CSP directives based on environment
+const isDev = process.env.NODE_ENV === 'development';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://*.supabase.co';
+const supabaseWss = supabaseUrl.replace('https://', 'wss://');
+const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+const cspDirectives = [
+  // Only allow resources from own origin by default
+  `default-src 'self'`,
+  // Scripts: self + inline (Next.js requires it) + eval in dev for HMR
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''}`,
+  // Styles: self + inline (Tailwind/Next.js injects inline styles)
+  `style-src 'self' 'unsafe-inline'`,
+  // Images: self + data URIs (for avatars, inline images) + Supabase storage + blob
+  `img-src 'self' data: blob: ${supabaseUrl}`,
+  // Fonts: self + data URIs
+  `font-src 'self' data:`,
+  // Connect: self + Supabase REST/Auth (HTTPS) + Supabase Realtime (WSS)
+  `connect-src 'self' ${supabaseUrl} ${supabaseWss}${isDev ? ' ws://localhost:* http://localhost:*' : ''}`,
+  // Media: self
+  `media-src 'self'`,
+  // Objects: none (no Flash/plugins)
+  `object-src 'none'`,
+  // Frames: none (we set X-Frame-Options: DENY too)
+  `frame-src 'none'`,
+  // Frame ancestors: none (prevent embedding)
+  `frame-ancestors 'none'`,
+  // Base URI: self only (prevent base tag hijacking)
+  `base-uri 'self'`,
+  // Form actions: self only
+  `form-action 'self'`,
+  // Upgrade insecure requests in production
+  ...(!isDev ? ['upgrade-insecure-requests'] : []),
+];
+
+const contentSecurityPolicy = cspDirectives.join('; ');
+
 const nextConfig: NextConfig = {
   // Enable React Strict Mode for better development experience
   reactStrictMode: true,
-  
+
   // Dist directory for builds
   distDir: '.next',
-  
+
   // Transpile swagger-ui-react for Next.js compatibility
   transpilePackages: ['swagger-ui-react', 'next-swagger-doc'],
-  
+
   // Environment variables available at build time
   env: {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
-  
-  // Headers for security
+
+  // Security headers
   async headers() {
     return [
       {
         source: '/(.*)',
         headers: [
+          // Content Security Policy — controls which resources the browser may load
+          {
+            key: 'Content-Security-Policy',
+            value: contentSecurityPolicy,
+          },
+          // Prevent clickjacking by disallowing framing
           {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          // Prevent MIME-type sniffing
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff',
           },
+          // Control referrer information sent with requests
           {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
+          },
+          // Enforce HTTPS for 1 year, include subdomains, allow HSTS preload
+          {
+            key: 'Strict-Transport-Security',
+            value: 'max-age=31536000; includeSubDomains; preload',
+          },
+          // Restrict browser features/APIs the app doesn't need
+          {
+            key: 'Permissions-Policy',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+          },
+          // Legacy XSS protection header (still useful for older browsers)
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+          // Prevent DNS prefetching to third-party origins
+          {
+            key: 'X-DNS-Prefetch-Control',
+            value: 'on',
           },
         ],
       },

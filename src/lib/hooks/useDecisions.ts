@@ -107,7 +107,7 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
     const subscription = supabase
       .channel('decisions:changes')
       .on(
-        'postgres_changes',
+        'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'decisions' },
         (payload: RealtimeChangePayload<Decision>) => {
           const currentOpts = optionsRef.current;
@@ -115,9 +115,9 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
             fetchDecisions();
           } else {
             if (payload.eventType === 'INSERT' && payload.new) {
-              setDecisions((prev) => [payload.new, ...prev].slice(0, currentOpts.limit));
+              setDecisions((prev) => [payload.new as Decision, ...prev].slice(0, currentOpts.limit));
             } else if (payload.eventType === 'UPDATE' && payload.new) {
-              setDecisions((prev) => prev.map((d) => (d.id === payload.new?.id ? { ...d, ...payload.new } : d)));
+              setDecisions((prev) => prev.map((d) => (d.id === payload.new?.id ? { ...d, ...payload.new as Decision } : d)));
             } else if (payload.eventType === 'DELETE' && payload.old) {
               setDecisions((prev) => prev.filter((d) => d.id !== payload.old?.id));
             }
