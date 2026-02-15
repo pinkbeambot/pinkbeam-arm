@@ -118,6 +118,7 @@ export default function DecisionsPage() {
         <div className="mb-6">
           <DecisionFilters
             agents={agents}
+            decisions={decisions}
             searchQuery={searchQuery}
             onSearchChange={handleFilterChange(setSearchQuery)}
             agentFilter={agentFilter}
