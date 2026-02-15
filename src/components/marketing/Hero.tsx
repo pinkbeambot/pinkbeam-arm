@@ -68,7 +68,7 @@ export function Hero() {
                 "{valisQuotes[Math.floor(Math.random() * valisQuotes.length)]}"
               </p>
               <p className="text-sm text-muted-foreground">
-                — VALIS, Pink Beam CEO
+                — VALIS
               </p>
             </div>
           </FadeInOnMount>
