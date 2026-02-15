@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { ThemeSwitcher } from '@/components/theme-switcher';
+import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
 import {
   Tooltip,
   TooltipContent,
@@ -368,6 +369,16 @@ export function PortalSidebar({
               <span className="flex-1">Logout</span>
             </button>
           )}
+        </div>
+
+        {/* Connection Status */}
+        <div className="flex-shrink-0 px-4 py-2 border-t border-border">
+          <ConnectionStatus 
+            state="connected" 
+            size="sm" 
+            showLabel={!collapsed}
+            className="w-full justify-center"
+          />
         </div>
 
         {/* Collapse Toggle */}
