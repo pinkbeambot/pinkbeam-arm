@@ -148,7 +148,7 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
         setAgent(result.data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agent';
-        setError(new Error(errorMessage));
+        setError(err instanceof ApiError ? err : new Error(errorMessage));
       } finally {
         setLoading(false);
       }
