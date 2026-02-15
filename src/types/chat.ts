@@ -37,11 +37,24 @@ export interface ChatMessage {
   role: ChatMessageRole;
   content: string;
   metadata: MessageMetadata;
+  is_bookmarked?: boolean;
   created_at: string;
   updated_at?: string;
   // Extended fields from get_chat_messages
   agent_name?: string;
   agent_avatar?: string;
+}
+
+export interface ChatSearchResult {
+  id: string;
+  chat_id: string;
+  role: ChatMessageRole;
+  content: string;
+  snippet: string;
+  is_bookmarked: boolean;
+  created_at: string;
+  agent_name: string;
+  agent_avatar: string | null;
 }
 
 // ============================================================================

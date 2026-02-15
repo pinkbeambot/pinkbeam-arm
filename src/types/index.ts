@@ -546,6 +546,7 @@ export type {
   ChatListProps,
   ChatRealtimeMessage,
   TypingIndicator,
+  ChatSearchResult,
 } from './chat';
 
 // ============================================================================

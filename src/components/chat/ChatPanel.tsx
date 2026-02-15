@@ -1,15 +1,23 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, ChevronDown, Trash2 } from 'lucide-react';
+import { X, ChevronDown, Trash2, Bookmark, Search, Download, FileText, FileJson, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn, formatRelativeTime, getAvatarColor, getInitials, getAgentStatusColor } from '@/lib/utils';
 import { useChat } from '@/lib/hooks/useChat';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent, SheetHeader } from '@/components/ui/sheet';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ChatInput } from './ChatInput';
 import type { ChatMessage } from '@/types';
 
@@ -20,12 +28,58 @@ interface ChatPanelProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// ============================================================================
+// Search Result Type
+// ============================================================================
+
+interface SearchResult {
+  id: string;
+  chat_id: string;
+  role: string;
+  content: string;
+  is_bookmarked: boolean;
+  created_at: string;
+  rank: number;
+  headline: string;
+}
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProps) {
   const { chat, messages, loading, error, hasMore, sending, sendMessage, loadMore, deleteMessage } =
     useChat({ chatId, agentId });
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
+
+  // Search state
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Bookmark state — tracks toggling in progress
+  const [togglingBookmark, setTogglingBookmark] = useState<Set<string>>(new Set());
+  // Local bookmark overrides (optimistic updates)
+  const [bookmarkOverrides, setBookmarkOverrides] = useState<Map<string, boolean>>(new Map());
+
+  // Show bookmarks only filter
+  const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
+
+  // Export state
+  const [exporting, setExporting] = useState(false);
+
+  // Reset search when chat changes
+  useEffect(() => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowBookmarkedOnly(false);
+    setBookmarkOverrides(new Map());
+  }, [chatId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -70,6 +124,150 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
     [sendMessage]
   );
 
+  // Search within chat
+  const performSearch = useCallback(
+    async (query: string) => {
+      if (!chat?.id || !query.trim()) {
+        setSearchResults([]);
+        setSearching(false);
+        return;
+      }
+
+      setSearching(true);
+      try {
+        const params = new URLSearchParams({ q: query, limit: '20' });
+        const response = await fetch(`/api/chats/${chat.id}/messages/search?${params}`);
+        if (!response.ok) throw new Error('Search failed');
+        const data = await response.json();
+        setSearchResults(data.messages || []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [chat?.id]
+  );
+
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+      if (!value.trim()) {
+        setSearchResults([]);
+        setSearching(false);
+        return;
+      }
+      setSearching(true);
+      searchDebounceRef.current = setTimeout(() => {
+        performSearch(value);
+      }, 300);
+    },
+    [performSearch]
+  );
+
+  // Cleanup search debounce
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    };
+  }, []);
+
+  // Toggle bookmark
+  const toggleBookmark = useCallback(
+    async (messageId: string, currentBookmarked: boolean) => {
+      if (!chat?.id) return;
+
+      setTogglingBookmark((prev) => new Set(prev).add(messageId));
+      // Optimistic update
+      setBookmarkOverrides((prev) => new Map(prev).set(messageId, !currentBookmarked));
+
+      try {
+        const response = await fetch(`/api/chats/${chat.id}/messages/${messageId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_bookmarked: !currentBookmarked }),
+        });
+
+        if (!response.ok) {
+          // Revert optimistic update
+          setBookmarkOverrides((prev) => {
+            const next = new Map(prev);
+            next.delete(messageId);
+            return next;
+          });
+        }
+      } catch {
+        // Revert optimistic update
+        setBookmarkOverrides((prev) => {
+          const next = new Map(prev);
+          next.delete(messageId);
+          return next;
+        });
+      } finally {
+        setTogglingBookmark((prev) => {
+          const next = new Set(prev);
+          next.delete(messageId);
+          return next;
+        });
+      }
+    },
+    [chat?.id]
+  );
+
+  // Export chat
+  const handleExport = useCallback(
+    async (format: 'markdown' | 'json' | 'text') => {
+      if (!chat?.id) return;
+      setExporting(true);
+
+      try {
+        const params = new URLSearchParams({
+          format,
+          bookmarked_only: showBookmarkedOnly ? 'true' : 'false',
+        });
+        const response = await fetch(`/api/chats/${chat.id}/export?${params}`);
+
+        if (!response.ok) throw new Error('Export failed');
+
+        if (format === 'json') {
+          const data = await response.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          downloadBlob(blob, `chat-export.json`);
+        } else {
+          const text = await response.text();
+          const mimeType = format === 'markdown' ? 'text/markdown' : 'text/plain';
+          const ext = format === 'markdown' ? 'md' : 'txt';
+          const blob = new Blob([text], { type: mimeType });
+          downloadBlob(blob, `chat-export.${ext}`);
+        }
+      } catch (err) {
+        console.error('Export failed:', err);
+      } finally {
+        setExporting(false);
+      }
+    },
+    [chat?.id, showBookmarkedOnly]
+  );
+
+  // Resolve bookmark status (with optimistic override)
+  const isBookmarked = useCallback(
+    (message: ChatMessage) => {
+      if (bookmarkOverrides.has(message.id)) {
+        return bookmarkOverrides.get(message.id)!;
+      }
+      return message.is_bookmarked || false;
+    },
+    [bookmarkOverrides]
+  );
+
+  // Filter messages if bookmark filter is active
+  const displayedMessages = showBookmarkedOnly
+    ? messages.filter((m) => isBookmarked(m))
+    : messages;
+
   const agent = chat?.agent;
   const agentName = agent?.name || 'Agent';
   const agentAvatar = agent?.avatar_url;
@@ -108,60 +306,224 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
                 </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
-              <X className="h-4 w-4" />
-            </Button>
+
+            <div className="flex items-center gap-1">
+              {/* Search toggle */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={searchOpen ? 'secondary' : 'ghost'}
+                      size="icon"
+                      onClick={() => {
+                        setSearchOpen(!searchOpen);
+                        if (searchOpen) {
+                          setSearchQuery('');
+                          setSearchResults([]);
+                        }
+                      }}
+                    >
+                      <Search className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Search messages</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Bookmark filter toggle */}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant={showBookmarkedOnly ? 'secondary' : 'ghost'}
+                      size="icon"
+                      onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                    >
+                      <Bookmark className={cn('h-4 w-4', showBookmarkedOnly && 'fill-current')} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {showBookmarkedOnly ? 'Show all messages' : 'Show bookmarked only'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+
+              {/* Export dropdown */}
+              <DropdownMenu>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" disabled={exporting}>
+                          {exporting ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent>Export transcript</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleExport('markdown')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as Markdown
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('text')}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Export as Plain Text
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleExport('json')}>
+                    <FileJson className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Close */}
+              <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </SheetHeader>
 
-        {/* Messages */}
-        <ScrollArea
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="flex-1 px-4 py-4"
-        >
-          {loading && messages.length === 0 ? (
-            <ChatLoadingSkeleton />
-          ) : error ? (
-            <ChatError error={error} onRetry={() => window.location.reload()} />
-          ) : messages.length === 0 ? (
-            <ChatEmptyState agentName={agentName} />
-          ) : (
-            <div className="space-y-4">
-              {hasMore && (
-                <div className="text-center py-2">
-                  <span className="text-xs text-muted-foreground">Loading more...</span>
-                </div>
+        {/* Search bar */}
+        {searchOpen && (
+          <div className="px-4 py-2 border-b flex-shrink-0">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search in conversation..."
+                className="pl-9 h-9"
+                autoFocus
+              />
+              {searching && (
+                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
               )}
-              {messages.map((message, index) => (
-                <ChatMessageBubble
-                  key={message.id}
-                  message={message}
-                  isUser={message.role === 'user'}
-                  agentName={agentName}
-                  agentAvatar={agentAvatar}
-                  showAvatar={
-                    index === 0 ||
-                    messages[index - 1]?.role !== message.role
-                  }
-                  onDelete={() => deleteMessage(message.id)}
-                />
+            </div>
+            {searchQuery.trim() && !searching && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} found
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Search results */}
+        {searchOpen && searchQuery.trim() && searchResults.length > 0 ? (
+          <ScrollArea className="flex-1 px-4 py-4">
+            <div className="space-y-3">
+              {searchResults.map((result) => (
+                <div
+                  key={result.id}
+                  className="rounded-lg border p-3 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
+                  onClick={() => {
+                    // Close search and scroll to message
+                    setSearchOpen(false);
+                    setSearchQuery('');
+                    setSearchResults([]);
+                    // Find the message in the messages list and scroll to it
+                    const el = document.getElementById(`msg-${result.id}`);
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      el.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+                      setTimeout(() => {
+                        el.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+                      }, 2000);
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-medium capitalize text-muted-foreground">
+                      {result.role === 'user' ? 'You' : agentName}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {result.is_bookmarked && (
+                        <Bookmark className="h-3 w-3 fill-current text-yellow-500" />
+                      )}
+                      <span className="text-xs text-muted-foreground">
+                        {formatRelativeTime(result.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <div
+                    className="text-sm line-clamp-3"
+                    dangerouslySetInnerHTML={{ __html: result.headline || result.content.slice(0, 200) }}
+                  />
+                </div>
               ))}
             </div>
-          )}
-        </ScrollArea>
+          </ScrollArea>
+        ) : (
+          <>
+            {/* Messages */}
+            <ScrollArea
+              ref={scrollRef}
+              onScroll={handleScroll}
+              className="flex-1 px-4 py-4"
+            >
+              {loading && messages.length === 0 ? (
+                <ChatLoadingSkeleton />
+              ) : error ? (
+                <ChatError error={error} onRetry={() => window.location.reload()} />
+              ) : displayedMessages.length === 0 ? (
+                showBookmarkedOnly ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                    <Bookmark className="h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm font-medium mb-1">No bookmarked messages</p>
+                    <p className="text-xs text-muted-foreground">
+                      Bookmark messages by clicking the bookmark icon.
+                    </p>
+                  </div>
+                ) : (
+                  <ChatEmptyState agentName={agentName} />
+                )
+              ) : (
+                <div className="space-y-4">
+                  {hasMore && !showBookmarkedOnly && (
+                    <div className="text-center py-2">
+                      <span className="text-xs text-muted-foreground">Loading more...</span>
+                    </div>
+                  )}
+                  {displayedMessages.map((message, index) => (
+                    <ChatMessageBubble
+                      key={message.id}
+                      message={message}
+                      isUser={message.role === 'user'}
+                      agentName={agentName}
+                      agentAvatar={agentAvatar}
+                      showAvatar={
+                        index === 0 ||
+                        displayedMessages[index - 1]?.role !== message.role
+                      }
+                      isBookmarked={isBookmarked(message)}
+                      isTogglingBookmark={togglingBookmark.has(message.id)}
+                      onToggleBookmark={() => toggleBookmark(message.id, isBookmarked(message))}
+                      onDelete={() => deleteMessage(message.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
 
-        {/* Scroll to bottom button */}
-        {showScrollButton && (
-          <Button
-            variant="secondary"
-            size="sm"
-            className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full shadow-lg"
-            onClick={scrollToBottom}
-          >
-            <ChevronDown className="h-4 w-4 mr-1" />
-            New messages
-          </Button>
+            {/* Scroll to bottom button */}
+            {showScrollButton && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full shadow-lg"
+                onClick={scrollToBottom}
+              >
+                <ChevronDown className="h-4 w-4 mr-1" />
+                New messages
+              </Button>
+            )}
+          </>
         )}
 
         {/* Input */}
@@ -177,12 +539,19 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
   );
 }
 
+// ============================================================================
+// Message Bubble
+// ============================================================================
+
 interface ChatMessageBubbleProps {
   message: ChatMessage;
   isUser: boolean;
   agentName?: string;
   agentAvatar?: string;
   showAvatar: boolean;
+  isBookmarked: boolean;
+  isTogglingBookmark: boolean;
+  onToggleBookmark: () => void;
   onDelete: () => void;
 }
 
@@ -192,18 +561,22 @@ function ChatMessageBubble({
   agentName,
   agentAvatar,
   showAvatar,
+  isBookmarked,
+  isTogglingBookmark,
+  onToggleBookmark,
   onDelete,
 }: ChatMessageBubbleProps) {
-  const [showDelete, setShowDelete] = useState(false);
+  const [showActions, setShowActions] = useState(false);
 
   return (
     <div
+      id={`msg-${message.id}`}
       className={cn(
-        'flex gap-3 group',
+        'flex gap-3 group rounded-lg transition-all duration-300',
         isUser ? 'flex-row-reverse' : 'flex-row'
       )}
-      onMouseEnter={() => setShowDelete(true)}
-      onMouseLeave={() => setShowDelete(false)}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
     >
       {/* Avatar */}
       <div className="flex-shrink-0 w-8">
@@ -241,7 +614,6 @@ function ChatMessageBubble({
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
-                // Override default elements for better styling
                 p: ({ children }) => <p className="m-0 whitespace-pre-wrap">{children}</p>,
                 a: ({ children, href }) => (
                   <a
@@ -305,7 +677,24 @@ function ChatMessageBubble({
             {formatRelativeTime(message.created_at)}
           </span>
 
-          {isUser && showDelete && (
+          {/* Bookmark (always visible when bookmarked, hover for all) */}
+          {(showActions || isBookmarked) && (
+            <button
+              onClick={onToggleBookmark}
+              disabled={isTogglingBookmark}
+              className={cn(
+                'transition-colors',
+                isBookmarked
+                  ? 'text-yellow-500 hover:text-yellow-600'
+                  : 'text-muted-foreground hover:text-yellow-500'
+              )}
+              title={isBookmarked ? 'Remove bookmark' : 'Bookmark message'}
+            >
+              <Bookmark className={cn('h-3 w-3', isBookmarked && 'fill-current')} />
+            </button>
+          )}
+
+          {isUser && showActions && (
             <button
               onClick={onDelete}
               className="text-muted-foreground hover:text-destructive transition-colors"
@@ -318,6 +707,21 @@ function ChatMessageBubble({
       </div>
     </div>
   );
+}
+
+// ============================================================================
+// Helper Components
+// ============================================================================
+
+function downloadBlob(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 function ChatLoadingSkeleton() {
