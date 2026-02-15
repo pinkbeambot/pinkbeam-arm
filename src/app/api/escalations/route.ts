@@ -204,27 +204,34 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createEscalationSchema.parse(body);
 
-    const { data: agent, error: agentError } = await supabase
+    // Parallelize validation queries for agent and task (if provided)
+    const agentPromise = supabase
       .from('agents')
       .select('id')
       .eq('id', validatedData.agent_id)
       .eq('tenant_id', tenantId)
       .single();
 
+    const taskPromise = validatedData.task_id
+      ? supabase
+          .from('tasks')
+          .select('id')
+          .eq('id', validatedData.task_id)
+          .eq('tenant_id', tenantId)
+          .single()
+      : Promise.resolve({ data: null, error: null });
+
+    const [
+      { data: agent, error: agentError },
+      { data: task, error: taskError },
+    ] = await Promise.all([agentPromise, taskPromise]);
+
     if (agentError || !agent) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 400 });
     }
 
-    if (validatedData.task_id) {
-      const { data: task, error: taskError } = await supabase
-        .from('tasks')
-        .select('id')
-        .eq('id', validatedData.task_id)
-        .eq('tenant_id', tenantId)
-        .single();
-      if (taskError || !task) {
-        return NextResponse.json({ error: 'Task not found' }, { status: 400 });
-      }
+    if (validatedData.task_id && (taskError || !task)) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 400 });
     }
 
     const { data: escalation, error } = await supabase

@@ -231,43 +231,51 @@ async function fetchAgentContext(
   agentId: string,
   tenantId: string
 ) {
-  // Fetch recent activities
-  const { data: activities } = await supabase
-    .from('activities')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('agent_id', agentId)
-    .order('created_at', { ascending: false })
-    .limit(10);
+  // Fetch context in parallel using Promise.all()
+  const [
+    { data: activities },
+    { data: tasks },
+    { data: decisions },
+    { data: escalations },
+  ] = await Promise.all([
+    // Fetch recent activities
+    supabase
+      .from('activities')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('agent_id', agentId)
+      .order('created_at', { ascending: false })
+      .limit(10),
 
-  // Fetch active tasks
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('assignee_id', agentId)
-    .in('status', ['queued', 'in_progress', 'blocked', 'review'])
-    .order('created_at', { ascending: false })
-    .limit(10);
+    // Fetch active tasks
+    supabase
+      .from('tasks')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('assignee_id', agentId)
+      .in('status', ['queued', 'in_progress', 'blocked', 'review'])
+      .order('created_at', { ascending: false })
+      .limit(10),
 
-  // Fetch recent decisions
-  const { data: decisions } = await supabase
-    .from('decisions')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('agent_id', agentId)
-    .order('created_at', { ascending: false })
-    .limit(5);
+    // Fetch recent decisions
+    supabase
+      .from('decisions')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('agent_id', agentId)
+      .order('created_at', { ascending: false })
+      .limit(5),
 
-  // Fetch open escalations
-  const { data: escalations } = await supabase
-    .from('escalations')
-    .select('*')
-    .eq('tenant_id', tenantId)
-    .eq('agent_id', agentId)
-    .eq('status', 'open')
-    .order('created_at', { ascending: false })
-    .limit(5);
+    // Fetch open escalations
+    supabase
+      .from('escalations')
+      .select('*')
+      .eq('tenant_id', tenantId)
+      .eq('agent_id', agentId)
+      .eq('status', 'open')
+      .order('created_at', { ascending: false })
+      .limit(5),
+  ]);
 
   return {
     activities: activities || [],

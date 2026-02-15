@@ -370,40 +370,46 @@ export async function POST(request: NextRequest) {
     if (isErrorResponse(auth)) return auth;
     const { tenantId, supabase } = auth;
 
-    // Validate assignee exists and belongs to tenant (if provided)
-    if (validatedData.assignee_id) {
-      const { data: assignee, error: assigneeError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', validatedData.assignee_id)
-        .eq('tenant_id', tenantId)
-        .single();
+    // Validate assignee and parent task exist and belong to tenant (if provided)
+    // Parallelize these independent queries
+    const [assigneeResult, parentTaskResult] = await Promise.all([
+      validatedData.assignee_id
+        ? supabase
+            .from('agents')
+            .select('id')
+            .eq('id', validatedData.assignee_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+      validatedData.parent_task_id
+        ? supabase
+            .from('tasks')
+            .select('id, depth')
+            .eq('id', validatedData.parent_task_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
 
-      if (assigneeError || !assignee) {
-        return NextResponse.json(
-          { error: 'Assignee agent not found' },
-          { status: 400 }
-        );
-      }
+    const { data: assignee, error: assigneeError } = assigneeResult;
+    const { data: parentTask, error: parentError } = parentTaskResult;
+
+    if (validatedData.assignee_id && (assigneeError || !assignee)) {
+      return NextResponse.json(
+        { error: 'Assignee agent not found' },
+        { status: 400 }
+      );
     }
 
-    // Validate parent task exists and belongs to tenant (if provided)
+    if (validatedData.parent_task_id && (parentError || !parentTask)) {
+      return NextResponse.json(
+        { error: 'Parent task not found' },
+        { status: 400 }
+      );
+    }
+
     let parentDepth = 0;
-    if (validatedData.parent_task_id) {
-      const { data: parentTask, error: parentError } = await supabase
-        .from('tasks')
-        .select('id, depth')
-        .eq('id', validatedData.parent_task_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (parentError || !parentTask) {
-        return NextResponse.json(
-          { error: 'Parent task not found' },
-          { status: 400 }
-        );
-      }
-
+    if (parentTask) {
       parentDepth = parentTask.depth || 0;
     }
 

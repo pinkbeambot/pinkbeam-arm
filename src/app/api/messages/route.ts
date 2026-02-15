@@ -228,55 +228,65 @@ export async function POST(request: NextRequest) {
     if (isErrorResponse(auth)) return auth;
     const { tenantId, supabase } = auth;
 
-    // Validate from_agent exists and belongs to tenant (if provided)
-    if (validatedData.from_agent_id) {
-      const { data: fromAgent, error: fromAgentError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', validatedData.from_agent_id)
-        .eq('tenant_id', tenantId)
-        .single();
+    // Validate from_agent, to_agent, and thread in parallel
+    const [
+      { data: fromAgent, error: fromAgentError },
+      { data: toAgent, error: toAgentError },
+      { data: threadMessage, error: threadError },
+    ] = await Promise.all([
+      // Validate from_agent exists and belongs to tenant (if provided)
+      validatedData.from_agent_id
+        ? supabase
+            .from('agents')
+            .select('id')
+            .eq('id', validatedData.from_agent_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
 
-      if (fromAgentError || !fromAgent) {
-        return NextResponse.json(
-          { error: 'Sender agent not found or does not belong to tenant' },
-          { status: 400 }
-        );
-      }
+      // Validate to_agent exists and belongs to tenant (if provided and not broadcast)
+      validatedData.to_agent_id && !validatedData.to_broadcast
+        ? supabase
+            .from('agents')
+            .select('id')
+            .eq('id', validatedData.to_agent_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+
+      // Validate thread exists if provided
+      validatedData.thread_id
+        ? supabase
+            .from('messages')
+            .select('id')
+            .eq('id', validatedData.thread_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    // Check from_agent error
+    if (validatedData.from_agent_id && (fromAgentError || !fromAgent)) {
+      return NextResponse.json(
+        { error: 'Sender agent not found or does not belong to tenant' },
+        { status: 400 }
+      );
     }
 
-    // Validate to_agent exists and belongs to tenant (if provided and not broadcast)
-    if (validatedData.to_agent_id && !validatedData.to_broadcast) {
-      const { data: toAgent, error: toAgentError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', validatedData.to_agent_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (toAgentError || !toAgent) {
-        return NextResponse.json(
-          { error: 'Recipient agent not found or does not belong to tenant' },
-          { status: 400 }
-        );
-      }
+    // Check to_agent error
+    if (validatedData.to_agent_id && !validatedData.to_broadcast && (toAgentError || !toAgent)) {
+      return NextResponse.json(
+        { error: 'Recipient agent not found or does not belong to tenant' },
+        { status: 400 }
+      );
     }
 
-    // Validate thread exists if provided
-    if (validatedData.thread_id) {
-      const { data: threadMessage, error: threadError } = await supabase
-        .from('messages')
-        .select('id')
-        .eq('id', validatedData.thread_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (threadError || !threadMessage) {
-        return NextResponse.json(
-          { error: 'Thread message not found or does not belong to tenant' },
-          { status: 400 }
-        );
-      }
+    // Check thread error
+    if (validatedData.thread_id && (threadError || !threadMessage)) {
+      return NextResponse.json(
+        { error: 'Thread message not found or does not belong to tenant' },
+        { status: 400 }
+      );
     }
 
     // Create the message

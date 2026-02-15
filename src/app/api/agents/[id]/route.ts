@@ -99,41 +99,42 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Fetch recent tasks assigned to this agent
-    const { data: recentTasks } = await supabase
-      .from('tasks')
-      .select('id, title, status, priority, created_at, completed_at')
-      .eq('assignee_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent decisions made by this agent
-    const { data: recentDecisions } = await supabase
-      .from('decisions')
-      .select('id, title, status, confidence, proposed_at, category')
-      .eq('agent_id', id)
-      .eq('tenant_id', tenantId)
-      .order('proposed_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent escalations raised by this agent
-    const { data: recentEscalations } = await supabase
-      .from('escalations')
-      .select('id, title, status, urgency, created_at, type')
-      .eq('agent_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent activities for this agent
-    const { data: recentActivities } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('agent_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    // Fetch related data in parallel to avoid N+1 query pattern
+    const [
+      { data: recentTasks },
+      { data: recentDecisions },
+      { data: recentEscalations },
+      { data: recentActivities },
+    ] = await Promise.all([
+      supabase
+        .from('tasks')
+        .select('id, title, status, priority, created_at, completed_at')
+        .eq('assignee_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('decisions')
+        .select('id, title, status, confidence, proposed_at, category')
+        .eq('agent_id', id)
+        .eq('tenant_id', tenantId)
+        .order('proposed_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('escalations')
+        .select('id, title, status, urgency, created_at, type')
+        .eq('agent_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('agent_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
 
     return NextResponse.json({
       data: {

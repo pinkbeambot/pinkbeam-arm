@@ -236,56 +236,53 @@ export async function GET(request: NextRequest) {
       .map(a => a.actor_id)
     )];
 
-    let agents: Record<string, unknown>[] = [];
-    if (agentIds.length > 0) {
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('id, name, avatar_url, role, status')
-        .in('id', agentIds);
-      agents = agentData || [];
-    }
-
     // Fetch related tasks if needed
     const taskIds = slicedActivities
       .filter(a => a.target_type === 'tasks' && a.target_id)
       .map(a => a.target_id);
-    
-    let tasks: Record<string, unknown>[] = [];
-    if (taskIds.length > 0) {
-      const { data: taskData } = await supabase
-        .from('tasks')
-        .select('id, title, status, priority, assignee_id')
-        .in('id', taskIds);
-      tasks = taskData || [];
-    }
 
     // Fetch related decisions if needed
     const decisionIds = slicedActivities
       .filter(a => a.target_type === 'decisions' && a.target_id)
       .map(a => a.target_id);
-    
-    let decisions: Record<string, unknown>[] = [];
-    if (decisionIds.length > 0) {
-      const { data: decisionData } = await supabase
-        .from('decisions')
-        .select('id, title, status, category, agent_id')
-        .in('id', decisionIds);
-      decisions = decisionData || [];
-    }
 
     // Fetch related escalations if needed
     const escalationIds = slicedActivities
       .filter(a => a.target_type === 'escalations' && a.target_id)
       .map(a => a.target_id);
-    
-    let escalations: Record<string, unknown>[] = [];
-    if (escalationIds.length > 0) {
-      const { data: escalationData } = await supabase
-        .from('escalations')
-        .select('id, title, status, urgency, agent_id')
-        .in('id', escalationIds);
-      escalations = escalationData || [];
-    }
+
+    // Parallelize all related entity queries with Promise.all()
+    const [agentResult, taskResult, decisionResult, escalationResult] = await Promise.all([
+      agentIds.length > 0
+        ? supabase
+            .from('agents')
+            .select('id, name, avatar_url, role, status')
+            .in('id', agentIds)
+        : Promise.resolve({ data: null }),
+      taskIds.length > 0
+        ? supabase
+            .from('tasks')
+            .select('id, title, status, priority, assignee_id')
+            .in('id', taskIds)
+        : Promise.resolve({ data: null }),
+      decisionIds.length > 0
+        ? supabase
+            .from('decisions')
+            .select('id, title, status, category, agent_id')
+            .in('id', decisionIds)
+        : Promise.resolve({ data: null }),
+      escalationIds.length > 0
+        ? supabase
+            .from('escalations')
+            .select('id, title, status, urgency, agent_id')
+            .in('id', escalationIds)
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const agents = agentResult.data || [];
+    const tasks = taskResult.data || [];
+    const decisions = decisionResult.data || [];
+    const escalations = escalationResult.data || [];
 
     // Format response
     return NextResponse.json({

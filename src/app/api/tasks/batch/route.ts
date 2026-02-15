@@ -21,26 +21,45 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { tasks: tasksToCreate } = batchCreateTaskSchema.parse(body);
 
-    // Validate all assignees exist before creating
+    // Extract and validate assignees and parent tasks in parallel
     const assigneeIds = [...new Set(tasksToCreate
       .map(t => t.assignee_id)
       .filter(Boolean))];
 
+    const parentIds = [...new Set(tasksToCreate
+      .map(t => t.parent_task_id)
+      .filter(Boolean))];
+
+    const parentDepths: Record<string, number> = {};
+
+    // Parallelize validation queries
+    const [assigneeResult, parentResult] = await Promise.all([
+      assigneeIds.length > 0
+        ? supabase
+            .from('agents')
+            .select('id')
+            .in('id', assigneeIds)
+            .eq('tenant_id', tenantId)
+        : Promise.resolve({ data: [], error: null }),
+      parentIds.length > 0
+        ? supabase
+            .from('tasks')
+            .select('id, depth')
+            .in('id', parentIds)
+            .eq('tenant_id', tenantId)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    // Handle assignee validation
+    if (assigneeResult.error) {
+      return NextResponse.json(
+        { error: 'Failed to validate assignees', details: assigneeResult.error.message },
+        { status: 500 }
+      );
+    }
+
     if (assigneeIds.length > 0) {
-      const { data: validAssignees, error: assigneeError } = await supabase
-        .from('agents')
-        .select('id')
-        .in('id', assigneeIds)
-        .eq('tenant_id', tenantId);
-
-      if (assigneeError) {
-        return NextResponse.json(
-          { error: 'Failed to validate assignees', details: assigneeError.message },
-          { status: 500 }
-        );
-      }
-
-      const validAssigneeIds = new Set(validAssignees?.map(a => a.id) || []);
+      const validAssigneeIds = new Set(assigneeResult.data?.map(a => a.id) || []);
       const invalidAssignees = assigneeIds.filter(id => !validAssigneeIds.has(id));
 
       if (invalidAssignees.length > 0) {
@@ -51,27 +70,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate parent tasks exist
-    const parentIds = [...new Set(tasksToCreate
-      .map(t => t.parent_task_id)
-      .filter(Boolean))];
+    // Handle parent task validation
+    if (parentResult.error) {
+      return NextResponse.json(
+        { error: 'Failed to validate parent tasks', details: parentResult.error.message },
+        { status: 500 }
+      );
+    }
 
-    const parentDepths: Record<string, number> = {};
     if (parentIds.length > 0) {
-      const { data: validParents, error: parentError } = await supabase
-        .from('tasks')
-        .select('id, depth')
-        .in('id', parentIds)
-        .eq('tenant_id', tenantId);
-
-      if (parentError) {
-        return NextResponse.json(
-          { error: 'Failed to validate parent tasks', details: parentError.message },
-          { status: 500 }
-        );
-      }
-
-      const validParentIds = new Set(validParents?.map(p => p.id) || []);
+      const validParentIds = new Set(parentResult.data?.map(p => p.id) || []);
       const invalidParents = parentIds.filter(id => !validParentIds.has(id));
 
       if (invalidParents.length > 0) {
@@ -82,7 +90,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Build depth map
-      validParents?.forEach(p => {
+      parentResult.data?.forEach(p => {
         parentDepths[p.id] = p.depth || 0;
       });
     }
@@ -207,12 +215,8 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Update each task individually (Supabase doesn't support batch updates well)
-    const results = [];
-    const errors = [];
-
-    for (const { id, data } of tasksToUpdate) {
-      // Add timestamp tracking for status changes
+    // Prepare update data with timestamp tracking for all tasks
+    const tasksWithTimestamps = tasksToUpdate.map(({ id, data }) => {
       const updateData: Record<string, unknown> = { ...data };
       const currentStatus = taskStatusMap.get(id);
 
@@ -227,7 +231,12 @@ export async function PATCH(request: NextRequest) {
         updateData.completed_at = new Date().toISOString();
       }
 
-      const { data: updatedTask, error: updateError } = await supabase
+      return { id, updateData };
+    });
+
+    // Update all tasks in parallel
+    const updatePromises = tasksWithTimestamps.map(({ id, updateData }) =>
+      supabase
         .from('tasks')
         .update(updateData)
         .eq('id', id)
@@ -237,14 +246,27 @@ export async function PATCH(request: NextRequest) {
           assignee:assignee_id(id, name, avatar_url, status, role),
           assigner:assigner_id(id, name, avatar_url)
         `)
-        .single();
+        .single()
+    );
 
-      if (updateError) {
-        errors.push({ id, error: updateError.message });
+    const updateResults = await Promise.allSettled(updatePromises);
+
+    const results: unknown[] = [];
+    const errors: { id: string; error: string }[] = [];
+
+    updateResults.forEach((result, index) => {
+      const taskId = tasksWithTimestamps[index].id;
+      if (result.status === 'fulfilled') {
+        const { data: updatedTask, error: updateError } = result.value;
+        if (updateError) {
+          errors.push({ id: taskId, error: updateError.message });
+        } else {
+          results.push(updatedTask);
+        }
       } else {
-        results.push(updatedTask);
+        errors.push({ id: taskId, error: result.reason?.message || 'Unknown error' });
       }
-    }
+    });
 
     return NextResponse.json({
       data: results,

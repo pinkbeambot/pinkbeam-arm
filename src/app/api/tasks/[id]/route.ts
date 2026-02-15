@@ -106,32 +106,34 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Fetch related decisions
-    const { data: decisions } = await supabase
-      .from('decisions')
-      .select('id, title, status, confidence, proposed_at')
-      .eq('task_id', id)
-      .eq('tenant_id', tenantId)
-      .order('proposed_at', { ascending: false })
-      .limit(10);
-
-    // Fetch related escalations
-    const { data: escalations } = await supabase
-      .from('escalations')
-      .select('id, title, status, urgency, created_at')
-      .eq('task_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent activities for this task
-    const { data: activities } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('task_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    // Fetch related decisions, escalations, and activities in parallel
+    const [
+      { data: decisions },
+      { data: escalations },
+      { data: activities },
+    ] = await Promise.all([
+      supabase
+        .from('decisions')
+        .select('id, title, status, confidence, proposed_at')
+        .eq('task_id', id)
+        .eq('tenant_id', tenantId)
+        .order('proposed_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('escalations')
+        .select('id, title, status, urgency, created_at')
+        .eq('task_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('task_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
 
     return NextResponse.json({
       data: {
