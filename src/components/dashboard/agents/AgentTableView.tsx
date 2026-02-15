@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle, Circle } from 'lucide-react';
+import { CheckCircle2, Clock, Copy, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle, Circle } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatRelativeTime, getAgentStatusColor, getAgentStatusLabel, getRoleBadgeColor, getRoleLabel, getInitials, getAvatarColor } from '@/lib/utils';
 import type { Agent, AgentStatus } from '@/types';
@@ -17,6 +17,7 @@ interface AgentTableViewProps {
   onEditAgent: (agent: Agent) => void;
   onToggleStatus: (agent: Agent) => void;
   onDeleteAgent: (agent: Agent) => void;
+  onCloneAgent: (agent: Agent) => void;
 }
 
 export function AgentTableView({
@@ -26,6 +27,7 @@ export function AgentTableView({
   onEditAgent,
   onToggleStatus,
   onDeleteAgent,
+  onCloneAgent,
 }: AgentTableViewProps) {
   return (
     <Card>
@@ -111,6 +113,10 @@ export function AgentTableView({
                           <ExternalLink className="mr-2 h-4 w-4" />
                           Configure
                         </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onCloneAgent(agent)}>
+                        <Copy className="mr-2 h-4 w-4" />
+                        Clone Agent
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onToggleStatus(agent)}>
                         {agent.status === 'paused' ? (

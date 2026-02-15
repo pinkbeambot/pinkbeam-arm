@@ -144,6 +144,17 @@ export function escapeIlike(term: string): string {
   return term.replace(/[%_\\]/g, '\\$&')
 }
 
+/**
+ * Generate a URL-safe slug from a name.
+ * Lowercases, replaces whitespace with hyphens, strips non-alphanumeric chars.
+ */
+export function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '');
+}
+
 export function getAvatarColor(id: string): string {
   const colors = [
     'bg-red-500',

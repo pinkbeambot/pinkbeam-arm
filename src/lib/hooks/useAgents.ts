@@ -392,6 +392,142 @@ export function useDeleteAgent() {
 }
 
 /**
+ * Hook to clone an agent via API
+ */
+export function useCloneAgent() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const cloneAgent = useCallback(async (agentId: string, options?: { name?: string; parent_id?: string | null }) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/${agentId}/clone`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options || {}),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'AGENT_CLONE_FAILED', errorData.error || `Failed to clone agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error('Failed to clone agent');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  return { cloneAgent, loading, error };
+}
+
+/**
+ * Hook to export an agent's configuration via API
+ */
+export function useExportAgent() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const exportAgent = useCallback(async (agentId: string) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/${agentId}/export`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'AGENT_EXPORT_FAILED', errorData.error || `Failed to export agent: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error('Failed to export agent');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  return { exportAgent, loading, error };
+}
+
+/**
+ * Hook to import an agent from exported configuration via API
+ */
+export function useImportAgent() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const importAgent = useCallback(async (config: Record<string, unknown>, overrides?: { name?: string; parent_id?: string }) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          version: '1.0',
+          config,
+          overrides,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'AGENT_IMPORT_FAILED', errorData.error || `Failed to import agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error('Failed to import agent');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  return { importAgent, loading, error };
+}
+
+/**
  * Convenience hook for fetching all agents
  * Uses useTenant() to get the real tenant ID from auth context
  */

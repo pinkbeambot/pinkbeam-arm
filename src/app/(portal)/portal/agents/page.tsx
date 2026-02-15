@@ -8,7 +8,7 @@ import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashb
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
 import { ChatPanel } from '@/components/chat';
-import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent } from '@/lib/hooks/useAgents';
+import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent, useCloneAgent } from '@/lib/hooks/useAgents';
 import { useTenant } from '@/lib/hooks/useTenant';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -21,6 +21,7 @@ export default function AgentsPage() {
   const { updateAgent, loading: updateLoading } = useUpdateAgent();
   const { deleteAgent, loading: deleteLoading } = useDeleteAgent();
   const { createAgent, loading: createLoading } = useCreateAgent();
+  const { cloneAgent, loading: cloneLoading } = useCloneAgent();
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,6 +82,16 @@ export default function AgentsPage() {
     setChatAgentId(agent.id);
     setChatOpen(true);
   }, []);
+
+  const handleCloneAgent = useCallback(async (agent: Agent) => {
+    try {
+      const clonedAgent = await cloneAgent(agent.id);
+      toast({ title: 'Agent Cloned', description: `${clonedAgent.name} has been created from ${agent.name}.` });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to clone agent.', variant: 'destructive' });
+    }
+  }, [cloneAgent, refetch, toast]);
 
   const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
     if (!tenantId) {
@@ -159,16 +170,18 @@ export default function AgentsPage() {
             onEditAgent={handleEditAgent}
             onToggleStatus={handleToggleStatus}
             onDeleteAgent={handleDeleteAgent}
+            onCloneAgent={handleCloneAgent}
           />
         </div>
 
         <AgentDetailPanel
           agent={selectedAgent}
-          loading={updateLoading || deleteLoading}
+          loading={updateLoading || deleteLoading || cloneLoading}
           open={detailOpen}
           onOpenChange={setDetailOpen}
           onChat={() => selectedAgent && handleChat(selectedAgent)}
           onToggleStatus={() => selectedAgent && handleToggleStatus(selectedAgent)}
+          onCloneAgent={() => selectedAgent && handleCloneAgent(selectedAgent)}
         />
 
         <CreateAgentModal

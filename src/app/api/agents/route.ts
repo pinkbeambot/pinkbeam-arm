@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { generateUniqueSlug } from '@/lib/api/slug';
 import { createAgentSchema, listAgentsQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
 import { escapeIlike } from '@/lib/utils';
@@ -269,7 +270,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate slug if not provided
-    const slug = validatedData.slug || validatedData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    let slug: string;
+    if (validatedData.slug) {
+      slug = validatedData.slug;
+    } else {
+      try {
+        slug = await generateUniqueSlug(validatedData.name, tenantId, supabase);
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'error' in err && 'status' in err) {
+          const slugErr = err as { error: string; status: number };
+          return NextResponse.json({ error: slugErr.error }, { status: slugErr.status });
+        }
+        return NextResponse.json({ error: 'Failed to generate slug' }, { status: 500 });
+      }
+    }
 
     // Create the agent
     const { data: agent, error } = await supabase

@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Copy, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatRelativeTime, getAgentStatusColor, getAgentStatusLabel, getRoleBadgeColor, getRoleLabel, getInitials, getAvatarColor } from '@/lib/utils';
 import type { Agent, AgentStatus } from '@/types';
@@ -23,6 +23,7 @@ interface AgentGridViewProps {
   onEditAgent: (agent: Agent) => void;
   onToggleStatus: (agent: Agent) => void;
   onDeleteAgent: (agent: Agent) => void;
+  onCloneAgent: (agent: Agent) => void;
 }
 
 export function AgentGridView({
@@ -32,6 +33,7 @@ export function AgentGridView({
   onEditAgent,
   onToggleStatus,
   onDeleteAgent,
+  onCloneAgent,
 }: AgentGridViewProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -44,6 +46,7 @@ export function AgentGridView({
           onEdit={() => onEditAgent(agent)}
           onToggleStatus={() => onToggleStatus(agent)}
           onDelete={() => onDeleteAgent(agent)}
+          onClone={() => onCloneAgent(agent)}
         />
       ))}
     </div>
@@ -57,9 +60,10 @@ interface AgentCardProps {
   onEdit: () => void;
   onToggleStatus: () => void;
   onDelete: () => void;
+  onClone: () => void;
 }
 
-function AgentCard({ agent, isSelected, onClick, onEdit, onToggleStatus, onDelete }: AgentCardProps) {
+function AgentCard({ agent, isSelected, onClick, onEdit, onToggleStatus, onDelete, onClone }: AgentCardProps) {
   return (
     <Card
       className={cn(
@@ -115,6 +119,10 @@ function AgentCard({ agent, isSelected, onClick, onEdit, onToggleStatus, onDelet
                   <ExternalLink className="mr-2 h-4 w-4" />
                   Configure
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onClone}>
+                <Copy className="mr-2 h-4 w-4" />
+                Clone
               </DropdownMenuItem>
               <DropdownMenuItem onClick={onToggleStatus}>
                 {agent.status === 'paused' ? (

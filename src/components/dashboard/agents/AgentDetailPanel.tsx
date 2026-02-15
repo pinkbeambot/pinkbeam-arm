@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Bot, Calendar, Activity, MessageSquare, Play, Pause, Pencil } from 'lucide-react';
+import { X, Bot, Calendar, Activity, MessageSquare, Play, Pause, Pencil, Copy } from 'lucide-react';
 import { cn, formatDateTime, getAgentStatusColor, getAgentStatusLabel, getRoleLabel, getRoleBadgeColor, getInitials, getAvatarColor, formatRelativeTime } from '@/lib/utils';
 import type { Agent } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ interface AgentDetailPanelProps {
   onEdit?: () => void;
   onChat: () => void;
   onToggleStatus: () => void;
+  onCloneAgent?: () => void;
   onAgentUpdated?: (agent: Agent) => void;
 }
 
@@ -38,6 +39,7 @@ export function AgentDetailPanel({
   onEdit,
   onChat,
   onToggleStatus,
+  onCloneAgent,
   onAgentUpdated,
 }: AgentDetailPanelProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -85,6 +87,7 @@ export function AgentDetailPanel({
               onEdit={handleEdit}
               onChat={onChat}
               onToggleStatus={onToggleStatus}
+              onCloneAgent={onCloneAgent}
               onClose={() => onOpenChange(false)}
             />
           )}
@@ -107,12 +110,14 @@ function AgentDetailContent({
   onEdit,
   onChat,
   onToggleStatus,
+  onCloneAgent,
   onClose,
 }: {
   agent: Agent;
   onEdit: () => void;
   onChat: () => void;
   onToggleStatus: () => void;
+  onCloneAgent?: () => void;
   onClose: () => void;
 }) {
   // Fetch analytics data for the Performance tab
@@ -169,6 +174,12 @@ function AgentDetailContent({
             <MessageSquare className="mr-2 h-4 w-4" />
             Chat
           </Button>
+          {onCloneAgent && (
+            <Button variant="outline" size="sm" onClick={onCloneAgent} className="flex-1">
+              <Copy className="mr-2 h-4 w-4" />
+              Clone
+            </Button>
+          )}
           <Button 
             variant={agent.status === 'paused' ? 'default' : 'outline'} 
             size="sm" 

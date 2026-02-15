@@ -16,6 +16,7 @@ interface AgentListProps {
   onEditAgent: (agent: Agent) => void;
   onToggleStatus: (agent: Agent) => void;
   onDeleteAgent: (agent: Agent) => void;
+  onCloneAgent: (agent: Agent) => void;
 }
 
 export function AgentList({
@@ -27,6 +28,7 @@ export function AgentList({
   onEditAgent,
   onToggleStatus,
   onDeleteAgent,
+  onCloneAgent,
 }: AgentListProps) {
   if (loading) {
     return <AgentListSkeleton viewMode={viewMode} />;
@@ -44,6 +46,7 @@ export function AgentList({
       onEditAgent={onEditAgent}
       onToggleStatus={onToggleStatus}
       onDeleteAgent={onDeleteAgent}
+      onCloneAgent={onCloneAgent}
     />
   ) : (
     <AgentTableView
@@ -53,6 +56,7 @@ export function AgentList({
       onEditAgent={onEditAgent}
       onToggleStatus={onToggleStatus}
       onDeleteAgent={onDeleteAgent}
+      onCloneAgent={onCloneAgent}
     />
   );
 }
