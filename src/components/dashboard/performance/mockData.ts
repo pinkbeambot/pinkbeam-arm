@@ -9,7 +9,8 @@ import type {
   TimeSeriesDataPoint,
   Bottleneck,
   ROIMetrics,
-  TaskStageMetrics
+  TaskStageMetrics,
+  DateRange
 } from './types';
 import type { Agent, AgentStatus } from '@/types';
 
@@ -330,7 +331,7 @@ export function generatePerformanceData(dateRange: string): PerformanceDashboard
   const days = dateRange === 'today' ? 1 : dateRange === '7d' ? 7 : dateRange === '30d' ? 30 : 90;
   
   return {
-    dateRange: dateRange as any,
+    dateRange: dateRange as DateRange,
     metrics: {
       tasksCompleted: {
         title: 'Tasks Completed',
