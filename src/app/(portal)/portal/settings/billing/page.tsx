@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { PlanCard, UsageMeter, InvoiceTable } from '@/components/billing';
 import { useBilling, useAgentLimit, useTrial } from '@/lib/hooks/useBilling';
+import { useRBAC } from '@/lib/hooks';
 import type { SubscriptionTier } from '@/types';
 import {
   CreditCard,
@@ -88,6 +89,11 @@ export default function BillingSettingsPage() {
   const canCreate = !isAtLimit;
   const { isTrialing, daysRemaining } = useTrial();
 
+  // RBAC permissions
+  const { can } = useRBAC();
+  const canReadBilling = can('billing:read');
+  const canManageBilling = can('billing:manage');
+
   const [selectedTier, setSelectedTier] = React.useState<SubscriptionTier | null>(null);
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
@@ -116,6 +122,25 @@ export default function BillingSettingsPage() {
     }
   };
 
+  if (!canReadBilling) {
+    return (
+      <PortalLayout>
+        <PageContainer>
+          <PageHeader
+            title="Billing & Subscription"
+            description="Manage your subscription plan and billing information"
+          />
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              You don&apos;t have permission to view billing information. Contact your workspace owner for access.
+            </AlertDescription>
+          </Alert>
+        </PageContainer>
+      </PortalLayout>
+    );
+  }
+
   if (isLoading) {
     return (
       <PortalLayout>
@@ -140,7 +165,7 @@ export default function BillingSettingsPage() {
           title="Billing & Subscription"
           description="Manage your subscription plan and billing information"
         >
-          {billing?.stripeCustomerId && (
+          {billing?.stripeCustomerId && canManageBilling && (
             <Button
               variant="outline"
               size="sm"
@@ -294,7 +319,7 @@ export default function BillingSettingsPage() {
           )}
 
           {/* Plans Grid */}
-          {plans.length > 0 && (
+          {plans.length > 0 && canManageBilling && (
             <>
               <Separator />
               <div>

@@ -16,6 +16,7 @@ import {
 } from '@/components/dashboard/tasks';
 import { useTasks } from '@/lib/hooks/useTasks';
 import { useAgents } from '@/lib/hooks/useAgents';
+import { useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,16 @@ export default function TasksPage() {
   } = useTasks({ limit: 100 });
 
   const { agents, isLoading: agentsLoading } = useAgents();
+
+  // RBAC permissions
+  const { can } = useRBAC();
+  const canCreateTasks = can('tasks:create');
+  const canUpdateTasks = can('tasks:update');
+  const canDeleteTasks = can('tasks:delete');
+
+  const showPermissionDenied = useCallback(() => {
+    toast({ title: 'Permission Denied', description: 'You do not have permission to perform this action.', variant: 'destructive' });
+  }, [toast]);
 
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
@@ -261,10 +272,12 @@ export default function TasksPage() {
               </Button>
             </div>
 
-            <Button onClick={() => setCreateModalOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Task
-            </Button>
+            {canCreateTasks && (
+              <Button onClick={() => setCreateModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            )}
           </div>
         </PageHeader>
 
@@ -299,9 +312,9 @@ export default function TasksPage() {
             <KanbanBoard
               tasks={filteredTasks}
               onTaskClick={handleTaskClick}
-              onTaskEdit={handleTaskEdit}
-              onTaskDelete={handleTaskDelete}
-              onStatusChange={handleStatusChange}
+              onTaskEdit={canUpdateTasks ? handleTaskEdit : handleTaskClick}
+              onTaskDelete={canDeleteTasks ? handleTaskDelete : showPermissionDenied}
+              onStatusChange={canUpdateTasks ? handleStatusChange : showPermissionDenied}
             />
           ) : (
             <DependencyGraph
@@ -321,8 +334,8 @@ export default function TasksPage() {
           setSelectedTask(null);
         }}
         agents={agents}
-        onUpdate={handleTaskUpdate}
-        onDelete={handleTaskDelete}
+        onUpdate={canUpdateTasks ? handleTaskUpdate : async () => { showPermissionDenied(); }}
+        onDelete={canDeleteTasks ? handleTaskDelete : showPermissionDenied}
         loading={tasksLoading}
       />
 

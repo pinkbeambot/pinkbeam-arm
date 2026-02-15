@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Settings, Bell, CreditCard, Users } from "lucide-react";
+import { User, Mail, Settings, Bell, CreditCard, Users, Shield } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -145,6 +145,26 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Audit Log & Retention Link */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                Audit Log & Retention
+              </CardTitle>
+              <CardDescription>
+                Export audit logs and configure data retention policies
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" asChild>
+                <Link href="/portal/settings/audit">
+                  Manage Audit Settings
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Coming Soon Sections */}
           <Card className="border-dashed">
             <CardHeader>
@@ -160,7 +180,6 @@ export default async function SettingsPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• Workspace settings</li>
                 <li>• API keys & integrations</li>
-                <li>• Data export & privacy controls</li>
               </ul>
             </CardContent>
           </Card>

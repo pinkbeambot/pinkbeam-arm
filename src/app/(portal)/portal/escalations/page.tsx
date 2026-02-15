@@ -9,6 +9,7 @@ import { EscalationDetailPanel } from '@/components/dashboard/escalations/Escala
 import { EscalationStatsView } from '@/components/dashboard/escalations/EscalationStats';
 import { useEscalations, useEscalationStats } from '@/lib/hooks/useEscalations';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import type { Escalation, EscalationUrgency, EscalationType } from '@/types';
@@ -37,8 +38,16 @@ export default function EscalationsPage() {
     type: typeFilter,
     agentId: agentFilter,
   });
-  
+
   const { stats, loading: statsLoading } = useEscalationStats();
+
+  // RBAC permissions
+  const { can } = useRBAC();
+  const canResolveEscalations = can('escalations:resolve');
+
+  const showPermissionDenied = useCallback(() => {
+    toast({ title: 'Permission Denied', description: 'You do not have permission to resolve escalations.', variant: 'destructive' });
+  }, [toast]);
 
   // Get unique agents for filter dropdown
   const agents = useMemo(() => {
@@ -219,8 +228,8 @@ export default function EscalationsPage() {
           loading={loading}
           selectedEscalationId={selectedEscalation?.id}
           onSelectEscalation={handleSelectEscalation}
-          onResolve={handleResolve}
-          onTakeOver={handleTakeOver}
+          onResolve={canResolveEscalations ? handleResolve : showPermissionDenied}
+          onTakeOver={canResolveEscalations ? handleTakeOver : undefined}
         />
 
         {/* Detail Panel */}
@@ -228,8 +237,8 @@ export default function EscalationsPage() {
           escalation={selectedEscalation}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onResolve={handleResolveFromPanel}
-          onTakeOver={handleTakeOver ? (id) => {
+          onResolve={canResolveEscalations ? handleResolveFromPanel : async () => { showPermissionDenied(); }}
+          onTakeOver={canResolveEscalations ? (id) => {
             const escalation = escalations.find(e => e.id === id);
             if (escalation) handleTakeOver(escalation);
           } : undefined}

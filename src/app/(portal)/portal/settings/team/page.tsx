@@ -3,20 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { 
-  Users, 
-  UserPlus, 
-  Mail, 
-  Shield, 
+import {
+  Users,
+  UserPlus,
+  Mail,
+  Shield,
   User,
   Eye,
-  MoreHorizontal,
-  Trash2,
-  RefreshCw
 } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import { RoleSelector } from "./RoleSelector";
 
 interface TeamMember {
   user_id: string;
@@ -131,14 +128,12 @@ export default async function TeamSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isOwner && (
+              {isAdmin && (
                 <div className="mb-6">
-                  <Link href="/portal/settings/team/invite">
-                    <Button className="gap-2">
-                      <UserPlus className="h-4 w-4" />
-                      Invite Member
-                    </Button>
-                  </Link>
+                  <Button className="gap-2" disabled>
+                    <UserPlus className="h-4 w-4" />
+                    Invite Member
+                  </Button>
                 </div>
               )}
 
@@ -192,13 +187,9 @@ export default async function TeamSettingsPage() {
                         </span>
                       )}
                       
-                      {isOwner && member.role !== 'owner' && (
+                      {isAdmin && member.role !== 'owner' && (
                         <div className="flex items-center gap-1 ml-4">
-                          <Link href={`/portal/settings/team/${member.user_id}`}>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </Link>
+                          <RoleSelector memberId={member.user_id} currentRole={member.role} />
                         </div>
                       )}
                     </div>
@@ -209,7 +200,7 @@ export default async function TeamSettingsPage() {
                   <div className="text-center py-8 text-muted-foreground">
                     <Users className="h-12 w-12 mx-auto mb-3 opacity-50" />
                     <p>No team members found</p>
-                    {isOwner && (
+                    {isAdmin && (
                       <p className="text-sm mt-1">
                         Invite your team to collaborate
                       </p>

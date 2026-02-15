@@ -11,6 +11,7 @@ import { DecisionFilters, type ConfidenceLevel, type DecisionType } from '@/comp
 import { useDecisionsRealtime, useOverrideDecision, useExportDecisions } from '@/lib/hooks/useDecisions';
 import { useAgentsRealtime } from '@/lib/hooks/useAgents';
 import { useTenant } from '@/lib/hooks/useTenant';
+import { useRBAC } from '@/lib/hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import type { Decision, DecisionStatus } from '@/types';
@@ -73,6 +74,14 @@ export default function DecisionsPage() {
 
   const { overrideDecision, loading: overrideLoading } = useOverrideDecision();
   const { exportDecisions } = useExportDecisions();
+
+  // RBAC permissions
+  const { can } = useRBAC();
+  const canOverrideDecisions = can('decisions:override');
+
+  const showPermissionDenied = useCallback(() => {
+    toast({ title: 'Permission Denied', description: 'You do not have permission to override decisions.', variant: 'destructive' });
+  }, [toast]);
 
   const handleSelectDecision = useCallback((decision: Decision) => {
     setSelectedDecision(decision);
@@ -165,7 +174,7 @@ export default function DecisionsPage() {
               loading={false}
               selectedDecisionId={selectedDecision?.id}
               onSelectDecision={handleSelectDecision}
-              onOverrideDecision={(decision) => handleSelectDecision(decision)}
+              onOverrideDecision={canOverrideDecisions ? (decision) => handleSelectDecision(decision) : showPermissionDenied}
               onViewTask={handleViewTask}
               searchQuery={searchQuery}
               agentFilter={agentFilter}
@@ -199,7 +208,7 @@ export default function DecisionsPage() {
           decision={selectedDecision}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onOverride={handleOverrideDecision}
+          onOverride={canOverrideDecisions ? handleOverrideDecision : async () => { showPermissionDenied(); }}
           onViewTask={handleViewTask}
           onViewActivity={handleViewActivity}
           loading={overrideLoading}
