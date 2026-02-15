@@ -93,7 +93,7 @@ NEXT_PUBLIC_APP_URL            # App URL (default: http://localhost:3000)
 RESEND_API_KEY                 # Server-side only — transactional emails
 STRIPE_SECRET_KEY              # Stripe API key (test: sk_test_...)
 STRIPE_WEBHOOK_SECRET          # Stripe webhook signing secret
-DEV_AUTH_BYPASS                # For E2E tests only - bypasses auth (NEVER in production)
+DEV_AUTH_BYPASS                # Local dev convenience — bypasses auth in middleware (NEVER in production)
 ```
 
 ## Key Documentation
@@ -109,9 +109,9 @@ All protected API routes use `authenticateRequest()` from `@/lib/api/auth`. Retu
 
 ## Testing
 
-### E2E Testing Gotcha
+### E2E Testing
 
-E2E tests require `DEV_AUTH_BYPASS=true` in `.env.local` to bypass authentication. The test fixtures (`src/__tests__/e2e/fixtures.ts`) rely on this to create authenticated sessions. **Never enable in production** — the build will fail if this variable is set in production environments.
+E2E tests authenticate via the real Supabase OTP flow using Playwright's setup project pattern. The `setup` project (`src/__tests__/e2e/auth.setup.ts`) runs first, authenticates a persistent test user (`e2e-test@pinkbeam-test.com`) via `admin.generateLink()`, and saves session cookies to `.playwright/.auth/user.json`. Other test projects declare `dependencies: ['setup']` and use the `authenticatedPage` fixture which loads this storageState. Requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables.
 
 ## Development Status
 

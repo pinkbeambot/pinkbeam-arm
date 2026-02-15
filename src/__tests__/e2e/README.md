@@ -6,9 +6,10 @@ This directory contains end-to-end tests for the Pink Beam ARM platform using Pl
 
 ```
 src/__tests__/e2e/
-├── fixtures.ts       # Test fixtures and authentication helpers
+├── auth.setup.ts     # Playwright setup project — authenticates via real OTP flow
+├── fixtures.ts       # Test fixtures (authenticatedPage, cleanup)
 ├── index.ts          # Public exports
-├── auth.spec.ts      # Authentication flows
+├── auth.spec.ts      # Authentication flows (unauthenticated + OTP login)
 ├── agents.spec.ts    # Agent management
 ├── tasks.spec.ts     # Task management
 ├── decisions.spec.ts # Decision log
@@ -53,12 +54,27 @@ Tests use the following configuration from `playwright.config.ts`:
 
 ## Authentication
 
-Tests use the `DEV_AUTH_BYPASS` feature for authentication. When `DEV_AUTH_BYPASS=true` is set in the environment, the middleware bypasses authentication checks.
+Tests authenticate via the **real Supabase OTP flow** using Playwright's setup project
+pattern. No `DEV_AUTH_BYPASS` is needed.
 
-For local development, set this in your `.env.local`:
+**How it works:**
+
+1. The `setup` project (`auth.setup.ts`) runs before all E2E test projects
+2. It navigates to `/auth`, enters an email, and retrieves a valid OTP via
+   `supabase.auth.admin.generateLink()` (bypasses email delivery)
+3. The OTP is entered in the browser, creating a real authenticated session
+4. Session cookies are saved to `.playwright/.auth/user.json`
+5. Test fixtures load this `storageState` into new browser contexts
+
+**Required environment variables:**
+
 ```
-DEV_AUTH_BYPASS=true
+NEXT_PUBLIC_SUPABASE_URL=...
+SUPABASE_SERVICE_ROLE_KEY=...
 ```
+
+The persistent test user email is `e2e-test@pinkbeam-test.com` (created automatically
+by the setup project if it doesn't exist).
 
 ## Test Data
 

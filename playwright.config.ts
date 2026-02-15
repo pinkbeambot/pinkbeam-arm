@@ -40,11 +40,18 @@ export default defineConfig({
 
   // Configure projects for major browsers
   projects: [
-    // E2E Tests
+    // Auth setup — runs first, saves session cookies for dependent projects
+    {
+      name: 'setup',
+      testMatch: /e2e\/auth\.setup\.ts$/,
+    },
+
+    // E2E Tests (depend on auth setup)
     {
       name: 'e2e-chromium',
       testMatch: /e2e\/.*\.spec\.ts$/,
-      use: { 
+      dependencies: ['setup'],
+      use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }
       },
@@ -52,17 +59,18 @@ export default defineConfig({
     {
       name: 'e2e-firefox',
       testMatch: /e2e\/.*\.spec\.ts$/,
-      use: { 
+      dependencies: ['setup'],
+      use: {
         ...devices['Desktop Firefox'],
         viewport: { width: 1280, height: 720 }
       },
     },
-    
+
     // Visual Regression Tests
     {
       name: 'visual-chromium',
       testMatch: /visual\/.*\.spec\.ts$/,
-      use: { 
+      use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }
       },
@@ -70,7 +78,7 @@ export default defineConfig({
     {
       name: 'visual-chromium-mobile',
       testMatch: /visual\/.*\.spec\.ts$/,
-      use: { 
+      use: {
         ...devices['iPhone 14'],
       },
     },
