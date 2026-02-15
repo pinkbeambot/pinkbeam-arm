@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
+import { ApiError } from '@/lib/errors';
 import type { Task, TaskStatus, TaskPriority, RealtimeChangePayload } from '@/types';
 
 interface UseTasksOptions {
@@ -192,22 +193,33 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(task),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create task');
+    try {
+      const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(task),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create task');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
-
-    const result = await response.json();
-    return result.data;
   };
 
   // Update task
@@ -217,22 +229,33 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(updates),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to update task');
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(updates),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
-
-    const result = await response.json();
-    return result.data;
   };
 
   // Delete task
@@ -242,20 +265,31 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to delete task');
+    try {
+      const response = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete task');
+      }
+
+      // Remove from local state
+      setTasks((current) => current.filter((t) => t.id !== id));
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
-
-    // Remove from local state
-    setTasks((current) => current.filter((t) => t.id !== id));
   };
 
   // Add dependency
@@ -269,21 +303,32 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        depends_on_task_id: dependsOnTaskId,
-        dependency_type: type,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to add dependency');
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          depends_on_task_id: dependsOnTaskId,
+          dependency_type: type,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new ApiError(response.status, 'TASK_ADD_DEPENDENCY_FAILED', errorData.error || 'Failed to add dependency');
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
   };
 
@@ -294,19 +339,30 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(
-      `/api/tasks/${taskId}/dependencies?dependency_id=${dependencyId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to remove dependency');
+    try {
+      const response = await fetch(
+        `/api/tasks/${taskId}/dependencies?dependency_id=${dependencyId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new ApiError(response.status, 'TASK_REMOVE_DEPENDENCY_FAILED', errorData.error || 'Failed to remove dependency');
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
   };
 
@@ -355,13 +411,13 @@ export function useTask(taskId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch task');
+        throw new ApiError(response.status, 'TASK_FETCH_FAILED', errorData.error || 'Failed to fetch task');
       }
 
       const result = await response.json();
       setTask(result.data);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setError(err instanceof ApiError ? err : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -439,14 +495,14 @@ export function useTaskDependencies(taskId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to fetch dependencies');
+        throw new ApiError(response.status, 'TASK_FETCH_DEPENDENCIES_FAILED', errorData.error || 'Failed to fetch dependencies');
       }
 
       const result = await response.json();
       setDependencies(result.data.dependencies);
       setDependents(result.data.dependents);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Unknown error'));
+      setError(err instanceof ApiError ? err : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
