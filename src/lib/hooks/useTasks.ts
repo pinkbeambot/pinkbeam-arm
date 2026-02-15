@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ApiError } from '@/lib/errors';
+import { createTaskSchema, updateTaskSchema } from '@/lib/validation';
 import type { Task, TaskStatus, TaskPriority, RealtimeChangePayload } from '@/types';
 
 interface UseTasksOptions {
@@ -187,6 +188,9 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
   // Create task
   const createTask = async (task: CreateTaskInput): Promise<Task> => {
+    // Validate input before sending to API
+    createTaskSchema.parse(task);
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('Not authenticated');
@@ -223,6 +227,9 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
   // Update task
   const updateTask = async (id: string, updates: UpdateTaskInput): Promise<Task> => {
+    // Validate known fields before sending to API
+    updateTaskSchema.parse(updates);
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('Not authenticated');

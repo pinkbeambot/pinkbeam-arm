@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 import { ApiError } from '@/lib/errors';
+import { createAgentSchema, updateAgentSchema } from '@/lib/validation';
 import { useTenant } from '@/lib/hooks/useTenant';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
@@ -266,10 +267,13 @@ export function useCreateAgent() {
       throw new Error('Not authenticated');
     }
 
+    // Validate input before sending to API (tenant_id is set server-side)
+    createAgentSchema.parse(agentData);
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(API_BASE, {
         method: 'POST',
         headers: {
@@ -311,10 +315,13 @@ export function useUpdateAgent() {
       throw new Error('Not authenticated');
     }
 
+    // Validate known fields before sending to API
+    updateAgentSchema.parse(updates);
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`${API_BASE}/${agentId}`, {
         method: 'PATCH',
         headers: {

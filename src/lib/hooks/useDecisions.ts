@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ApiError } from '@/lib/errors';
+import { overrideDecisionSchema, updateDecisionSchema } from '@/lib/validation';
 import type { Decision, DecisionStatus, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
@@ -171,6 +172,14 @@ export function useOverrideDecision() {
   const [error, setError] = useState<Error | null>(null);
 
   const overrideDecision = useCallback(async (decisionId: string, overrideData: { correctDecision: string; reason: string; sendFeedback: boolean }) => {
+    const payload = {
+      reason: overrideData.reason,
+      correct_action: overrideData.correctDecision ? { decision: overrideData.correctDecision } : undefined,
+    };
+
+    // Validate before sending to API
+    overrideDecisionSchema.parse(payload);
+
     setLoading(true);
     setError(null);
     try {
@@ -180,10 +189,7 @@ export function useOverrideDecision() {
       const response = await fetch(`/api/decisions/${decisionId}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: overrideData.reason,
-          correct_action: overrideData.correctDecision ? { decision: overrideData.correctDecision } : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -208,6 +214,9 @@ export function useUpdateDecision() {
   const [error, setError] = useState<Error | null>(null);
 
   const updateDecision = useCallback(async (decisionId: string, updateData: { status?: DecisionStatus; outcome?: Record<string, unknown>; executed_action?: Record<string, unknown> }) => {
+    // Validate before sending to API
+    updateDecisionSchema.parse(updateData);
+
     setLoading(true);
     setError(null);
     try {
