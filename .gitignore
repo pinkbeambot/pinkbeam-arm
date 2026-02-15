@@ -5,6 +5,7 @@
 # Secrets
 *.pem
 *.key
+.mcp.json
 
 # Dependencies
 node_modules/
