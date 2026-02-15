@@ -167,12 +167,12 @@ describe('Agent Version History API', () => {
 
   describe('POST /api/agents/:id/config/restore', () => {
     it('should require version_id or version_number', async () => {
-      const validRequest = { version_number: 3 };
-      const invalidRequest = {};
-      
+      const validRequest: { version_number: number; version_id?: string } = { version_number: 3 };
+      const invalidRequest: { version_id?: string; version_number?: number } = {};
+
       const hasValidInput = !!(validRequest.version_id || validRequest.version_number);
       const hasInvalidInput = !!(invalidRequest.version_id || invalidRequest.version_number);
-      
+
       expect(hasValidInput).toBe(true);
       expect(hasInvalidInput).toBe(false);
     });

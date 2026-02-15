@@ -25,17 +25,32 @@
     "PreToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "case \"$CLAUDE_FILE_PATH\" in *.env|*.env.*) echo 'BLOCK: Cannot edit environment files — edit these manually' >&2; exit 1;; */package-lock.json|*/pnpm-lock.yaml|*/yarn.lock) echo 'BLOCK: Cannot edit lock files' >&2; exit 1;; esac"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_FILE_PATH\" in *.env|*.env.*) echo 'BLOCK: Cannot edit environment files — edit these manually' >&2; exit 1;; */package-lock.json|*/pnpm-lock.yaml|*/yarn.lock) echo 'BLOCK: Cannot edit lock files' >&2; exit 1;; esac"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
-        "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx eslint --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null; exit 0;; esac"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx eslint --fix \"$CLAUDE_FILE_PATH\" 2>/dev/null; exit 0;; esac"
+          }
+        ]
       },
       {
         "matcher": "Edit|Write",
-        "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx tsc --noEmit --pretty 2>&1 | grep -A 2 \"$CLAUDE_FILE_PATH\" || true;; esac"
+        "hooks": [
+          {
+            "type": "command",
+            "command": "case \"$CLAUDE_FILE_PATH\" in *.ts|*.tsx) npx tsc --noEmit --pretty 2>&1 | grep -A 2 \"$CLAUDE_FILE_PATH\" || true;; esac"
+          }
+        ]
       }
     ]
   }

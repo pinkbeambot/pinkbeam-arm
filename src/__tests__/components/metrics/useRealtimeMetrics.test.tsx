@@ -71,7 +71,7 @@ describe('useRealtimeMetrics', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch = vi.fn();
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
     // Default: authenticated session
     mockUseAuth.mockReturnValue({
       session: { access_token: 'test-token-123' },
