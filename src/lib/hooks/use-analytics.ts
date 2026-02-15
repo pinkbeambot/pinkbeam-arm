@@ -4,6 +4,7 @@
  */
 
 import * as React from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
 import type { PerformanceDashboardData, DateRange, AgentPerformance } from '@/components/dashboard/performance/types';
 import { analyticsService } from '@/lib/analytics';
 
@@ -126,23 +127,31 @@ function dateRangeToDays(dateRange: DateRange): number {
  * Hook for fetching complete performance dashboard data
  */
 export function usePerformanceData(dateRange: DateRange): UseAnalyticsResult<PerformanceDashboardData> {
+  const { session } = useAuth();
+  const accessToken = session?.access_token;
+
   const [data, setData] = React.useState<PerformanceDashboardData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
 
   const fetchData = React.useCallback(async () => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const result = await analyticsService.fetchPerformanceData(dateRange);
+      const result = await analyticsService.fetchPerformanceData(dateRange, accessToken);
       setData(result);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, accessToken]);
 
   React.useEffect(() => {
     fetchData();
@@ -155,16 +164,24 @@ export function usePerformanceData(dateRange: DateRange): UseAnalyticsResult<Per
  * Hook for fetching overview metrics only
  */
 export function useOverviewMetrics(dateRange: DateRange): UseAnalyticsResult<OverviewData> {
+  const { session } = useAuth();
+  const accessToken = session?.access_token;
+
   const [data, setData] = React.useState<OverviewData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
 
   const fetchData = React.useCallback(async () => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const result = await analyticsService.fetchOverviewMetrics(dateRange);
+      const result = await analyticsService.fetchOverviewMetrics(dateRange, accessToken);
       setData({
         tasksCompleted: result.summary.tasksCompleted,
         tasksCreated: result.summary.tasksCreated,
@@ -180,7 +197,7 @@ export function useOverviewMetrics(dateRange: DateRange): UseAnalyticsResult<Ove
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange]);
+  }, [dateRange, accessToken]);
 
   React.useEffect(() => {
     fetchData();
@@ -193,23 +210,31 @@ export function useOverviewMetrics(dateRange: DateRange): UseAnalyticsResult<Ove
  * Hook for fetching agent leaderboard
  */
 export function useLeaderboard(dateRange: DateRange, sortBy: string = 'tasksCompleted', limit: number = 20): UseAnalyticsResult<LeaderboardData> {
+  const { session } = useAuth();
+  const accessToken = session?.access_token;
+
   const [data, setData] = React.useState<LeaderboardData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
 
   const fetchData = React.useCallback(async () => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const result = await analyticsService.fetchLeaderboard(dateRange, sortBy, limit);
+      const result = await analyticsService.fetchLeaderboard(dateRange, sortBy, limit, accessToken);
       setData({ leaderboard: result.leaderboard });
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange, sortBy, limit]);
+  }, [dateRange, sortBy, limit, accessToken]);
 
   React.useEffect(() => {
     fetchData();
@@ -222,16 +247,24 @@ export function useLeaderboard(dateRange: DateRange, sortBy: string = 'tasksComp
  * Hook for fetching bottleneck data
  */
 export function useBottlenecks(hours: number = 24): UseAnalyticsResult<BottlenecksData> {
+  const { session } = useAuth();
+  const accessToken = session?.access_token;
+
   const [data, setData] = React.useState<BottlenecksData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
 
   const fetchData = React.useCallback(async () => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const result = await analyticsService.fetchBottlenecks(hours);
+      const result = await analyticsService.fetchBottlenecks(hours, accessToken);
       setData({
         bottlenecks: result.bottlenecks,
         pipelineSnapshot: result.pipelineSnapshot,
@@ -242,7 +275,7 @@ export function useBottlenecks(hours: number = 24): UseAnalyticsResult<Bottlenec
     } finally {
       setIsLoading(false);
     }
-  }, [hours]);
+  }, [hours, accessToken]);
 
   React.useEffect(() => {
     fetchData();
@@ -255,16 +288,24 @@ export function useBottlenecks(hours: number = 24): UseAnalyticsResult<Bottlenec
  * Hook for fetching ROI metrics
  */
 export function useROIMetrics(dateRange: DateRange, hourlyRate: number = 50): UseAnalyticsResult<ROIData> {
+  const { session } = useAuth();
+  const accessToken = session?.access_token;
+
   const [data, setData] = React.useState<ROIData | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
 
   const fetchData = React.useCallback(async () => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      const result = await analyticsService.fetchROIMetrics(dateRange, hourlyRate);
+      const result = await analyticsService.fetchROIMetrics(dateRange, hourlyRate, accessToken);
       setData({
         summary: result.summary,
         trends: result.trends,
@@ -277,7 +318,7 @@ export function useROIMetrics(dateRange: DateRange, hourlyRate: number = 50): Us
     } finally {
       setIsLoading(false);
     }
-  }, [dateRange, hourlyRate]);
+  }, [dateRange, hourlyRate, accessToken]);
 
   React.useEffect(() => {
     fetchData();

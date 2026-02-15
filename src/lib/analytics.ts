@@ -186,32 +186,8 @@ interface ROIResponse {
   cached?: boolean;
 }
 
-// Helper to get auth token
-async function getAuthToken(): Promise<string | null> {
-  // Check for Supabase session token in localStorage
-  if (typeof window !== 'undefined') {
-    const storageKey = 'sb-' + (process.env.NEXT_PUBLIC_SUPABASE_URL?.match(/https:\/\/(.+)\.supabase/)?.[1] || '') + '-auth-token';
-    const sessionData = localStorage.getItem(storageKey);
-    if (sessionData) {
-      try {
-        const session = JSON.parse(sessionData);
-        return session.access_token || null;
-      } catch {
-        return null;
-      }
-    }
-  }
-  return null;
-}
-
-// Fetch wrapper with auth
-async function fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
-  const token = await getAuthToken();
-  
-  if (!token) {
-    throw new Error('No authentication token available');
-  }
-
+// Fetch wrapper with auth — token must be provided by the caller (e.g. from useAuth())
+function fetchWithAuth(url: string, token: string, options?: RequestInit): Promise<Response> {
   return fetch(url, {
     ...options,
     headers: {
@@ -248,9 +224,9 @@ function convertToTimeSeries(data: Array<{ date: string; value?: number; [key: s
 /**
  * Fetch overview metrics
  */
-export async function fetchOverviewMetrics(dateRange: DateRange): Promise<OverviewResponse['data']> {
+export async function fetchOverviewMetrics(dateRange: DateRange, token: string): Promise<OverviewResponse['data']> {
   const days = dateRangeToDays(dateRange);
-  const response = await fetchWithAuth(`/api/analytics/overview?days=${days}`);
+  const response = await fetchWithAuth(`/api/analytics/overview?days=${days}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -264,9 +240,9 @@ export async function fetchOverviewMetrics(dateRange: DateRange): Promise<Overvi
 /**
  * Fetch agent leaderboard
  */
-export async function fetchLeaderboard(dateRange: DateRange, sortBy: string = 'tasksCompleted', limit: number = 20): Promise<LeaderboardResponse['data']> {
+export async function fetchLeaderboard(dateRange: DateRange, sortBy: string = 'tasksCompleted', limit: number = 20, token: string = ''): Promise<LeaderboardResponse['data']> {
   const days = dateRangeToDays(dateRange);
-  const response = await fetchWithAuth(`/api/analytics/leaderboard?days=${days}&sortBy=${sortBy}&limit=${limit}`);
+  const response = await fetchWithAuth(`/api/analytics/leaderboard?days=${days}&sortBy=${sortBy}&limit=${limit}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -280,8 +256,8 @@ export async function fetchLeaderboard(dateRange: DateRange, sortBy: string = 't
 /**
  * Fetch bottleneck data
  */
-export async function fetchBottlenecks(hours: number = 24): Promise<BottleneckResponse['data']> {
-  const response = await fetchWithAuth(`/api/analytics/bottlenecks?hours=${hours}`);
+export async function fetchBottlenecks(hours: number = 24, token: string = ''): Promise<BottleneckResponse['data']> {
+  const response = await fetchWithAuth(`/api/analytics/bottlenecks?hours=${hours}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -295,9 +271,9 @@ export async function fetchBottlenecks(hours: number = 24): Promise<BottleneckRe
 /**
  * Fetch ROI metrics
  */
-export async function fetchROIMetrics(dateRange: DateRange, hourlyRate: number = 50): Promise<ROIResponse['data']> {
+export async function fetchROIMetrics(dateRange: DateRange, hourlyRate: number = 50, token: string = ''): Promise<ROIResponse['data']> {
   const days = dateRangeToDays(dateRange);
-  const response = await fetchWithAuth(`/api/analytics/roi?days=${days}&hourlyRate=${hourlyRate}`);
+  const response = await fetchWithAuth(`/api/analytics/roi?days=${days}&hourlyRate=${hourlyRate}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -311,12 +287,12 @@ export async function fetchROIMetrics(dateRange: DateRange, hourlyRate: number =
 /**
  * Fetch complete performance dashboard data
  */
-export async function fetchPerformanceData(dateRange: DateRange): Promise<PerformanceDashboardData> {
+export async function fetchPerformanceData(dateRange: DateRange, token: string): Promise<PerformanceDashboardData> {
   const [overview, leaderboard, bottlenecks, roi] = await Promise.all([
-    fetchOverviewMetrics(dateRange),
-    fetchLeaderboard(dateRange),
-    fetchBottlenecks(24),
-    fetchROIMetrics(dateRange),
+    fetchOverviewMetrics(dateRange, token),
+    fetchLeaderboard(dateRange, 'tasksCompleted', 20, token),
+    fetchBottlenecks(24, token),
+    fetchROIMetrics(dateRange, 50, token),
   ]);
 
   // Convert API data to component types
