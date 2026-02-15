@@ -382,7 +382,7 @@ export function useRealtimeActivities(options: UseRealtimeActivitiesOptions) {
   if (agentId) filters.push(`agent_id=eq.${agentId}`);
   if (category) filters.push(`category=eq.${category}`);
 
-  return useRealtime<Record<string, unknown>>({
+  return useRealtime({
     table: 'activities',
     filter: filters.length > 0 ? filters.join(',') : undefined,
     events: ['INSERT'],
@@ -395,13 +395,13 @@ export function useRealtimeActivities(options: UseRealtimeActivitiesOptions) {
 export interface UseRealtimeAgentsOptions {
   tenantId?: string;
   enabled?: boolean;
-  onChange?: (event: { eventType: RealtimeEventType; new: Record<string, unknown> | null; old: Record<string, unknown> | null }) => void;
+  onChange?: (event: { eventType: RealtimeEventType; new: object | null; old: object | null }) => void;
 }
 
 export function useRealtimeAgents(options: UseRealtimeAgentsOptions) {
   const { tenantId, enabled = true, onChange } = options;
 
-  return useRealtime<Record<string, unknown>>({
+  return useRealtime({
     table: 'agents',
     filter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
     events: ['UPDATE'],

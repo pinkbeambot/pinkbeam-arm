@@ -51,6 +51,17 @@ type RBACHandler = (
 ) => Promise<NextResponse> | NextResponse;
 
 /**
+ * User role data from database
+ */
+interface UserRoleData {
+  id: string;
+  email: string;
+  role: string;
+  tenant_id: string;
+  name: string | null;
+}
+
+/**
  * Get user role from the database
  */
 export async function getUserRole(

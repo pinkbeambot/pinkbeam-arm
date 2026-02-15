@@ -275,18 +275,19 @@ export function useRealtimeActivities(
   // Realtime Subscription (using new core hook)
   // ============================================================================
 
-  const handleRealtimeInsert = React.useCallback((newActivity: Activity) => {
-    const newEvent = transformActivity(newActivity);
+  const handleRealtimeInsert = React.useCallback((newActivity: object) => {
+    const activity = newActivity as Activity;
+    const newEvent = transformActivity(activity);
     const currentFilter = filterRef.current;
 
     // Apply client-side filters
     if (currentFilter?.type && currentFilter.type !== 'all') {
-      if (categoryMap[newActivity.type] !== currentFilter.type) {
+      if (categoryMap[activity.type] !== currentFilter.type) {
         return;
       }
     }
 
-    if (currentFilter?.agentId && newActivity.agent_id !== currentFilter.agentId) {
+    if (currentFilter?.agentId && activity.agent_id !== currentFilter.agentId) {
       return;
     }
 
@@ -294,7 +295,7 @@ export function useRealtimeActivities(
     setEvents(prev => [newEvent, ...prev]);
 
     // Notify callback
-    onNewActivityRef.current?.(newActivity);
+    onNewActivityRef.current?.(activity);
   }, []);
 
   // Build filter for realtime subscription
