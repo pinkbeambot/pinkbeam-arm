@@ -369,7 +369,13 @@ export async function POST(request: NextRequest) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can create tasks
+    const guard = requirePermission(userRole, 'tasks:create');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Validate assignee and parent task exist and belong to tenant (if provided)
     // Parallelize these independent queries
