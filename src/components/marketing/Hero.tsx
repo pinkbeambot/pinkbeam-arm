@@ -71,11 +71,6 @@ export function Hero() {
           </FadeInOnMount>
 
           {/* VALIS Quote - REMOVED to streamline hero */}
-          
-          {/* CTA Buttons */}                — VALIS
-              </p>
-            </div>
-          </FadeInOnMount>
 
           {/* CTA Buttons */}
           <FadeInOnMount delay={0.3}>
