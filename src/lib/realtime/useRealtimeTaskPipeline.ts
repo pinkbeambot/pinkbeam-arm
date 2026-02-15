@@ -134,23 +134,23 @@ export function useRealtimeTaskPipeline(
   }, [tenantId, agentId, supabase]);
 
   // Handle realtime inserts
-  const handleInsert = useCallback((newRecord: Record<string, unknown> | null) => {
+  const handleInsert = useCallback((newRecord: object | null) => {
     if (!newRecord) return;
     
-    const newTask = newRecord as Task;
+    const newTask = newRecord as unknown as Task;
     setTasks(prev => [newTask, ...prev]);
     onTaskCreated?.(newTask);
   }, [onTaskCreated]);
 
   // Handle realtime updates
   const handleUpdate = useCallback((
-    newRecord: Record<string, unknown> | null,
-    oldRecord: Record<string, unknown> | null
+    newRecord: object | null,
+    oldRecord: object | null
   ) => {
     if (!newRecord) return;
 
-    const updatedTask = newRecord as Task;
-    const oldTask = oldRecord as Task | null;
+    const updatedTask = newRecord as unknown as Task;
+    const oldTask = oldRecord as unknown as Task | null;
 
     setTasks(prevTasks => {
       const index = prevTasks.findIndex(t => t.id === updatedTask.id);
@@ -192,7 +192,7 @@ export function useRealtimeTaskPipeline(
     connectionState,
     error,
     isConnected,
-  } = useRealtime<Task>({
+  } = useRealtime({
     table: 'tasks',
     filter,
     events: ['INSERT', 'UPDATE'],

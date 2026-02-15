@@ -275,8 +275,9 @@ export function useRealtimeActivities(
   // Realtime Subscription (using new core hook)
   // ============================================================================
 
-  const handleRealtimeInsert = React.useCallback((newActivity: Activity) => {
-    const newEvent = transformActivity(newActivity);
+  const handleRealtimeInsert = React.useCallback((newActivity: object) => {
+    const activity = newActivity as unknown as Activity;
+    const newEvent = transformActivity(activity);
     const currentFilter = filterRef.current;
 
     // Apply client-side filters

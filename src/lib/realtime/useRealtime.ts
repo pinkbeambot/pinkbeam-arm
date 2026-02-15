@@ -142,7 +142,7 @@ function generateChannelName(
   return parts.join(':');
 }
 
-export function useRealtime<T extends Record<string, unknown>>(
+export function useRealtime<T extends Record<string, unknown> | object>(
   options: UseRealtimeOptions<T>
 ): UseRealtimeReturn<T> {
   const {
@@ -253,7 +253,7 @@ export function useRealtime<T extends Record<string, unknown>>(
         }
 
         channel = channel.on(
-          'postgres_changes',
+          'postgres_changes' as any,
           postgresChangesFilter,
           (payload: { eventType: RealtimeEventType; new: T | null; old: T | null }) => {
             try {
