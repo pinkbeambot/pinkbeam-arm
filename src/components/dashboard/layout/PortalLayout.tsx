@@ -30,6 +30,7 @@ import { ThemeSwitcher } from '@/components/theme-switcher';
 import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { useBrowserNotifications } from '@/lib/hooks/useBrowserNotifications';
+import { GlobalSearch } from '@/components/dashboard/GlobalSearch';
 import {
   Tooltip,
   TooltipContent,
@@ -432,6 +433,7 @@ export function PortalHeader({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <GlobalSearch />
           <NotificationBell />
           <ThemeSwitcher />
           {children}
