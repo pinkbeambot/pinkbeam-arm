@@ -1,3 +1,14 @@
+---
+title: "Event-Driven Reporting"
+type: process
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [process, operations]
+aliases: ["Reporting", "Signal Protocol"]
+---
+
 # Pink Beam ARM — Event-Driven Reporting
 
 **Document:** Reporting Protocol  
@@ -160,6 +171,14 @@ Weekly update: finished 3 things this week
 
 ---
 
-*Document Owner: CTO*  
-*Review Schedule: As needed*  
+*Document Owner: CTO*
+*Review Schedule: As needed*
 *Questions: Tag @cto in #engineering*
+
+---
+
+## Related Documentation
+
+- [[DEVELOPMENT-PROCESS]] — Development process using this reporting protocol
+- [[AGENT-ROLES]] — Agent roles that follow this protocol
+- [[ENGINEERING]] — Engineering status context

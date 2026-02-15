@@ -1,3 +1,14 @@
+---
+title: "REST API Documentation"
+type: reference
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [api, reference, backend, critical]
+aliases: ["API Docs", "REST API"]
+---
+
 # ARM API Documentation
 
 API endpoints for the Agent Relationship Management (ARM) platform.
@@ -901,3 +912,12 @@ All request bodies and query parameters are validated using Zod schemas. Validat
   ]
 }
 ```
+
+---
+
+## Related Documentation
+
+- [[ARCHITECTURE]] — System architecture underlying the API
+- [[AUTH_IMPLEMENTATION]] — Authentication middleware details
+- [[AGENT-PROTOCOL]] — Agent protocol implemented by agent endpoints
+- [[TESTING-STANDARDS]] — API testing requirements and coverage thresholds

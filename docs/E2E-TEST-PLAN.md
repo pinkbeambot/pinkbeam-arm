@@ -1,3 +1,14 @@
+---
+title: "Playwright E2E Test Plan"
+type: planning
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: ENG-FE
+tags: [testing, planning, frontend]
+aliases: ["E2E Tests", "Playwright Tests"]
+---
+
 # Playwright E2E Test Plan
 
 ## Current State
@@ -132,3 +143,11 @@ Start with:
 4. Decisions (escalation path)
 
 Want me to create Issue #123 and spawn engineers to implement?
+
+---
+
+## Related Documentation
+
+- [[TESTING-STANDARDS]] — Comprehensive testing guide this plan implements
+- [[AGENT-ROLES]] — Testing enforcement per role
+- [[CICD]] — CI integration for E2E tests

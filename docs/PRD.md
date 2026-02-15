@@ -1,3 +1,14 @@
+---
+title: "Product Requirements Document"
+type: product
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CPO
+tags: [product, core, critical]
+aliases: ["PRD", "Product Requirements"]
+---
+
 # Pink Beam ARM — Product Requirements Document (PRD)
 
 ## Version 1.0 — FINAL
@@ -1654,3 +1665,13 @@ When evaluating additions to MVP, we use these criteria:
 ---
 
 *This is a living document. Progress will be saved at each checkpoint.*
+
+---
+
+## Related Documentation
+
+- [[ARCHITECTURE]] — System architecture implementing these requirements
+- [[MASTER-TASK-LIST]] — Task breakdown derived from this PRD
+- [[ENGINEERING]] — Engineering timeline and status
+- [[STATUS]] — Current development progress
+- [[AGENT-PROTOCOL]] — Agent protocol implementing agent features

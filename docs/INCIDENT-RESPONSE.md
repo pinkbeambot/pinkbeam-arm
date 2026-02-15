@@ -1,3 +1,14 @@
+---
+title: "Incident Response & Rollback"
+type: operations
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [operations, critical, deployment]
+aliases: ["Incident Response", "Rollback Procedures"]
+---
+
 # Pink Beam ARM — Incident Response
 
 **Document:** Incident Response & Rollback Procedures  
@@ -227,6 +238,14 @@ curl -s https://pinkbeam-arm.vercel.app/api/health | jq .
 
 ---
 
-*Document Owner: CTO*  
-*Review Schedule: Monthly*  
+*Document Owner: CTO*
+*Review Schedule: Monthly*
 *Next Review: 2026-03-13*
+
+---
+
+## Related Documentation
+
+- [[DEPLOYMENT]] — Deployment procedures and environments
+- [[CICD]] — CI/CD pipeline and automated checks
+- [[DEVELOPMENT-PROCESS]] — Development process with rollback ownership

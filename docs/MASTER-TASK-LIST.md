@@ -1,3 +1,14 @@
+---
+title: "Master Task List"
+type: planning
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CPO
+tags: [planning, product, core]
+aliases: ["Task List", "Project Tasks"]
+---
+
 # Pink Beam ARM — Master Task List
 
 **Project:** Pink Beam Agent Relationship Management Platform  
@@ -208,8 +219,8 @@ Minimal work to future-proof for the meta-agent without building it yet.
 
 | File | Purpose |
 |------|---------|
-| `~/code/arm/docs/PRD.md` | 67KB product requirements |
-| `~/code/arm/docs/ARCHITECTURE.md` | System design |
+| [[PRD]] | 67KB product requirements |
+| [[ARCHITECTURE]] | System design |
 | `~/code/arm/ENG-FE-TASKS.md` | Frontend task assignments |
 | `~/code/arm/ENG-BE-TASKS.md` | Backend task assignments |
 | `~/code/arm/docs/ENG-STATUS.md` | Engineering status |
@@ -227,5 +238,14 @@ Minimal work to future-proof for the meta-agent without building it yet.
 
 ---
 
-*Last updated: 2026-02-13*  
+*Last updated: 2026-02-13*
 *Maintained by: VALIS (CEO)*
+
+---
+
+## Related Documentation
+
+- [[PRD]] — Product requirements this task list is derived from
+- [[ARCHITECTURE]] — System architecture guiding implementation
+- [[ENGINEERING]] — Engineering status and active assignments
+- [[STATUS]] — Current development snapshot

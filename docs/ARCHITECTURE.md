@@ -1,3 +1,14 @@
+---
+title: "System Architecture"
+type: architecture
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [architecture, core, critical, agents, database, realtime]
+aliases: ["Architecture", "System Design"]
+---
+
 # ARM Platform Architecture
 
 ## System Overview
@@ -5,7 +16,7 @@
 ARM is a native Agent Relationship Management platform built on a modern, event-driven architecture. The system supports hierarchical agent spawning (agents creating agents), real-time activity feeds, and comprehensive decision logging.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
+┌──────────────────────────────────────────────────────────────────────────────┐
 │                              CLIENT LAYER                                    │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
 │  │  Web App    │  │  Mobile     │  │  CLI        │  │  External APIs      │  │
@@ -46,17 +57,17 @@ ARM is a native Agent Relationship Management platform built on a modern, event-
 ┌─────────▼───────────────────────────────────────────────────────────────────┐
 │                           DATA LAYER (Supabase)                             │
 │                                                                             │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐   │
-│  │ tenants      │ │ agents       │ │ tasks        │ │ decisions        │   │
-│  │ - workspaces │ │ - hierarchy  │ │ - pipeline   │ │ - audit trail    │   │
-│  │ - configs    │ │ - state      │ │ - deps       │ │ - reasoning      │   │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘   │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐    │
+│  │ tenants      │ │ agents       │ │ tasks        │ │ decisions        │    │
+│  │ - workspaces │ │ - hierarchy  │ │ - pipeline   │ │ - audit trail    │    │
+│  │ - configs    │ │ - state      │ │ - deps       │ │ - reasoning      │    │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘    │
 │                                                                             │
-│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐   │
-│  │ escalations  │ │ activities   │ │ messages     │ │ analytics        │   │
-│  │ - inbox      │ │ - event log  │ │ - a2a comms  │ │ - metrics        │   │
-│  │ - resolution │ │ - timeline   │ │ - threads    │ │ - aggregations   │   │
-│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘   │
+│  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌──────────────────┐    │
+│  │ escalations  │ │ activities   │ │ messages     │ │ analytics        │    │
+│  │ - inbox      │ │ - event log  │ │ - a2a comms  │ │ - metrics        │    │
+│  │ - resolution │ │ - timeline   │ │ - threads    │ │ - aggregations   │    │
+│  └──────────────┘ └──────────────┘ └──────────────┘ └──────────────────┘    │
 │                                                                             │
 │  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐                         │
 │  │ users        │ │ sessions     │ │ files        │                         │
@@ -369,3 +380,16 @@ User: "Pause all sales agents and summarize their open tasks"
 - Performance benchmarks
 - Regular dependency updates
 - Database migration testing
+
+---
+
+## Related Documentation
+
+- [[AGENT-PROTOCOL]] — Agent communication protocol extending this architecture
+- [[API]] — REST API implementing the architecture
+- [[AUTH_IMPLEMENTATION]] — Authentication implementation details
+- [[ACTIVITY_FEED_IMPLEMENTATION]] — Activity feed event system implementation
+- [[PRD]] — Product requirements driving architectural decisions
+- [[MASTER-TASK-LIST]] — Implementation task breakdown
+- [[ENGINEERING]] — Engineering status and timeline
+- [[STATUS]] — Current development status

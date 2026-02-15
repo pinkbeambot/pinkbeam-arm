@@ -1,3 +1,14 @@
+---
+title: "CI/CD Pipeline"
+type: operations
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [operations, deployment, critical]
+aliases: ["CI/CD", "Continuous Integration"]
+---
+
 # CI/CD Setup Guide
 
 ## GitHub Secrets Required
@@ -93,3 +104,12 @@ npm run test
 # Start dev server
 npm run dev
 ```
+
+---
+
+## Related Documentation
+
+- [[DEPLOYMENT]] — Deployment procedures and environments
+- [[DEVELOPMENT-PROCESS]] — Development process with CI/CD integration
+- [[TESTING-STANDARDS]] — Test pipeline executed by CI
+- [[INCIDENT-RESPONSE]] — Rollback procedures triggered by CI failures

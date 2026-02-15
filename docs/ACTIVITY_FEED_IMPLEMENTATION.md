@@ -1,3 +1,14 @@
+---
+title: "Activity Feed Implementation"
+type: implementation
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: ENG-BE
+tags: [implementation, realtime, backend, database]
+aliases: ["Activity Feed", "Event System"]
+---
+
 # Activity Feed Backend - Implementation Notes
 
 ## Overview
@@ -304,3 +315,12 @@ DROP TRIGGER IF EXISTS escalations_activity_trigger ON escalations;
 - GitHub Issue: https://github.com/pinkbeambot/pinkbeam-arm/issues/14
 - Supabase Realtime Docs: https://supabase.com/docs/guides/realtime
 - Database Migration: `supabase/migrations/010_activity_feed_enhancements.sql`
+
+---
+
+## Related Documentation
+
+- [[ARCHITECTURE]] — Event-driven architecture this implements
+- [[API]] — Activity feed API endpoints
+- [[TESTING-STANDARDS]] — Testing requirements for event system
+- [[ENGINEERING]] — Engineering status for activity feed work

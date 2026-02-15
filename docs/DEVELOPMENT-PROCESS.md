@@ -1,3 +1,14 @@
+---
+title: "Development Process"
+type: process
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [process, core]
+aliases: ["Dev Process", "Engineering Process"]
+---
+
 # Pink Beam ARM — Development Process Fixes
 
 **Documented:** 2026-02-13  
@@ -247,5 +258,17 @@ If any session times out:
 
 ---
 
-*Documented by: VALIS (CEO)*  
+*Documented by: VALIS (CEO)*
 *Next review: After CTO implements*
+
+---
+
+## Related Documentation
+
+- [[TESTING-STANDARDS]] — Testing standards enforced by this process
+- [[DEPLOYMENT]] — Deployment procedures and schedule
+- [[INCIDENT-RESPONSE]] — Incident response and rollback
+- [[CICD]] — CI/CD pipeline configuration
+- [[REPORTING]] — Event-driven reporting protocol
+- [[AGENT-ROLES]] — Agent roles with testing enforcement
+- [[ARCHITECTURE]] — System architecture guiding development

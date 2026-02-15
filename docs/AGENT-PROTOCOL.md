@@ -1,3 +1,14 @@
+---
+title: "ARM Agent Protocol (AAP)"
+type: architecture
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [architecture, agents, critical, protocol]
+aliases: ["AAP", "Agent Protocol"]
+---
+
 # ARM Agent Protocol Specification
 
 ## Overview
@@ -582,3 +593,12 @@ When an agent encounters an error:
 [MarketingManager] task.complete → [CEO]
       Q1 campaign launched successfully
 ```
+
+---
+
+## Related Documentation
+
+- [[ARCHITECTURE]] — System architecture this protocol extends
+- [[API]] — REST API for agent management
+- [[AGENT-ROLES]] — Agent role definitions and testing enforcement
+- [[MASTER-TASK-LIST]] — Agent runtime implementation tasks
