@@ -14,7 +14,7 @@
 
 import * as React from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
+import { useAuth } from '@/components/auth/AuthProvider';
 import type { Activity, Agent } from '@/types';
 import type {
   AgentLiveMetrics,
@@ -132,6 +132,8 @@ export function useRealtimeMetrics(
   } = options;
 
   const supabase = React.useMemo(() => createClient(), []);
+  const { session } = useAuth();
+  const accessToken = session?.access_token;
 
   // State
   const [agentMetrics, setAgentMetrics] = React.useState<AgentLiveMetrics[]>([]);
@@ -168,37 +170,46 @@ export function useRealtimeMetrics(
   // ============================================================================
 
   const fetchMetricsSnapshot = React.useCallback(async () => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     // Only show full loading state on initial load to avoid UI flashing on polls
     if (!hasLoadedRef.current) {
       setIsLoading(true);
     }
     setError(null);
 
+    const headers = {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    };
+
     try {
-      // Fetch agents
-      const { data: agentsData, error: agentsError } = await supabase
-        .from('agents')
-        .select('*')
-        .order('updated_at', { ascending: false });
-
-      if (agentsError) throw new Error(`Failed to fetch agents: ${agentsError.message}`);
-
-      // Fetch tasks stats
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select('status');
-
-      if (tasksError) throw new Error(`Failed to fetch tasks: ${tasksError.message}`);
-
-      // Fetch recent activities for calculating rates
+      // Fetch agents and recent activities via API routes (not direct Supabase)
+      // to go through server auth middleware which sets tenant context for RLS.
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-      const { data: activitiesData, error: activitiesError } = await supabase
-        .from('activities')
-        .select('*')
-        .gte('created_at', fiveMinutesAgo)
-        .order('created_at', { ascending: false });
 
-      if (activitiesError) throw new Error(`Failed to fetch activities: ${activitiesError.message}`);
+      const [agentsRes, activitiesRes] = await Promise.all([
+        fetch('/api/agents?limit=100', { headers }),
+        fetch(`/api/activities?date_from=${fiveMinutesAgo}&limit=100`, { headers }),
+      ]);
+
+      if (!agentsRes.ok) {
+        const err = await agentsRes.json().catch(() => ({}));
+        throw new Error(`Failed to fetch agents: ${err.error || agentsRes.statusText}`);
+      }
+      if (!activitiesRes.ok) {
+        const err = await activitiesRes.json().catch(() => ({}));
+        throw new Error(`Failed to fetch activities: ${err.error || activitiesRes.statusText}`);
+      }
+
+      const agentsJson = await agentsRes.json();
+      const activitiesJson = await activitiesRes.json();
+
+      const agentsData: Agent[] = agentsJson.data || [];
+      const activitiesData: Activity[] = activitiesJson.activities || [];
 
       // Read current values from refs (not state) to avoid dependency cycles
       const currentAgentIds = agentIdsRef.current;
@@ -346,7 +357,7 @@ export function useRealtimeMetrics(
     } finally {
       setIsLoading(false);
     }
-  }, [supabase, maxDataPoints]);
+  }, [accessToken, maxDataPoints]);
 
   // ============================================================================
   // Realtime Subscription
