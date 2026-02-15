@@ -93,14 +93,6 @@ const capabilities: { id: Capability; label: string; description: string }[] = [
   { id: 'modify_config', label: 'Modify Config', description: 'Can change agent settings' },
 ];
 
-const models = [
-  { value: 'claude-3-opus', label: 'Claude 3 Opus (Most capable)' },
-  { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet (Balanced)' },
-  { value: 'claude-3-haiku', label: 'Claude 3 Haiku (Fastest)' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-];
-
 export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: CreateAgentModalProps) {
   const [step, setStep] = useState<Step>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
@@ -332,7 +324,7 @@ function BasicInfoStep({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {models.map((model) => (
+            {SUPPORTED_MODELS.map((model) => (
               <SelectItem key={model.value} value={model.value}>
                 {model.label}
               </SelectItem>
@@ -436,7 +428,7 @@ function ReviewStep({
 
         <div>
           <span className="text-sm font-medium text-muted-foreground">Model</span>
-          <p className="text-sm">{models.find(m => m.value === formData.model)?.label || formData.model}</p>
+          <p className="text-sm">{SUPPORTED_MODELS.find(m => m.value === formData.model)?.label || formData.model}</p>
         </div>
 
         <Separator />
