@@ -118,8 +118,8 @@ describe('useRealtimeMetrics', () => {
         expect(result.current.isLoading).toBe(false);
       });
 
-      // Should have called both /api/agents and /api/activities
-      expect(mockFetch).toHaveBeenCalledTimes(2);
+      // Should have called /api/agents, /api/activities, and /api/analytics/realtime
+      expect(mockFetch).toHaveBeenCalledTimes(3);
 
       for (const call of mockFetch.mock.calls) {
         const [, options] = call;
