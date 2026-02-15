@@ -10,8 +10,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:visual": "playwright test",
-    "test:visual:update": "playwright test --update-snapshots",
+    "test:e2e": "playwright test --project=e2e-chromium",
+    "test:e2e:ui": "playwright test --ui --project=e2e-chromium",
+    "test:e2e:headed": "playwright test --headed --project=e2e-chromium",
+    "test:visual": "playwright test --project=visual-chromium",
+    "test:visual:update": "playwright test --project=visual-chromium --update-snapshots",
     "lighthouse": "lhci autorun",
     "analyze": "ANALYZE=true next build"
   },
