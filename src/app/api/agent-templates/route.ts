@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching templates:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch templates', details: error.message },
+        { error: 'Failed to fetch templates' },
         { status: 500 }
       );
     }
@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating template:', error);
       return NextResponse.json(
-        { error: 'Failed to create template', details: error.message },
+        { error: 'Failed to create template' },
         { status: 500 }
       );
     }

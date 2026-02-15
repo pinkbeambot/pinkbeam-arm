@@ -148,7 +148,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating session:', error);
       return NextResponse.json(
-        { error: 'Failed to update session', details: error.message },
+        { error: 'Failed to update session' },
         { status: 500 }
       );
     }
@@ -189,7 +189,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting session:', error);
       return NextResponse.json(
-        { error: 'Failed to delete session', details: error.message },
+        { error: 'Failed to delete session' },
         { status: 500 }
       );
     }

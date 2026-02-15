@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching escalations:', error);
-      return NextResponse.json({ error: 'Failed to fetch escalations', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch escalations' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating escalation:', error);
-      return NextResponse.json({ error: 'Failed to create escalation', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create escalation' }, { status: 500 });
     }
 
     return NextResponse.json({ data: escalation }, { status: 201 });

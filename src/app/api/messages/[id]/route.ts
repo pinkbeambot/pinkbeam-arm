@@ -75,7 +75,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching message:', error);
       return NextResponse.json(
-        { error: { code: 'FETCH_ERROR', message: 'Failed to fetch message', details: error.message } },
+        { error: { code: 'FETCH_ERROR', message: 'Failed to fetch message' } },
         { status: 500 }
       );
     }
@@ -184,7 +184,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating message:', error);
       return NextResponse.json(
-        { error: { code: 'UPDATE_ERROR', message: 'Failed to update message', details: error.message } },
+        { error: { code: 'UPDATE_ERROR', message: 'Failed to update message' } },
         { status: 500 }
       );
     }
@@ -295,7 +295,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting message:', error);
       return NextResponse.json(
-        { error: { code: 'DELETE_ERROR', message: 'Failed to delete message', details: error.message } },
+        { error: { code: 'DELETE_ERROR', message: 'Failed to delete message' } },
         { status: 500 }
       );
     }

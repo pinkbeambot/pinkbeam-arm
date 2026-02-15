@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching decision stats:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch stats', details: error.message },
+        { error: 'Failed to fetch stats' },
         { status: 500 }
       );
     }

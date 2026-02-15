@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching messages:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch messages', details: error.message },
+        { error: 'Failed to fetch messages' },
         { status: 500 }
       );
     }
@@ -299,7 +299,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating message:', error);
       return NextResponse.json(
-        { error: 'Failed to create message', details: error.message },
+        { error: 'Failed to create message' },
         { status: 500 }
       );
     }

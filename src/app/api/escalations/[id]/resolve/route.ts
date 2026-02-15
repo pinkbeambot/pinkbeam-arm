@@ -69,7 +69,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (error) {
       console.error('Error resolving escalation:', error);
-      return NextResponse.json({ error: 'Failed to resolve escalation', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to resolve escalation' }, { status: 500 });
     }
 
     return NextResponse.json({ data: escalation });

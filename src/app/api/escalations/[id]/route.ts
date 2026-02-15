@@ -166,7 +166,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to update escalation', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to update escalation' }, { status: 500 });
     }
 
     return NextResponse.json({ data: escalation });

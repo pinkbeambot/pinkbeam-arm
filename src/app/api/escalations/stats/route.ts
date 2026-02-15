@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       .gte('created_at', dateFromStr);
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to fetch stats', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch stats' }, { status: 500 });
     }
 
     const list = escalations || [];

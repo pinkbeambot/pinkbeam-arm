@@ -101,7 +101,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching task:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch task', details: error.message },
+        { error: 'Failed to fetch task' },
         { status: 500 }
       );
     }
@@ -266,7 +266,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating task:', error);
       return NextResponse.json(
-        { error: 'Failed to update task', details: error.message },
+        { error: 'Failed to update task' },
         { status: 500 }
       );
     }
@@ -369,7 +369,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting task:', error);
       return NextResponse.json(
-        { error: 'Failed to delete task', details: error.message },
+        { error: 'Failed to delete task' },
         { status: 500 }
       );
     }

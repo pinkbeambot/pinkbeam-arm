@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching tasks:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch tasks', details: error.message },
+        { error: 'Failed to fetch tasks' },
         { status: 500 }
       );
     }
@@ -427,7 +427,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating task:', error);
       return NextResponse.json(
-        { error: 'Failed to create task', details: error.message },
+        { error: 'Failed to create task' },
         { status: 500 }
       );
     }

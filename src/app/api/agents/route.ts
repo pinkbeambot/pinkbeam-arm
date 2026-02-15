@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching agents:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch agents', details: error.message },
+        { error: 'Failed to fetch agents' },
         { status: 500 }
       );
     }
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
         );
       }
       return NextResponse.json(
-        { error: 'Failed to create agent', details: error.message },
+        { error: 'Failed to create agent' },
         { status: 500 }
       );
     }

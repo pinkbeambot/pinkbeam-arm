@@ -96,7 +96,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error marking message as read:', error);
       return NextResponse.json(
-        { error: 'Failed to mark message as read', details: error.message },
+        { error: 'Failed to mark message as read' },
         { status: 500 }
       );
     }

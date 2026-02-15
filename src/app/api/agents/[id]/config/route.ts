@@ -161,7 +161,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (error) {
         console.error('Error updating config:', error);
         return NextResponse.json(
-          { error: 'Failed to update configuration', details: error.message },
+          { error: 'Failed to update configuration' },
           { status: 500 }
         );
       }
@@ -184,7 +184,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (error) {
         console.error('Error creating config:', error);
         return NextResponse.json(
-          { error: 'Failed to create configuration', details: error.message },
+          { error: 'Failed to create configuration' },
           { status: 500 }
         );
       }
@@ -288,7 +288,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error resetting config:', error);
       return NextResponse.json(
-        { error: 'Failed to reset configuration', details: error.message },
+        { error: 'Failed to reset configuration' },
         { status: 500 }
       );
     }

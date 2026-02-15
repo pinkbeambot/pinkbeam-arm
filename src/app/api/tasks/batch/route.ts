@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating tasks in batch:', error);
       return NextResponse.json(
-        { error: 'Failed to create tasks', details: error.message },
+        { error: 'Failed to create tasks' },
         { status: 500 }
       );
     }
@@ -334,7 +334,7 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       console.error('Error deleting tasks in batch:', error);
       return NextResponse.json(
-        { error: 'Failed to delete tasks', details: error.message },
+        { error: 'Failed to delete tasks' },
         { status: 500 }
       );
     }

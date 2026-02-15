@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error fetching thread messages:', error);
       return NextResponse.json(
-        { error: { code: 'FETCH_ERROR', message: 'Failed to fetch thread messages', details: error.message } },
+        { error: { code: 'FETCH_ERROR', message: 'Failed to fetch thread messages' } },
         { status: 500 }
       );
     }

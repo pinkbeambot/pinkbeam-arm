@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching costs:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch costs', details: error.message },
+        { error: 'Failed to fetch costs' },
         { status: 500 }
       );
     }

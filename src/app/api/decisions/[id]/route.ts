@@ -80,7 +80,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching decision:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch decision', details: error.message },
+        { error: 'Failed to fetch decision' },
         { status: 500 }
       );
     }
@@ -251,7 +251,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating decision:', error);
       return NextResponse.json(
-        { error: 'Failed to update decision', details: error.message },
+        { error: 'Failed to update decision' },
         { status: 500 }
       );
     }

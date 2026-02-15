@@ -214,7 +214,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching activities:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch activities', details: error.message },
+        { error: 'Failed to fetch activities' },
         { status: 500 }
       );
     }

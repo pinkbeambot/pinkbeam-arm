@@ -72,7 +72,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error fetching versions:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch versions', details: error.message },
+        { error: 'Failed to fetch versions' },
         { status: 500 }
       );
     }

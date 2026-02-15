@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching sessions:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch sessions', details: error.message },
+        { error: 'Failed to fetch sessions' },
         { status: 500 }
       );
     }
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating session:', error);
       return NextResponse.json(
-        { error: 'Failed to create session', details: error.message },
+        { error: 'Failed to create session' },
         { status: 500 }
       );
     }

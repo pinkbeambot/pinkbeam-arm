@@ -35,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching template:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch template', details: error.message },
+        { error: 'Failed to fetch template' },
         { status: 500 }
       );
     }
@@ -113,7 +113,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting template:', error);
       return NextResponse.json(
-        { error: 'Failed to delete template', details: error.message },
+        { error: 'Failed to delete template' },
         { status: 500 }
       );
     }

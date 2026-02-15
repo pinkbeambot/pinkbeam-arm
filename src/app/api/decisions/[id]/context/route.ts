@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching decision context:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch decision context', details: error.message },
+        { error: 'Failed to fetch decision context' },
         { status: 500 }
       );
     }

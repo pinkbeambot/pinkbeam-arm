@@ -197,7 +197,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error creating dependency:', error);
       return NextResponse.json(
-        { error: 'Failed to create dependency', details: error.message },
+        { error: 'Failed to create dependency' },
         { status: 500 }
       );
     }
@@ -273,7 +273,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting dependency:', error);
       return NextResponse.json(
-        { error: 'Failed to delete dependency', details: error.message },
+        { error: 'Failed to delete dependency' },
         { status: 500 }
       );
     }
