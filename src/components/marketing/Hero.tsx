@@ -80,7 +80,7 @@ export function Hero() {
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Link>
                 </Button>
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-gray-700 text-gray-300 hover:bg-white/5" asChild>
+                <Button size="lg" className="w-full sm:w-auto border border-gray-600 bg-transparent text-white hover:bg-white/10" asChild>
                   <Link href="/agents">
                     Explore AI Employees
                   </Link>
