@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { createDecisionSchema, listDecisionsQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * @openapi
@@ -151,7 +152,7 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.gte('reasoning->confidence', validatedQuery.confidence_min);
     }
     if (validatedQuery.search) {
-      const searchTerm = validatedQuery.search;
+      const searchTerm = escapeIlike(validatedQuery.search);
       dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 

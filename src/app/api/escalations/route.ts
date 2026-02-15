@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { z } from 'zod';
+import { escapeIlike } from '@/lib/utils';
 
 const listEscalationsQuerySchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']).optional(),
@@ -125,7 +126,8 @@ export async function GET(request: NextRequest) {
     if (validatedQuery.type) dbQuery = dbQuery.eq('type', validatedQuery.type);
     if (validatedQuery.agent_id) dbQuery = dbQuery.eq('agent_id', validatedQuery.agent_id);
     if (validatedQuery.search) {
-      dbQuery = dbQuery.or(`title.ilike.%${validatedQuery.search}%,description.ilike.%${validatedQuery.search}%`);
+      const searchTerm = escapeIlike(validatedQuery.search);
+      dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 
     const { data: escalations, error, count } = await dbQuery;

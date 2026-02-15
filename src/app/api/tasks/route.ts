@@ -6,6 +6,7 @@ import {
   enhancedListTasksQuerySchema
 } from '@/lib/validation';
 import { z } from 'zod';
+import { escapeIlike } from '@/lib/utils';
 
 // Priority order mapping for sorting
 const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
@@ -245,7 +246,7 @@ export async function GET(request: NextRequest) {
 
     // Search in title and description
     if ('search' in validatedQuery && validatedQuery.search) {
-      const searchTerm = validatedQuery.search;
+      const searchTerm = escapeIlike(validatedQuery.search);
       dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 

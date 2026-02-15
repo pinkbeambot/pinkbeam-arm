@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { listAgentTemplatesQuerySchema, applyTemplateSchema } from '@/lib/validation';
 import { z } from 'zod';
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * GET /api/agent-templates
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      dbQuery = dbQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      const escaped = escapeIlike(search);
+      dbQuery = dbQuery.or(`name.ilike.%${escaped}%,description.ilike.%${escaped}%`);
     }
 
     // Execute query with pagination

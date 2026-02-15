@@ -140,6 +140,10 @@ export function getInitials(name: string): string {
     .slice(0, 2)
 }
 
+export function escapeIlike(term: string): string {
+  return term.replace(/[%_\\]/g, '\\$&')
+}
+
 export function getAvatarColor(id: string): string {
   const colors = [
     'bg-red-500',

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { listActivitiesQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * @openapi
@@ -204,7 +205,8 @@ export async function GET(request: NextRequest) {
     if (validatedQuery.search) {
       const searchTerm = validatedQuery.search.trim();
       if (searchTerm.length > 0) {
-        dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        const escaped = escapeIlike(searchTerm);
+        dbQuery = dbQuery.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`);
       }
     }
 

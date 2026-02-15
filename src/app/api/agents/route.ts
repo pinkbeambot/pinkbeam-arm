@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { createAgentSchema, listAgentsQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * @openapi
@@ -121,7 +122,8 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.eq('role', validatedQuery.role);
     }
     if (validatedQuery.search) {
-      dbQuery = dbQuery.or(`name.ilike.%${validatedQuery.search}%,description.ilike.%${validatedQuery.search}%`);
+      const searchTerm = escapeIlike(validatedQuery.search);
+      dbQuery = dbQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 
     // Execute query
