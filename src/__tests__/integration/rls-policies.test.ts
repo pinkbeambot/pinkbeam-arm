@@ -54,7 +54,7 @@ const NIL_UUID = '00000000-0000-0000-0000-000000000000';
 
 describe('Auth Middleware - Tenant Resolution', () => {
   it('should reject requests without Authorization header', () => {
-    const authHeader = null;
+    const authHeader = null as string | null;
     const hasValidBearer = authHeader?.startsWith('Bearer ') ?? false;
     expect(hasValidBearer).toBe(false);
   });
@@ -84,7 +84,7 @@ describe('Auth Middleware - Tenant Resolution', () => {
   });
 
   it('should return 403 when user has no tenant', () => {
-    const mockUserProfile = null;
+    const mockUserProfile = null as { tenant_id: string } | null;
     const hasTenant = mockUserProfile?.tenant_id != null;
     expect(hasTenant).toBe(false);
   });
@@ -683,7 +683,7 @@ describe('RLS Edge Cases', () => {
   });
 
   it('auto_set_tenant_context handles missing JWT gracefully', () => {
-    const jwtClaims: Record<string, string> | null = null;
+    const jwtClaims = null as Record<string, string> | null;
     const extractedTenantId = jwtClaims?.tenant_id ?? null;
     expect(extractedTenantId).toBeNull();
   });

@@ -64,6 +64,9 @@ export type MessageType =
 export type MessagePriority = 'low' | 'normal' | 'high' | 'urgent'
 export type NotificationType = 'task_assigned' | 'escalation_received' | 'decision_required' | 'system_alert' | 'info' | 'success' | 'warning' | 'error'
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent'
+export type ChatMessageRole = 'user' | 'agent' | 'system'
+export type MetaAgentIntent = 'status' | 'assign' | 'create_issue' | 'query' | 'spawn' | 'terminate' | 'pause' | 'resume' | 'escalate' | 'broadcast' | 'unknown'
+export type MetaAgentCommandStatus = 'processing' | 'completed' | 'failed' | 'rejected' | 'pending_confirmation'
 
 // ============================================================================
 // Database Interface
@@ -82,6 +85,18 @@ export interface Database {
           limits: Json
           plan: string
           billing_status: string | null
+          onboarding_completed: boolean
+          onboarding_completed_at: string | null
+          onboarding_steps: Json
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          stripe_price_id: string | null
+          subscription_status: string
+          current_tier: string
+          trial_ends_at: string | null
+          current_period_starts_at: string | null
+          current_period_ends_at: string | null
+          cancel_at_period_end: boolean
           created_at: string
           updated_at: string
           deleted_at: string | null
@@ -95,6 +110,18 @@ export interface Database {
           limits?: Json
           plan?: string
           billing_status?: string | null
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_steps?: Json
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+          subscription_status?: string
+          current_tier?: string
+          trial_ends_at?: string | null
+          current_period_starts_at?: string | null
+          current_period_ends_at?: string | null
+          cancel_at_period_end?: boolean
           created_at?: string
           updated_at?: string
           deleted_at?: string | null
@@ -108,6 +135,18 @@ export interface Database {
           limits?: Json
           plan?: string
           billing_status?: string | null
+          onboarding_completed?: boolean
+          onboarding_completed_at?: string | null
+          onboarding_steps?: Json
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_price_id?: string | null
+          subscription_status?: string
+          current_tier?: string
+          trial_ends_at?: string | null
+          current_period_starts_at?: string | null
+          current_period_ends_at?: string | null
+          cancel_at_period_end?: boolean
           created_at?: string
           updated_at?: string
           deleted_at?: string | null
@@ -883,6 +922,1088 @@ export interface Database {
         Insert: never
         Update: never
       }
+      agent_configs: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          config: Json
+          version_id: string | null
+          version_number: number
+          is_valid: boolean
+          validation_errors: Json
+          last_tested_at: string | null
+          last_test_result: Json | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          config?: Json
+          version_id?: string | null
+          version_number?: number
+          is_valid?: boolean
+          validation_errors?: Json
+          last_tested_at?: string | null
+          last_test_result?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          config?: Json
+          version_id?: string | null
+          version_number?: number
+          is_valid?: boolean
+          validation_errors?: Json
+          last_tested_at?: string | null
+          last_test_result?: Json | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      agent_config_versions: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          version_number: number
+          name: string | null
+          description: string | null
+          config: Json
+          change_type: string
+          changed_by: string | null
+          change_summary: Json
+          is_valid: boolean
+          validation_errors: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          version_number: number
+          name?: string | null
+          description?: string | null
+          config: Json
+          change_type?: string
+          changed_by?: string | null
+          change_summary?: Json
+          is_valid?: boolean
+          validation_errors?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          version_number?: number
+          name?: string | null
+          description?: string | null
+          config?: Json
+          change_type?: string
+          changed_by?: string | null
+          change_summary?: Json
+          is_valid?: boolean
+          validation_errors?: Json
+          created_at?: string
+        }
+      }
+      agent_templates: {
+        Row: {
+          id: string
+          tenant_id: string | null
+          name: string
+          slug: string
+          description: string | null
+          category: string
+          icon: string | null
+          color: string
+          config: Json
+          capabilities: string[]
+          recommended_model: string | null
+          recommended_tools: string[]
+          is_system: boolean
+          is_active: boolean
+          usage_count: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id?: string | null
+          name: string
+          slug: string
+          description?: string | null
+          category?: string
+          icon?: string | null
+          color?: string
+          config: Json
+          capabilities?: string[]
+          recommended_model?: string | null
+          recommended_tools?: string[]
+          is_system?: boolean
+          is_active?: boolean
+          usage_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string | null
+          name?: string
+          slug?: string
+          description?: string | null
+          category?: string
+          icon?: string | null
+          color?: string
+          config?: Json
+          capabilities?: string[]
+          recommended_model?: string | null
+          recommended_tools?: string[]
+          is_system?: boolean
+          is_active?: boolean
+          usage_count?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      config_test_results: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          config_version_id: string | null
+          test_input: string
+          test_output: string | null
+          success: boolean
+          response_time_ms: number | null
+          tokens_used: number | null
+          cost_usd: number | null
+          error_message: string | null
+          error_details: Json | null
+          model_used: string | null
+          raw_response: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          config_version_id?: string | null
+          test_input: string
+          test_output?: string | null
+          success?: boolean
+          response_time_ms?: number | null
+          tokens_used?: number | null
+          cost_usd?: number | null
+          error_message?: string | null
+          error_details?: Json | null
+          model_used?: string | null
+          raw_response?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          config_version_id?: string | null
+          test_input?: string
+          test_output?: string | null
+          success?: boolean
+          response_time_ms?: number | null
+          tokens_used?: number | null
+          cost_usd?: number | null
+          error_message?: string | null
+          error_details?: Json | null
+          model_used?: string | null
+          raw_response?: Json | null
+          created_at?: string
+        }
+      }
+      tenant_settings: {
+        Row: {
+          id: string
+          tenant_id: string
+          rate_limit_requests_per_minute: number
+          rate_limit_window_seconds: number
+          rate_limit_enabled: boolean
+          config: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          rate_limit_requests_per_minute?: number
+          rate_limit_window_seconds?: number
+          rate_limit_enabled?: boolean
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          rate_limit_requests_per_minute?: number
+          rate_limit_window_seconds?: number
+          rate_limit_enabled?: boolean
+          config?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      chats: {
+        Row: {
+          id: string
+          tenant_id: string
+          user_id: string
+          agent_id: string
+          title: string | null
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          user_id: string
+          agent_id: string
+          title?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          user_id?: string
+          agent_id?: string
+          title?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      chat_messages: {
+        Row: {
+          id: string
+          chat_id: string
+          role: ChatMessageRole
+          content: string
+          metadata: Json
+          is_bookmarked: boolean
+          search_vector: unknown | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          chat_id: string
+          role: ChatMessageRole
+          content: string
+          metadata?: Json
+          is_bookmarked?: boolean
+          search_vector?: unknown | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          chat_id?: string
+          role?: ChatMessageRole
+          content?: string
+          metadata?: Json
+          is_bookmarked?: boolean
+          search_vector?: unknown | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      meta_agent_sessions: {
+        Row: {
+          id: string
+          tenant_id: string
+          user_id: string
+          title: string | null
+          status: string
+          context: Json
+          message_count: number
+          command_count: number
+          started_at: string
+          last_activity_at: string
+          ended_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          user_id: string
+          title?: string | null
+          status?: string
+          context?: Json
+          message_count?: number
+          command_count?: number
+          started_at?: string
+          last_activity_at?: string
+          ended_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          user_id?: string
+          title?: string | null
+          status?: string
+          context?: Json
+          message_count?: number
+          command_count?: number
+          started_at?: string
+          last_activity_at?: string
+          ended_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      meta_agent_commands: {
+        Row: {
+          id: string
+          tenant_id: string
+          session_id: string
+          user_id: string
+          raw_message: string
+          intent: MetaAgentIntent
+          intent_confidence: number
+          extracted_entities: Json
+          status: MetaAgentCommandStatus
+          action_type: string | null
+          action_target_id: string | null
+          action_target_type: string | null
+          action_payload: Json | null
+          result: Json | null
+          result_summary: string | null
+          error_message: string | null
+          error_details: Json | null
+          response_message: string
+          response_metadata: Json
+          processing_time_ms: number | null
+          tokens_used: number | null
+          github_issue_url: string | null
+          github_issue_number: number | null
+          created_at: string
+          processed_at: string | null
+          completed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          session_id: string
+          user_id: string
+          raw_message: string
+          intent: MetaAgentIntent
+          intent_confidence: number
+          extracted_entities?: Json
+          status?: MetaAgentCommandStatus
+          action_type?: string | null
+          action_target_id?: string | null
+          action_target_type?: string | null
+          action_payload?: Json | null
+          result?: Json | null
+          result_summary?: string | null
+          error_message?: string | null
+          error_details?: Json | null
+          response_message: string
+          response_metadata?: Json
+          processing_time_ms?: number | null
+          tokens_used?: number | null
+          github_issue_url?: string | null
+          github_issue_number?: number | null
+          created_at?: string
+          processed_at?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          session_id?: string
+          user_id?: string
+          raw_message?: string
+          intent?: MetaAgentIntent
+          intent_confidence?: number
+          extracted_entities?: Json
+          status?: MetaAgentCommandStatus
+          action_type?: string | null
+          action_target_id?: string | null
+          action_target_type?: string | null
+          action_payload?: Json | null
+          result?: Json | null
+          result_summary?: string | null
+          error_message?: string | null
+          error_details?: Json | null
+          response_message?: string
+          response_metadata?: Json
+          processing_time_ms?: number | null
+          tokens_used?: number | null
+          github_issue_url?: string | null
+          github_issue_number?: number | null
+          created_at?: string
+          processed_at?: string | null
+          completed_at?: string | null
+          updated_at?: string
+        }
+      }
+      llm_costs: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          task_id: string | null
+          model: string
+          provider: string
+          input_tokens: number
+          output_tokens: number
+          total_tokens: number
+          input_cost_usd: number
+          output_cost_usd: number
+          total_cost_usd: number
+          request_type: string
+          status: string
+          error_message: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          task_id?: string | null
+          model: string
+          provider: string
+          input_tokens?: number
+          output_tokens?: number
+          total_tokens?: number
+          input_cost_usd?: number
+          output_cost_usd?: number
+          total_cost_usd?: number
+          request_type?: string
+          status?: string
+          error_message?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          task_id?: string | null
+          model?: string
+          provider?: string
+          input_tokens?: number
+          output_tokens?: number
+          total_tokens?: number
+          input_cost_usd?: number
+          output_cost_usd?: number
+          total_cost_usd?: number
+          request_type?: string
+          status?: string
+          error_message?: string | null
+          created_at?: string
+        }
+      }
+      team_invitations: {
+        Row: {
+          id: string
+          tenant_id: string
+          email: string
+          role: string
+          invited_by: string
+          token: string
+          expires_at: string
+          status: string
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          email: string
+          role?: string
+          invited_by: string
+          token: string
+          expires_at?: string
+          status?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          email?: string
+          role?: string
+          invited_by?: string
+          token?: string
+          expires_at?: string
+          status?: string
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      subscription_tiers: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          stripe_price_id: string
+          stripe_price_id_live: string | null
+          price_monthly: number
+          agent_limit: number
+          task_limit: number | null
+          storage_limit_mb: number | null
+          features: Json
+          is_active: boolean
+          sort_order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          description?: string | null
+          stripe_price_id: string
+          stripe_price_id_live?: string | null
+          price_monthly: number
+          agent_limit: number
+          task_limit?: number | null
+          storage_limit_mb?: number | null
+          features?: Json
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          stripe_price_id?: string
+          stripe_price_id_live?: string | null
+          price_monthly?: number
+          agent_limit?: number
+          task_limit?: number | null
+          storage_limit_mb?: number | null
+          features?: Json
+          is_active?: boolean
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      billing_events: {
+        Row: {
+          id: string
+          tenant_id: string
+          event_type: string
+          stripe_event_id: string | null
+          stripe_event_type: string | null
+          data: Json
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          event_type: string
+          stripe_event_id?: string | null
+          stripe_event_type?: string | null
+          data?: Json
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          event_type?: string
+          stripe_event_id?: string | null
+          stripe_event_type?: string | null
+          data?: Json
+          created_at?: string
+        }
+      }
+      invoices: {
+        Row: {
+          id: string
+          tenant_id: string
+          stripe_invoice_id: string
+          stripe_customer_id: string
+          stripe_subscription_id: string | null
+          amount_due: number
+          amount_paid: number
+          currency: string
+          status: string
+          invoice_pdf_url: string | null
+          hosted_invoice_url: string | null
+          period_start: string | null
+          period_end: string | null
+          paid_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          stripe_invoice_id: string
+          stripe_customer_id: string
+          stripe_subscription_id?: string | null
+          amount_due: number
+          amount_paid?: number
+          currency?: string
+          status: string
+          invoice_pdf_url?: string | null
+          hosted_invoice_url?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          paid_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          stripe_invoice_id?: string
+          stripe_customer_id?: string
+          stripe_subscription_id?: string | null
+          amount_due?: number
+          amount_paid?: number
+          currency?: string
+          status?: string
+          invoice_pdf_url?: string | null
+          hosted_invoice_url?: string | null
+          period_start?: string | null
+          period_end?: string | null
+          paid_at?: string | null
+          created_at?: string
+        }
+      }
+      webhook_endpoints: {
+        Row: {
+          id: string
+          tenant_id: string
+          url: string
+          description: string | null
+          events: string[]
+          secret: string
+          is_active: boolean
+          metadata: Json
+          consecutive_failures: number
+          disabled_at: string | null
+          disabled_reason: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          url: string
+          description?: string | null
+          events?: string[]
+          secret: string
+          is_active?: boolean
+          metadata?: Json
+          consecutive_failures?: number
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          url?: string
+          description?: string | null
+          events?: string[]
+          secret?: string
+          is_active?: boolean
+          metadata?: Json
+          consecutive_failures?: number
+          disabled_at?: string | null
+          disabled_reason?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      webhook_deliveries: {
+        Row: {
+          id: string
+          tenant_id: string
+          endpoint_id: string
+          event_type: string
+          event_id: string
+          payload: Json
+          status: string
+          response_status: number | null
+          response_body: string | null
+          response_time_ms: number | null
+          attempt_count: number
+          max_attempts: number
+          next_retry_at: string | null
+          last_attempted_at: string | null
+          error_message: string | null
+          created_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          endpoint_id: string
+          event_type: string
+          event_id: string
+          payload: Json
+          status?: string
+          response_status?: number | null
+          response_body?: string | null
+          response_time_ms?: number | null
+          attempt_count?: number
+          max_attempts?: number
+          next_retry_at?: string | null
+          last_attempted_at?: string | null
+          error_message?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          endpoint_id?: string
+          event_type?: string
+          event_id?: string
+          payload?: Json
+          status?: string
+          response_status?: number | null
+          response_body?: string | null
+          response_time_ms?: number | null
+          attempt_count?: number
+          max_attempts?: number
+          next_retry_at?: string | null
+          last_attempted_at?: string | null
+          error_message?: string | null
+          created_at?: string
+          completed_at?: string | null
+        }
+      }
+      security_audit_log: {
+        Row: {
+          id: string
+          tenant_id: string
+          user_id: string | null
+          action: string
+          resource_type: string
+          resource_id: string | null
+          ip_address: string | null
+          user_agent: string | null
+          details: Json
+          risk_score: number
+          risk_factors: string[] | null
+          success: boolean
+          error_code: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          user_id?: string | null
+          action: string
+          resource_type: string
+          resource_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          details?: Json
+          risk_score?: number
+          risk_factors?: string[] | null
+          success?: boolean
+          error_code?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          user_id?: string | null
+          action?: string
+          resource_type?: string
+          resource_id?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          details?: Json
+          risk_score?: number
+          risk_factors?: string[] | null
+          success?: boolean
+          error_code?: string | null
+          created_at?: string
+        }
+      }
+      agent_task_queue: {
+        Row: {
+          id: string
+          tenant_id: string
+          task_id: string
+          agent_id: string | null
+          status: string
+          claimed_at: string | null
+          started_at: string | null
+          completed_at: string | null
+          attempt_count: number
+          max_attempts: number
+          last_error: string | null
+          priority: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          task_id: string
+          agent_id?: string | null
+          status?: string
+          claimed_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          attempt_count?: number
+          max_attempts?: number
+          last_error?: string | null
+          priority?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          task_id?: string
+          agent_id?: string | null
+          status?: string
+          claimed_at?: string | null
+          started_at?: string | null
+          completed_at?: string | null
+          attempt_count?: number
+          max_attempts?: number
+          last_error?: string | null
+          priority?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      agent_decision_log: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          session_id: string
+          task_id: string | null
+          decision_id: string | null
+          category: string
+          action_type: string
+          action_params: Json
+          reasoning: string | null
+          confidence: number
+          outcome: Json | null
+          success: boolean | null
+          latency_ms: number | null
+          tokens_used: number | null
+          cost_usd: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          session_id: string
+          task_id?: string | null
+          decision_id?: string | null
+          category: string
+          action_type: string
+          action_params?: Json
+          reasoning?: string | null
+          confidence: number
+          outcome?: Json | null
+          success?: boolean | null
+          latency_ms?: number | null
+          tokens_used?: number | null
+          cost_usd?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          session_id?: string
+          task_id?: string | null
+          decision_id?: string | null
+          category?: string
+          action_type?: string
+          action_params?: Json
+          reasoning?: string | null
+          confidence?: number
+          outcome?: Json | null
+          success?: boolean | null
+          latency_ms?: number | null
+          tokens_used?: number | null
+          cost_usd?: number | null
+          created_at?: string
+        }
+      }
+      agent_execution_history: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          session_id: string
+          task_id: string | null
+          execution_type: string
+          execution_id: string
+          input_payload: Json | null
+          output_payload: Json | null
+          status: string
+          error_message: string | null
+          started_at: string
+          completed_at: string | null
+          duration_ms: number | null
+          tokens_input: number
+          tokens_output: number
+          cost_usd: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          session_id: string
+          task_id?: string | null
+          execution_type: string
+          execution_id: string
+          input_payload?: Json | null
+          output_payload?: Json | null
+          status?: string
+          error_message?: string | null
+          started_at?: string
+          completed_at?: string | null
+          duration_ms?: number | null
+          tokens_input?: number
+          tokens_output?: number
+          cost_usd?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          session_id?: string
+          task_id?: string | null
+          execution_type?: string
+          execution_id?: string
+          input_payload?: Json | null
+          output_payload?: Json | null
+          status?: string
+          error_message?: string | null
+          started_at?: string
+          completed_at?: string | null
+          duration_ms?: number | null
+          tokens_input?: number
+          tokens_output?: number
+          cost_usd?: number
+          created_at?: string
+        }
+      }
+      message_delivery: {
+        Row: {
+          id: string
+          tenant_id: string
+          message_id: string
+          status: string
+          attempt_count: number
+          last_attempt_at: string | null
+          error_message: string | null
+          acked_at: string | null
+          acked_by_agent_id: string | null
+          expires_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          message_id: string
+          status?: string
+          attempt_count?: number
+          last_attempt_at?: string | null
+          error_message?: string | null
+          acked_at?: string | null
+          acked_by_agent_id?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          message_id?: string
+          status?: string
+          attempt_count?: number
+          last_attempt_at?: string | null
+          error_message?: string | null
+          acked_at?: string | null
+          acked_by_agent_id?: string | null
+          expires_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      agent_lifecycle_events: {
+        Row: {
+          id: string
+          tenant_id: string
+          agent_id: string
+          event_type: string
+          previous_state: string | null
+          new_state: string | null
+          triggered_by: string | null
+          triggered_by_type: string | null
+          reason: string | null
+          metadata: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tenant_id: string
+          agent_id: string
+          event_type: string
+          previous_state?: string | null
+          new_state?: string | null
+          triggered_by?: string | null
+          triggered_by_type?: string | null
+          reason?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tenant_id?: string
+          agent_id?: string
+          event_type?: string
+          previous_state?: string | null
+          new_state?: string | null
+          triggered_by?: string | null
+          triggered_by_type?: string | null
+          reason?: string | null
+          metadata?: Json | null
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
@@ -996,6 +2117,9 @@ export interface Database {
       message_priority: MessagePriority
       notification_type: NotificationType
       notification_priority: NotificationPriority
+      chat_message_role: ChatMessageRole
+      meta_agent_intent: MetaAgentIntent
+      meta_agent_command_status: MetaAgentCommandStatus
     }
     CompositeTypes: {
       [_ in never]: never
