@@ -48,22 +48,97 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ data: cachedData, cached: true });
     }
 
-    // Use the database function to identify bottlenecks
-    const { data: bottleneckData, error: bottleneckError } = await supabase.rpc(
-      'identify_bottlenecks',
-      {
-        p_tenant_id: tenantId,
-        p_hours_back: hours,
-      }
-    );
+    // Query task_metrics_hourly directly instead of using RPC function
+    // (the identify_bottlenecks function has a UNION ALL ORDER BY bug)
+    const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+    const { data: recentMetrics, error: metricsError } = await supabase
+      .from('task_metrics_hourly')
+      .select('hour, blocked_tasks_count, avg_blocked_duration_seconds, avg_queued_duration_seconds, avg_processing_duration_seconds, status_breakdown')
+      .eq('tenant_id', tenantId)
+      .gte('hour', cutoff)
+      .order('hour', { ascending: false });
 
-    if (bottleneckError) {
-      console.error('Error identifying bottlenecks:', bottleneckError);
+    if (metricsError) {
+      console.error('Error fetching hourly metrics for bottlenecks:', metricsError);
       return NextResponse.json(
-        { error: 'Failed to fetch bottlenecks', details: bottleneckError.message },
+        { error: 'Failed to fetch bottlenecks', details: metricsError.message },
         { status: 500 }
       );
     }
+
+    // Identify bottlenecks from metrics (replicates identify_bottlenecks SQL logic)
+    interface BottleneckCandidate {
+      bottleneck_type: string;
+      description: string;
+      affected_count: number;
+      avg_wait_time_seconds: number;
+      severity: string;
+      recommendation: string;
+    }
+
+    const bottleneckData: BottleneckCandidate[] = [];
+    const metrics = recentMetrics || [];
+
+    // Blocked tasks analysis
+    const totalBlocked = metrics.reduce((sum, m) => sum + (m.blocked_tasks_count || 0), 0);
+    const avgBlockedDuration = metrics.filter(m => m.avg_blocked_duration_seconds)
+      .reduce((sum, m, _, arr) => sum + (m.avg_blocked_duration_seconds || 0) / arr.length, 0);
+    if (totalBlocked > 0) {
+      bottleneckData.push({
+        bottleneck_type: 'blocked_tasks',
+        description: 'Tasks stuck in blocked state',
+        affected_count: totalBlocked,
+        avg_wait_time_seconds: avgBlockedDuration,
+        severity: totalBlocked > 10 ? 'high' : 'medium',
+        recommendation: 'Review task dependencies and resolve blockers',
+      });
+    }
+
+    // Queue time analysis (use most recent metric)
+    const latestWithQueue = metrics.find(m => m.avg_queued_duration_seconds && m.avg_queued_duration_seconds > 300);
+    if (latestWithQueue) {
+      const queuedCount = latestWithQueue.status_breakdown
+        ? parseInt((latestWithQueue.status_breakdown as Record<string, { count?: string }>)?.queued?.count || '0')
+        : 0;
+      if (queuedCount > 0) {
+        bottleneckData.push({
+          bottleneck_type: 'long_queue_times',
+          description: 'Tasks taking too long to start',
+          affected_count: queuedCount,
+          avg_wait_time_seconds: latestWithQueue.avg_queued_duration_seconds,
+          severity: latestWithQueue.avg_queued_duration_seconds > 3600 ? 'high' : 'medium',
+          recommendation: 'Consider adding more agent capacity or optimizing task routing',
+        });
+      }
+    }
+
+    // Processing time analysis
+    const latestWithSlow = metrics.find(m => m.avg_processing_duration_seconds && m.avg_processing_duration_seconds > 900);
+    if (latestWithSlow) {
+      const inProgressCount = latestWithSlow.status_breakdown
+        ? parseInt((latestWithSlow.status_breakdown as Record<string, { count?: string }>)?.in_progress?.count || '0')
+        : 0;
+      const completedCount = latestWithSlow.status_breakdown
+        ? parseInt((latestWithSlow.status_breakdown as Record<string, { count?: string }>)?.completed?.count || '0')
+        : 0;
+      const totalAffected = inProgressCount + completedCount;
+      if (totalAffected > 0) {
+        bottleneckData.push({
+          bottleneck_type: 'slow_processing',
+          description: 'Tasks taking too long to complete',
+          affected_count: totalAffected,
+          avg_wait_time_seconds: latestWithSlow.avg_processing_duration_seconds,
+          severity: latestWithSlow.avg_processing_duration_seconds > 7200 ? 'high' : 'medium',
+          recommendation: 'Review agent configuration and task complexity',
+        });
+      }
+    }
+
+    // Sort by severity (high first)
+    bottleneckData.sort((a, b) => {
+      const severityOrder: Record<string, number> = { high: 1, medium: 2, low: 3 };
+      return (severityOrder[a.severity] || 3) - (severityOrder[b.severity] || 3);
+    });
 
     // Get tasks waiting longest
     const { data: longestWaitingTasks, error: waitingError } = await supabase
@@ -128,20 +203,7 @@ export async function GET(request: NextRequest) {
       }, {} as Record<string, { id: string; title: string; status: string; created_at: string }>);
     }
 
-    // Get hourly metrics for trend analysis
-    const { data: hourlyMetrics, error: hourlyError } = await supabase
-      .from('task_metrics_hourly')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .gte('hour', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
-      .order('hour', { ascending: false })
-      .limit(24);
-
-    if (hourlyError) {
-      console.error('Error fetching hourly metrics:', hourlyError);
-    }
-
-    // Calculate time-in-stage analysis
+    // Calculate time-in-stage analysis (reuse recentMetrics from bottleneck query)
     const timeInStage = {
       queued: { count: 0, avgTime: 0, maxTime: 0 },
       in_progress: { count: 0, avgTime: 0, maxTime: 0 },
@@ -150,7 +212,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Calculate metrics from hourly data
-    (hourlyMetrics || []).forEach(metric => {
+    (metrics).forEach(metric => {
       if (metric.avg_queued_duration_seconds) {
         timeInStage.queued.avgTime = metric.avg_queued_duration_seconds;
       }
@@ -219,21 +281,12 @@ export async function GET(request: NextRequest) {
         dependencyType: dep.dependency_type,
       }));
 
-    // Format bottleneck data from database function
-    interface BottleneckRow {
-      bottleneck_type: string;
-      description: string;
-      affected_count: number;
-      avg_wait_time_seconds: number;
-      severity: string;
-      recommendation: string;
-    }
-
-    const identifiedBottlenecks = (bottleneckData || []).map((b: BottleneckRow) => ({
+    // Format bottleneck data
+    const identifiedBottlenecks = bottleneckData.map(b => ({
       type: b.bottleneck_type,
       description: b.description,
-      affectedCount: parseInt(b.affected_count?.toString() || '0'),
-      avgWaitTimeSeconds: parseFloat(b.avg_wait_time_seconds?.toString() || '0'),
+      affectedCount: b.affected_count,
+      avgWaitTimeSeconds: b.avg_wait_time_seconds,
       severity: b.severity,
       recommendation: b.recommendation,
     }));

@@ -95,26 +95,85 @@ export async function GET(request: NextRequest) {
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - days);
 
-    // Use the database function for performance summary
-    const { data: performanceData, error: perfError } = await supabase.rpc(
-      'get_agent_performance_summary',
-      {
-        p_tenant_id: tenantId,
-        p_start_date: startDate.toISOString().split('T')[0],
-        p_end_date: endDate.toISOString().split('T')[0],
-      }
-    );
+    // Query agent_performance_daily directly instead of using RPC function
+    // (the get_agent_performance_summary function has a return-type mismatch)
+    const { data: dailyMetrics, error: dailyError } = await supabase
+      .from('agent_performance_daily')
+      .select('agent_id, agent_name, agent_role, tasks_completed, tasks_failed, success_rate, avg_task_duration_seconds, total_cost_usd, escalations_raised, override_rate, date')
+      .eq('tenant_id', tenantId)
+      .gte('date', startDate.toISOString().split('T')[0])
+      .lte('date', endDate.toISOString().split('T')[0]);
 
-    if (perfError) {
-      console.error('Error fetching performance summary:', perfError);
+    if (dailyError) {
+      console.error('Error fetching daily metrics:', dailyError);
       return NextResponse.json(
-        { error: 'Failed to fetch leaderboard', details: perfError.message },
+        { error: 'Failed to fetch leaderboard', details: dailyError.message },
         { status: 500 }
       );
     }
 
+    // Aggregate daily metrics per agent in JavaScript
+    const agentAgg = new Map<string, {
+      agent_id: string;
+      agent_name: string;
+      agent_role: string;
+      total_completed: number;
+      total_failed: number;
+      total_cost: number;
+      total_escalations: number;
+      success_rates: number[];
+      durations: number[];
+      override_rates: number[];
+    }>();
+
+    for (const row of (dailyMetrics || [])) {
+      let agg = agentAgg.get(row.agent_id);
+      if (!agg) {
+        agg = {
+          agent_id: row.agent_id,
+          agent_name: row.agent_name,
+          agent_role: row.agent_role,
+          total_completed: 0,
+          total_failed: 0,
+          total_cost: 0,
+          total_escalations: 0,
+          success_rates: [],
+          durations: [],
+          override_rates: [],
+        };
+        agentAgg.set(row.agent_id, agg);
+      }
+      agg.total_completed += row.tasks_completed || 0;
+      agg.total_failed += row.tasks_failed || 0;
+      agg.total_cost += parseFloat(row.total_cost_usd || '0');
+      agg.total_escalations += row.escalations_raised || 0;
+      if (row.success_rate != null) agg.success_rates.push(parseFloat(row.success_rate));
+      if (row.avg_task_duration_seconds != null) agg.durations.push(row.avg_task_duration_seconds);
+      if (row.override_rate != null) agg.override_rates.push(parseFloat(row.override_rate));
+    }
+
+    const performanceData: PerformanceData[] = Array.from(agentAgg.values()).map(agg => ({
+      agent_id: agg.agent_id,
+      agent_name: agg.agent_name,
+      agent_role: agg.agent_role,
+      total_tasks_completed: agg.total_completed,
+      total_tasks_failed: agg.total_failed,
+      success_rate: agg.success_rates.length > 0
+        ? Math.round(agg.success_rates.reduce((a, b) => a + b, 0) / agg.success_rates.length * 100) / 100
+        : 100,
+      avg_task_duration_seconds: agg.durations.length > 0
+        ? Math.round(agg.durations.reduce((a, b) => a + b, 0) / agg.durations.length * 100) / 100
+        : 0,
+      total_cost_usd: Math.round(agg.total_cost * 10000) / 10000,
+      total_escalations: agg.total_escalations,
+      override_rate: agg.override_rates.length > 0
+        ? Math.round(agg.override_rates.reduce((a, b) => a + b, 0) / agg.override_rates.length * 100) / 100
+        : 0,
+      trend_direction: 'stable',
+    }));
+
     // Get agent avatars and additional details
-    const agentIds = (performanceData as PerformanceData[])?.map((p) => p.agent_id) || [];
+    const agentIds = performanceData.map((p) => p.agent_id);
 
     let agentsWithDetails: AgentDetails[] = [];
 
@@ -133,7 +192,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Merge performance data with agent details
-    const leaderboard: LeaderboardEntry[] = (performanceData as PerformanceData[])
+    const leaderboard: LeaderboardEntry[] = performanceData
       .map((perf) => {
         const agent = agentsWithDetails.find(a => a.id === perf.agent_id);
         return {
@@ -144,11 +203,11 @@ export async function GET(request: NextRequest) {
           status: agent?.status || 'unknown',
           tasksCompleted: perf.total_tasks_completed,
           tasksFailed: perf.total_tasks_failed,
-          successRate: Math.round(perf.success_rate * 100) / 100,
+          successRate: perf.success_rate,
           avgTaskDuration: perf.avg_task_duration_seconds,
-          totalCost: Math.round(perf.total_cost_usd * 10000) / 10000,
+          totalCost: perf.total_cost_usd,
           escalationCount: perf.total_escalations,
-          overrideRate: Math.round(perf.override_rate * 100) / 100,
+          overrideRate: perf.override_rate,
           trendDirection: perf.trend_direction,
           rank: 0, // Will be set after sorting
           medal: null, // Will be set after sorting
