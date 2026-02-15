@@ -470,6 +470,82 @@ export type CostSummaryQuery = z.infer<typeof costSummaryQuerySchema>;
 export type DailyCostsQuery = z.infer<typeof dailyCostsQuerySchema>;
 
 // ============================================================================
+// Billing Validation
+// ============================================================================
+
+export const createCheckoutSchema = z.object({
+  tier: z.enum(['starter', 'pro', 'business', 'scale']),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+});
+
+export const createPortalSchema = z.object({
+  returnUrl: z.string().url().optional(),
+});
+
+export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
+export type CreatePortalInput = z.infer<typeof createPortalSchema>;
+
+// ============================================================================
+// Email Notification Validation
+// ============================================================================
+
+export const sendNotificationEmailSchema = z.object({
+  notification_id: z.string().uuid(),
+});
+
+export const sendTaskCompleteEmailSchema = z.object({
+  task_id: z.string().uuid(),
+  task_title: z.string().min(1),
+  agent_name: z.string().min(1),
+  completed_at: z.string(),
+  duration: z.string().optional(),
+});
+
+export const digestTypeSchema = z.enum(['daily', 'weekly']);
+
+export type SendNotificationEmailInput = z.infer<typeof sendNotificationEmailSchema>;
+export type SendTaskCompleteEmailInput = z.infer<typeof sendTaskCompleteEmailSchema>;
+export type DigestType = z.infer<typeof digestTypeSchema>;
+
+// ============================================================================
+// Webhook Validation
+// ============================================================================
+
+import { WEBHOOK_EVENT_TYPES } from '@/types/webhook';
+
+export const createWebhookEndpointSchema = z.object({
+  url: z.string().url(),
+  description: z.string().max(500).optional(),
+  events: z.array(z.enum(WEBHOOK_EVENT_TYPES as [string, ...string[]])).min(1),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const updateWebhookEndpointSchema = z.object({
+  url: z.string().url().optional(),
+  description: z.string().max(500).optional(),
+  events: z.array(z.enum(WEBHOOK_EVENT_TYPES as [string, ...string[]])).min(1).optional(),
+  is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const testWebhookSchema = z.object({
+  endpoint_id: z.string().uuid(),
+});
+
+export const listWebhookDeliveriesQuerySchema = z.object({
+  endpoint_id: z.string().uuid().optional(),
+  status: z.enum(['pending', 'success', 'failed', 'expired']).optional(),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+export type CreateWebhookEndpointInput = z.infer<typeof createWebhookEndpointSchema>;
+export type UpdateWebhookEndpointInput = z.infer<typeof updateWebhookEndpointSchema>;
+export type TestWebhookInput = z.infer<typeof testWebhookSchema>;
+export type ListWebhookDeliveriesQuery = z.infer<typeof listWebhookDeliveriesQuerySchema>;
+
+// ============================================================================
 // Re-export Auth Validation
 // ============================================================================
 
