@@ -250,7 +250,16 @@ export async function POST(request: NextRequest) {
 
       if (parentError || !parentAgent) {
         return NextResponse.json(
-          { error: 'Parent agent not found' },
+          { error: 'Parent agent not found or belongs to a different tenant' },
+          { status: 400 }
+        );
+      }
+
+      // Enforce max hierarchy depth (matches DB constraint agents_max_depth)
+      const MAX_AGENT_DEPTH = 10;
+      if ((parentAgent.depth || 0) + 1 > MAX_AGENT_DEPTH) {
+        return NextResponse.json(
+          { error: `Agent hierarchy cannot exceed ${MAX_AGENT_DEPTH} levels deep` },
           { status: 400 }
         );
       }
@@ -288,6 +297,28 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'An agent with this name/slug already exists' },
           { status: 409 }
+        );
+      }
+      // Handle check constraint violations (hierarchy constraints)
+      if (error.code === '23514') {
+        if (error.message?.includes('agents_no_self_parent')) {
+          return NextResponse.json(
+            { error: 'An agent cannot be its own parent' },
+            { status: 400 }
+          );
+        }
+        if (error.message?.includes('agents_max_depth')) {
+          return NextResponse.json(
+            { error: 'Agent hierarchy cannot exceed 10 levels deep' },
+            { status: 400 }
+          );
+        }
+      }
+      // Handle trigger-raised exceptions (circular hierarchy, root consistency)
+      if (error.message?.includes('Circular hierarchy detected')) {
+        return NextResponse.json(
+          { error: 'Cannot create agent: this would create a circular hierarchy' },
+          { status: 400 }
         );
       }
       return NextResponse.json(
