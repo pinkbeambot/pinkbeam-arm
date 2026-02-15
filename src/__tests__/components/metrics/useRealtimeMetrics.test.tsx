@@ -299,6 +299,9 @@ describe('useRealtimeMetrics', () => {
         avgResponseTime: 100,
         errorRate: 0,
         lastActivityAt: new Date().toISOString(),
+        tasksCompleted: 0,
+        tasksFailed: 0,
+        tasksInProgress: 0,
       };
 
       const agents = [
