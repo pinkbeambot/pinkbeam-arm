@@ -35,7 +35,7 @@ export function Hero() {
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-pink-500/10 border border-pink-500/20 mb-8">
                 <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse" />
                 <span className="text-sm font-medium text-pink-500">
-                  Now Hiring AI Agents
+                  Now Hiring AI Employees
                 </span>
               </div>
             </FadeInOnMount>
@@ -55,7 +55,7 @@ export function Hero() {
             {/* Subheadline */}
             <FadeInOnMount delay={0.15}>
               <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-                Build a workforce that scales with your ambition. AI agents handle the details while you focus on the big picture.
+                Build a workforce that scales with your ambition. AI employees handle the details while you focus on the big picture.
               </p>
             </FadeInOnMount>
 
