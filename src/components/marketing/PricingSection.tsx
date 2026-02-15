@@ -71,7 +71,7 @@ export function PricingSection({ showCTA = true }: PricingSectionProps) {
             </span>
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Hire AI employees for less than a single human salary. Start small, scale as you grow. 
+            Invest in growth, not overhead. Start small, scale as you grow.
             No hidden fees, no surprises.
           </p>
         </FadeIn>

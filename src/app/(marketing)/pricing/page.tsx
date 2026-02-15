@@ -125,7 +125,7 @@ export default function PricingPage() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground mb-8">
-              Hire AI employees for less than a single human salary. Start small, 
+              Scale your capabilities without traditional hiring constraints. Start small,
               scale as you grow. No hidden fees, no surprises.
             </p>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20">
@@ -217,7 +217,7 @@ export default function PricingPage() {
           {/* Comparison Note */}
           <FadeIn delay={0.4} className="mt-12 text-center">
             <p className="text-muted-foreground">
-              Compare to hiring a human: $6,000-12,000/month + benefits + onboarding + management overhead
+              AI employees amplify your team—handling routine tasks so your people can focus on high-value work
             </p>
           </FadeIn>
         </div>

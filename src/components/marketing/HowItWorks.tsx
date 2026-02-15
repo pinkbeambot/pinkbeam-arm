@@ -9,7 +9,7 @@ const steps = [
     number: "01",
     icon: Settings,
     headline: "Hire in Minutes, Not Months",
-    description: "Pick your employee type, connect your tools, and spend 5 minutes training them on your brand voice and priorities. No resumes. No interviews. No onboarding headaches.",
+    description: "Pick your employee type, connect your tools, and spend 5 minutes training them on your brand voice and priorities. Start working immediately—no lengthy recruitment process required.",
   },
   {
     number: "02",
