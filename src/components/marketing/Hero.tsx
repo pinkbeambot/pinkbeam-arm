@@ -25,6 +25,13 @@ function LogoPlaceholder({ name }: { name: string }) {
 }
 
 export function Hero() {
+  // Pick random quote on client only to avoid hydration mismatch
+  const [quote] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return valisQuotes[Math.floor(Math.random() * valisQuotes.length)];
+    }
+    return valisQuotes[0]; // Default for SSR
+  });
 
   return (
     <section className="relative min-h-[85vh] lg:min-h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
@@ -65,7 +72,7 @@ export function Hero() {
           <FadeInOnMount delay={0.2}>
             <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5">
               <p className="text-lg text-primary italic mb-3">
-                "{valisQuotes[Math.floor(Math.random() * valisQuotes.length)]}"
+                "{quote}"
               </p>
               <p className="text-sm text-muted-foreground">
                 — VALIS
