@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/auth/AuthProvider';
 import type { Activity, ActivityType } from '@/types';
 import type { ActivityEvent, UseRealtimeActivitiesOptions } from './types';
 
@@ -43,7 +44,7 @@ function transformActivity(activity: Activity): ActivityEvent {
     'agent_status_changed': 'agent_spawned',
     'message': 'task_created',
   };
-  
+
   return {
     id: activity.id,
     type: typeMap[activity.type] || 'task_created',
@@ -85,22 +86,29 @@ export function useRealtimeActivities(
   options: UseRealtimeActivitiesOptions = {}
 ): UseRealtimeActivitiesReturn {
   const { enabled = true, filter, onNewActivity } = options;
-  
+  const { session } = useAuth();
+
   const [events, setEvents] = React.useState<ActivityEvent[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isRealtime, setIsRealtime] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
   const [hasMore, setHasMore] = React.useState(false);
   const [cursor, setCursor] = React.useState<string | undefined>();
-  
+
   const supabase = createClient();
-  
+  const accessToken = session?.access_token;
+
   // Fetch initial activities
   const fetchActivities = React.useCallback(async (cursor?: string) => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Build query params
       const params = new URLSearchParams();
       if (filter?.type && filter.type !== 'all') {
@@ -119,24 +127,29 @@ export function useRealtimeActivities(
         params.append('cursor', cursor);
       }
       params.append('limit', '50');
-      
-      // Fetch from API
-      const response = await fetch(`/api/activities?${params.toString()}`);
-      
+
+      // Fetch from API with auth header
+      const response = await fetch(`/api/activities?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
       if (!response.ok) {
         throw new Error(`Failed to fetch activities: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       const newEvents = (data.activities || []).map(transformActivity);
-      
+
       if (cursor) {
         setEvents(prev => [...prev, ...newEvents]);
       } else {
         setEvents(newEvents);
       }
-      
+
       setHasMore(data.meta?.hasMore || false);
       setCursor(data.meta?.cursor);
     } catch (err) {
@@ -144,19 +157,19 @@ export function useRealtimeActivities(
     } finally {
       setIsLoading(false);
     }
-  }, [filter]);
-  
+  }, [filter, accessToken]);
+
   // Initial fetch
   React.useEffect(() => {
     if (enabled) {
       fetchActivities();
     }
   }, [enabled, fetchActivities]);
-  
+
   // Realtime subscription
   React.useEffect(() => {
     if (!enabled) return;
-    
+
     // Subscribe to activity changes
     const channel = supabase
       .channel('activities')
@@ -170,7 +183,7 @@ export function useRealtimeActivities(
         (payload) => {
           const newActivity = payload.new as Activity;
           const newEvent = transformActivity(newActivity);
-          
+
           // Apply filters
           if (filter?.type && filter.type !== 'all') {
             const categoryMap: Record<string, string> = {
@@ -191,19 +204,19 @@ export function useRealtimeActivities(
               'system.error': 'system',
               'system.config_changed': 'system',
             };
-            
+
             if (categoryMap[newActivity.type] !== filter.type) {
               return;
             }
           }
-          
+
           if (filter?.agentId && newActivity.agent_id !== filter.agentId) {
             return;
           }
-          
+
           // Add to events
           setEvents(prev => [newEvent, ...prev]);
-          
+
           // Notify callback
           onNewActivity?.(newActivity);
         }
@@ -211,22 +224,22 @@ export function useRealtimeActivities(
       .subscribe((status) => {
         setIsRealtime(status === 'SUBSCRIBED');
       });
-    
+
     return () => {
       channel.unsubscribe();
     };
   }, [enabled, filter, onNewActivity, supabase]);
-  
+
   const loadMore = React.useCallback(() => {
     if (hasMore && cursor && !isLoading) {
       fetchActivities(cursor);
     }
   }, [hasMore, cursor, isLoading, fetchActivities]);
-  
+
   const refetch = React.useCallback(() => {
     fetchActivities();
   }, [fetchActivities]);
-  
+
   return {
     events,
     isLoading,
