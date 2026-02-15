@@ -34,7 +34,11 @@ export {
   useRealtimeEscalations,
 } from './useRealtime';
 
-export type { 
+// Dashboard-specific hooks
+export { useRealtimeAgentStatus } from './useRealtimeAgentStatus';
+export { useRealtimeTaskPipeline } from './useRealtimeTaskPipeline';
+
+export type {
   ConnectionState,
   RealtimeEventType,
   UseRealtimeOptions,
@@ -45,6 +49,18 @@ export type {
   UseRealtimeDecisionsOptions,
   UseRealtimeEscalationsOptions,
 } from './useRealtime';
+
+export type {
+  AgentStatusUpdate,
+  UseRealtimeAgentStatusOptions,
+  UseRealtimeAgentStatusReturn,
+} from './useRealtimeAgentStatus';
+
+export type {
+  TaskStatusColumn,
+  UseRealtimeTaskPipelineOptions,
+  UseRealtimeTaskPipelineReturn,
+} from './useRealtimeTaskPipeline';
 
 // Provider
 export { RealtimeProvider, useRealtimeContext } from './RealtimeProvider';

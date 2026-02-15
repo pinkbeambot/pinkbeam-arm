@@ -20,10 +20,12 @@ export type {
   SendMessageRequest,
   DecisionProposal,
   EscalationRequest,
-  AgentIdentity,
-  AgentMessage,
-  ProtocolError,
-  RuntimeResponse,
+  AgentRow,
+  TaskRow,
+  MessageRow,
+  DecisionRow,
+  EscalationRow,
+  DailyCostRow,
 } from './schemas.ts';
 
 // Environment variables
