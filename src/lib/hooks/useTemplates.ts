@@ -112,6 +112,66 @@ export function useCreateAgentFromTemplate() {
   return { createFromTemplate, loading, error };
 }
 
+export interface CreateTemplateInput {
+  name: string;
+  description?: string;
+  category: string;
+  capabilities: string[];
+  recommended_model?: string;
+  system_prompt?: string;
+}
+
+export function useCreateTemplate() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const createTemplate = useCallback(async (input: CreateTemplateInput) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const slug = input.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const response = await fetch('/api/v1/agent-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: input.name,
+          slug,
+          description: input.description,
+          category: input.category || 'custom',
+          capabilities: input.capabilities,
+          recommended_model: input.recommended_model,
+          config: {
+            instructions: {
+              system_prompt: input.system_prompt || '',
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error || 'Failed to create template');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Failed to create template');
+      setError(e);
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  return { createTemplate, loading, error };
+}
+
 export function getTemplateCategories(templates: AgentTemplate[]): string[] {
   const categories = new Set(templates.map(t => t.category));
   return Array.from(categories).sort();

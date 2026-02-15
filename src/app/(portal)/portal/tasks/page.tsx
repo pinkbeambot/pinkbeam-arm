@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, LayoutGrid, GitBranch, List } from 'lucide-react';
+import { Plus, LayoutGrid, GitBranch, Upload } from 'lucide-react';
 import {
   DashboardLayout,
   PageContainer,
@@ -19,6 +19,8 @@ import { useAgents } from '@/lib/hooks/useAgents';
 import { useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { CSVImportDialog, TASK_SAMPLE_CSV } from '@/components/shared/CSVImportDialog';
+import { TASK_COLUMNS } from '@/lib/csv-parser';
 import { cn } from '@/lib/utils';
 import type { Task, TaskStatus, TaskPriority } from '@/types';
 
@@ -64,6 +66,7 @@ export default function TasksPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   // Filter and sort tasks
   const filteredTasks = useMemo(() => {
@@ -234,6 +237,34 @@ export default function TasksPage() {
     }
   }, [createTask, toast]);
 
+  const handleImportTasks = useCallback(async (rows: Record<string, string>[]) => {
+    const tasksToCreate = rows.map(row => ({
+      title: row.title,
+      description: row.description || undefined,
+      priority: (row.priority?.toLowerCase() || 'normal') as 'low' | 'normal' | 'high' | 'urgent',
+      type: row.type || 'generic',
+      assignee_id: row.assignee_id || undefined,
+      deadline_at: row.deadline_at || undefined,
+    }));
+
+    const response = await fetch('/api/tasks/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tasks: tasksToCreate }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Import failed');
+    }
+
+    const result = await response.json();
+    refetch();
+    const succeeded = result.meta?.created_count ?? result.data?.length ?? 0;
+    const requested = result.meta?.requested_count ?? rows.length;
+    return { succeeded, failed: requested - succeeded };
+  }, [refetch]);
+
   const loading = tasksLoading || agentsLoading;
 
   return (
@@ -273,10 +304,16 @@ export default function TasksPage() {
             </div>
 
             {canCreateTasks && (
-              <Button onClick={() => setCreateModalOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Task
-              </Button>
+              <>
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import CSV
+                </Button>
+                <Button onClick={() => setCreateModalOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Task
+                </Button>
+              </>
             )}
           </div>
         </PageHeader>
@@ -346,6 +383,15 @@ export default function TasksPage() {
         agents={agents}
         onCreate={handleCreateTask}
         loading={tasksLoading}
+      />
+
+      <CSVImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        type="tasks"
+        columns={TASK_COLUMNS}
+        onImport={handleImportTasks}
+        sampleData={TASK_SAMPLE_CSV}
       />
     </DashboardLayout>
   );

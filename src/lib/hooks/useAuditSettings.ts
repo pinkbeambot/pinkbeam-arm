@@ -136,3 +136,41 @@ export function useAuditExport() {
 
   return { exportAuditLog, exporting, error };
 }
+
+export interface CleanupResult {
+  archived_count: number;
+  purged_count: number;
+  audit_cleaned_count: number;
+}
+
+export function useRetentionCleanup() {
+  const [cleaning, setCleaning] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const [result, setResult] = useState<CleanupResult | null>(null);
+
+  const runCleanup = useCallback(async () => {
+    setCleaning(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await apiFetch('/api/settings/retention/cleanup', {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || 'Failed to run cleanup');
+      }
+      const { data } = (await res.json()) as { data: CleanupResult };
+      setResult(data);
+      return data;
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Unknown error');
+      setError(e);
+      return null;
+    } finally {
+      setCleaning(false);
+    }
+  }, []);
+
+  return { runCleanup, cleaning, error, result };
+}

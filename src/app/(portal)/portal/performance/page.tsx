@@ -88,7 +88,7 @@ export default function PerformancePage() {
         >
           <div className="flex items-center gap-3">
             <DateRangeSelector value={dateRange} onChange={setDateRange} />
-            <ExportButton dateRange={dateRange} disabled={!performanceData} />
+            <ExportButton dateRange={dateRange} data={performanceData} disabled={!performanceData} />
             <Button 
               variant="outline" 
               size="icon"

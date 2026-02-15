@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { Search, Sparkles, LayoutGrid, List, ArrowRight, Users, Zap, FileText, Headphones, Search as SearchIcon, Share2, Bot } from 'lucide-react';
+import { Search, Sparkles, LayoutGrid, List, ArrowRight, Users, Zap, FileText, Headphones, Search as SearchIcon, Share2, Bot, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
-import { useTemplates, useCreateAgentFromTemplate, getTemplateCategories } from '@/lib/hooks/useTemplates';
+import { useTemplates, useCreateAgentFromTemplate, useCreateTemplate, getTemplateCategories } from '@/lib/hooks/useTemplates';
 import { useTenant } from '@/lib/hooks/useTenant';
 import { useAgentsRealtime } from '@/lib/hooks/useAgents';
 import { Button } from '@/components/ui/button';
@@ -15,8 +15,9 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
-import type { AgentTemplate } from '@/types';
+import type { AgentTemplate, Capability } from '@/types';
 
 type ViewMode = 'grid' | 'list';
 
@@ -43,17 +44,27 @@ export default function TemplatesPage() {
   const { tenantId } = useTenant();
   const { templates, loading, refetch } = useTemplates(tenantId);
   const { createFromTemplate, loading: creating } = useCreateAgentFromTemplate();
+  const { createTemplate, loading: creatingTemplate } = useCreateTemplate();
   const { refetch: refetchAgents } = useAgentsRealtime(tenantId);
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  
+
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [agentName, setAgentName] = useState('');
   const [agentDescription, setAgentDescription] = useState('');
+
+  // Create custom template state
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [newTemplateDescription, setNewTemplateDescription] = useState('');
+  const [newTemplateCategory, setNewTemplateCategory] = useState('custom');
+  const [newTemplateModel, setNewTemplateModel] = useState('');
+  const [newTemplatePrompt, setNewTemplatePrompt] = useState('');
+  const [newTemplateCapabilities, setNewTemplateCapabilities] = useState<Capability[]>([]);
 
   const categories = useMemo(() => getTemplateCategories(templates), [templates]);
 
@@ -110,6 +121,51 @@ export default function TemplatesPage() {
     }
   };
 
+  const resetTemplateForm = () => {
+    setNewTemplateName('');
+    setNewTemplateDescription('');
+    setNewTemplateCategory('custom');
+    setNewTemplateModel('');
+    setNewTemplatePrompt('');
+    setNewTemplateCapabilities([]);
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!newTemplateName.trim()) return;
+
+    try {
+      await createTemplate({
+        name: newTemplateName,
+        description: newTemplateDescription || undefined,
+        category: newTemplateCategory,
+        capabilities: newTemplateCapabilities,
+        recommended_model: newTemplateModel || undefined,
+        system_prompt: newTemplatePrompt || undefined,
+      });
+
+      toast({
+        title: 'Template Saved',
+        description: `"${newTemplateName}" has been added to your template library.`,
+      });
+
+      setSaveTemplateOpen(false);
+      resetTemplateForm();
+      refetch();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to save template. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const toggleCapability = (cap: Capability) => {
+    setNewTemplateCapabilities(prev =>
+      prev.includes(cap) ? prev.filter(c => c !== cap) : [...prev, cap]
+    );
+  };
+
   const systemTemplates = templates.filter(t => t.is_system).length;
   const totalUsage = templates.reduce((sum, t) => sum + (t.usage_count || 0), 0);
 
@@ -119,7 +175,12 @@ export default function TemplatesPage() {
         <PageHeader
           title="Template Library"
           description={`Browse pre-built agent templates to jumpstart your AI workforce. ${templates.length} templates available.`}
-        />
+        >
+          <Button onClick={() => setSaveTemplateOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Create Template
+          </Button>
+        </PageHeader>
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -350,11 +411,119 @@ export default function TemplatesPage() {
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreateFromTemplate}
                 disabled={!agentName.trim() || creating}
               >
                 {creating ? 'Creating...' : 'Create Agent'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Save Custom Template Dialog */}
+        <Dialog open={saveTemplateOpen} onOpenChange={(open) => { setSaveTemplateOpen(open); if (!open) resetTemplateForm(); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Create Custom Template</DialogTitle>
+              <DialogDescription>
+                Save a reusable agent template to your library
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-2">
+                <Label htmlFor="template-name">Template Name</Label>
+                <Input
+                  id="template-name"
+                  value={newTemplateName}
+                  onChange={(e) => setNewTemplateName(e.target.value)}
+                  placeholder="e.g., Lead Qualifier"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="template-description">Description</Label>
+                <Textarea
+                  id="template-description"
+                  value={newTemplateDescription}
+                  onChange={(e) => setNewTemplateDescription(e.target.value)}
+                  placeholder="Describe what agents created from this template will do"
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={newTemplateCategory} onValueChange={setNewTemplateCategory}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="sales">Sales</SelectItem>
+                      <SelectItem value="marketing">Marketing</SelectItem>
+                      <SelectItem value="support">Support</SelectItem>
+                      <SelectItem value="research">Research</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="template-model">Recommended Model</Label>
+                  <Input
+                    id="template-model"
+                    value={newTemplateModel}
+                    onChange={(e) => setNewTemplateModel(e.target.value)}
+                    placeholder="e.g., claude-3-sonnet"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Capabilities</Label>
+                <div className="flex flex-wrap gap-2">
+                  {(['spawn', 'delegate', 'decide', 'escalate', 'access_external', 'modify_config'] as Capability[]).map((cap) => (
+                    <button
+                      key={cap}
+                      type="button"
+                      onClick={() => toggleCapability(cap)}
+                      className={cn(
+                        'px-3 py-1 rounded-full text-xs font-medium transition-colors border',
+                        newTemplateCapabilities.includes(cap)
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-muted text-muted-foreground border-transparent hover:border-border'
+                      )}
+                    >
+                      {cap.replace('_', ' ')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="template-prompt">System Prompt</Label>
+                <Textarea
+                  id="template-prompt"
+                  value={newTemplatePrompt}
+                  onChange={(e) => setNewTemplatePrompt(e.target.value)}
+                  placeholder="Enter the default system prompt for agents created from this template..."
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setSaveTemplateOpen(false); resetTemplateForm(); }}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveTemplate}
+                disabled={!newTemplateName.trim() || creatingTemplate}
+              >
+                {creatingTemplate ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Template'
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>

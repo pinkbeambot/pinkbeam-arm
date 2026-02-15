@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useRBAC } from '@/lib/hooks';
-import { useRetentionSettings, useAuditExport } from '@/lib/hooks/useAuditSettings';
+import { useRetentionSettings, useAuditExport, useRetentionCleanup } from '@/lib/hooks/useAuditSettings';
 import { useToast } from '@/components/ui/use-toast';
 import {
   Download,
@@ -31,6 +31,7 @@ import {
   AlertCircle,
   Clock,
   Loader2,
+  Trash2,
 } from 'lucide-react';
 import type { ExportOptions } from '@/lib/hooks/useAuditSettings';
 
@@ -63,8 +64,9 @@ export default function AuditSettingsPage() {
   const canRead = can('analytics:read');
   const canManage = can('team:manage');
 
-  const { retention, stats, loading, saving, error, updateRetention } = useRetentionSettings();
+  const { retention, stats, loading, saving, error, updateRetention, refetch } = useRetentionSettings();
   const { exportAuditLog, exporting, error: exportError } = useAuditExport();
+  const { runCleanup, cleaning, result: cleanupResult } = useRetentionCleanup();
 
   // Local form state for retention settings
   const [activityDays, setActivityDays] = useState<string>('');
@@ -151,6 +153,23 @@ export default function AuditSettingsPage() {
       toast({ title: 'Export Complete', description: `Audit log exported as ${exportFormat.toUpperCase()}.` });
     } else {
       toast({ title: 'Export Failed', description: exportError?.message || 'Failed to export audit log.', variant: 'destructive' });
+    }
+  };
+
+  const handleCleanup = async () => {
+    const data = await runCleanup();
+    if (data) {
+      const total = data.archived_count + data.purged_count + data.audit_cleaned_count;
+      toast({
+        title: 'Cleanup Complete',
+        description: total > 0
+          ? `${data.archived_count} archived, ${data.purged_count} purged, ${data.audit_cleaned_count} audit logs cleaned.`
+          : 'No records matched your retention policy thresholds.',
+      });
+      // Refresh stats
+      refetch();
+    } else {
+      toast({ title: 'Cleanup Failed', description: 'Failed to run data cleanup.', variant: 'destructive' });
     }
   };
 
@@ -322,6 +341,55 @@ export default function AuditSettingsPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Data Cleanup */}
+          {canManage && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Trash2 className="h-5 w-5 text-primary" />
+                  Data Cleanup
+                </CardTitle>
+                <CardDescription>
+                  Manually trigger cleanup based on your retention policies
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Run cleanup to archive old activities and purge expired records according to your configured retention periods.
+                  {retention?.auto_archive_enabled
+                    ? ` Activities older than ${retention.archive_after_days} days will be archived.`
+                    : ' Auto-archive is currently disabled — only purge operations will run.'}
+                  {retention && ` Security logs older than ${retention.security_log_retention_days} days will be removed.`}
+                </p>
+
+                {cleanupResult && (
+                  <div className="bg-muted/50 rounded-lg p-3 text-sm space-y-1">
+                    <p className="font-medium">Last cleanup results:</p>
+                    <p>{cleanupResult.archived_count} activit{cleanupResult.archived_count === 1 ? 'y' : 'ies'} archived</p>
+                    <p>{cleanupResult.purged_count} archived record{cleanupResult.purged_count !== 1 ? 's' : ''} purged</p>
+                    <p>{cleanupResult.audit_cleaned_count} audit log{cleanupResult.audit_cleaned_count !== 1 ? 's' : ''} cleaned</p>
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button variant="outline" onClick={handleCleanup} disabled={cleaning}>
+                    {cleaning ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Running Cleanup...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Run Cleanup Now
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Retention Settings */}
           <Card>

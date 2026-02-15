@@ -92,7 +92,7 @@ export type LeaderboardSortField =
 export type SortDirection = 'asc' | 'desc';
 
 export interface ExportOptions {
-  format: 'csv' | 'pdf';
+  format: 'csv' | 'json';
   sections: ('metrics' | 'leaderboard' | 'roi' | 'bottlenecks')[];
   dateRange: DateRange;
 }

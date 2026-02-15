@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { Plus, Users } from 'lucide-react';
+import { Plus, Users, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
@@ -13,6 +13,8 @@ import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent, useC
 import { useTenant, useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { CSVImportDialog, AGENT_SAMPLE_CSV } from '@/components/shared/CSVImportDialog';
+import { AGENT_COLUMNS } from '@/lib/csv-parser';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, CreateAgentInput } from '@/types';
 
 export default function AgentsPage() {
@@ -46,6 +48,7 @@ export default function AgentsPage() {
   
   const [chatOpen, setChatOpen] = useState(false);
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const filteredAgents = useMemo(() =>
     filterAndSortAgents(agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder),
@@ -201,6 +204,31 @@ export default function AgentsPage() {
     }
   }, [createAgent, refetch, toast, tenantId]);
 
+  const handleImportAgents = useCallback(async (rows: Record<string, string>[]) => {
+    const agents = rows.map(row => ({
+      name: row.name,
+      role: row.role.toLowerCase() as 'ceo' | 'manager' | 'worker' | 'specialist' | 'system',
+      description: row.description || '',
+      capabilities: row.capabilities ? row.capabilities.split(';').map(c => c.trim()).filter(Boolean) : [],
+      model: row.model || undefined,
+    }));
+
+    const response = await fetch('/api/agents/import/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agents }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Import failed');
+    }
+
+    const result = await response.json();
+    refetch();
+    return { succeeded: result.data.succeeded, failed: result.data.failed };
+  }, [refetch]);
+
   const stats = useMemo(() => ({
     total: agents.length,
     active: agents.filter(a => a.status === 'active').length,
@@ -217,10 +245,16 @@ export default function AgentsPage() {
           description={`Manage your AI workforce. ${stats.total} agent${stats.total !== 1 ? 's' : ''} total.`}
         >
           {canCreateAgents && (
-            <Button onClick={() => setCreateModalOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" />
-              Create Agent
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                <Upload className="mr-2 h-4 w-4" />
+                Import CSV
+              </Button>
+              <Button onClick={() => setCreateModalOpen(true)}>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Agent
+              </Button>
+            </div>
           )}
         </PageHeader>
 
@@ -290,6 +324,15 @@ export default function AgentsPage() {
         />
 
         <ChatPanel chatId={null} agentId={chatAgentId || undefined} open={chatOpen} onOpenChange={setChatOpen} />
+
+        <CSVImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          type="agents"
+          columns={AGENT_COLUMNS}
+          onImport={handleImportAgents}
+          sampleData={AGENT_SAMPLE_CSV}
+        />
 
         <BulkActionBar
           selectedCount={selectedIds.size}
