@@ -79,6 +79,7 @@ test.describe('Authentication Flows', () => {
 
       // Fill OTP digits
       const otpInputs = page.locator('input[inputmode="numeric"]');
+      await otpInputs.first().waitFor({ state: 'visible' });
       for (let i = 0; i < 6; i++) {
         await otpInputs.nth(i).fill(otp![i]);
       }

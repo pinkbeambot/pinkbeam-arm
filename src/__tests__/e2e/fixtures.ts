@@ -1,5 +1,6 @@
 import { test as base, expect, Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
+import { existsSync } from 'fs';
 
 // Re-export constants from auth setup
 export { TEST_EMAIL, STORAGE_STATE } from './auth.setup';
@@ -53,8 +54,16 @@ export async function cleanupTestData(): Promise<void> {
  */
 export const test = base.extend<TestFixtures>({
   authenticatedPage: async ({ browser }, use) => {
+    const storageStatePath = '.playwright/.auth/user.json';
+    if (!existsSync(storageStatePath)) {
+      throw new Error(
+        `Auth setup incomplete: ${storageStatePath} not found. ` +
+        `Run the setup project first: npx playwright test --project=setup`
+      );
+    }
+
     const context = await browser.newContext({
-      storageState: '.playwright/.auth/user.json',
+      storageState: storageStatePath,
     });
     const page = await context.newPage();
     await use(page);
