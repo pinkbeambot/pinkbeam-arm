@@ -28,6 +28,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { ThemeSwitcher } from '@/components/theme-switcher';
 import { ConnectionStatus } from '@/components/realtime/ConnectionStatus';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { useBrowserNotifications } from '@/lib/hooks/useBrowserNotifications';
 import {
   Tooltip,
   TooltipContent,
@@ -429,7 +431,8 @@ export function PortalHeader({
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
+          <NotificationBell />
           <ThemeSwitcher />
           {children}
         </div>
@@ -448,6 +451,9 @@ interface PortalLayoutProps {
 export function PortalLayout({ children }: PortalLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
+
+  // Initialize browser notifications (handles tab title, sound, and browser Notification API)
+  useBrowserNotifications();
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -494,6 +500,10 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             </div>
             <span className="font-bold">Pink Beam</span>
           </Link>
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
+            <ThemeSwitcher />
+          </div>
         </div>
 
         {/* Main Content */}
