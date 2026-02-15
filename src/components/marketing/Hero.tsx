@@ -4,6 +4,14 @@ import { ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FadeIn, FadeInOnMount } from "@/components/animations";
 import Link from "next/link";
+import { useState } from "react";
+
+// Rotating headlines for A/B testing
+const headlines = [
+  "Build a workforce that scales with your ambition. AI agents handle the details while your team focuses on the big picture.",
+  "What could your team achieve with an extra 1,000 hours per week? AI agents handle the repetitive work so your people can focus on what matters.",
+  "The future of work isn't humans vs. AI. It's humans with AI. Give your team digital colleagues that handle the routine, so they can handle the remarkable."
+];
 
 // Logo placeholder component
 function LogoPlaceholder({ name }: { name: string }) {
@@ -17,8 +25,11 @@ function LogoPlaceholder({ name }: { name: string }) {
 }
 
 export function Hero() {
+  // Pick random headline on mount
+  const [headline] = useState(() => headlines[Math.floor(Math.random() * headlines.length)]);
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
+    <section className="relative min-h-[95vh] lg:min-h-[90vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-primary/5 via-transparent to-transparent pointer-events-none" />
       <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
@@ -52,12 +63,10 @@ export function Hero() {
             </h1>
           </FadeInOnMount>
           
-          {/* Subheadline */}
+          {/* Subheadline - Rotating */}
           <FadeInOnMount delay={0.2}>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              Meet your AI employees: fully autonomous team members that handle
-              research, sales, support, and creative work—24/7 availability,
-              consistent execution, infinite scale. One platform. One price. Infinite output.
+              {headline}
             </p>
           </FadeInOnMount>
 
