@@ -71,7 +71,7 @@ export function useTenant(): UseTenantReturn {
         throw new Error(errorData.error || `Failed to fetch tenant: ${response.status}`);
       }
 
-      const data = await response.json();
+      const { data } = await response.json();
       setTenantId(data.tenant_id);
       setTenant(data.tenant || null);
     } catch (err) {

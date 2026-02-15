@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@supabase/supabase-js';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -88,20 +89,17 @@ export async function GET(request: NextRequest) {
     if (tenantError) {
       console.error('Tenant details lookup error:', tenantError);
       // Still return tenant_id even if full details fail
-      return NextResponse.json({
+      return apiSuccess({
         tenant_id: userProfile.tenant_id,
       });
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       tenant_id: userProfile.tenant_id,
       tenant: tenant,
     });
   } catch (error) {
     console.error('Error in GET /api/user/tenant:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

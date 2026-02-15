@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
 import { z } from 'zod';
 
 const sendMessageSchema = z.object({
@@ -78,16 +79,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       agent_avatar: msg.agent_avatar,
     })) || [];
 
-    return NextResponse.json({
+    return apiSuccess({
       messages: formattedMessages,
       has_more: hasMore,
     });
   } catch (error) {
     console.error('Error in GET /api/chats/[id]/messages:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }
 
@@ -165,15 +163,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       request.headers.get('authorization') || ''
     ).catch((err: Error) => console.error('Error triggering agent response:', err));
 
-    return NextResponse.json({
-      message: userMessage,
-    });
+    return apiSuccess(userMessage);
   } catch (error) {
     console.error('Error in POST /api/chats/[id]/messages:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }
 

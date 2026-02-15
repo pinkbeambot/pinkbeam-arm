@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -80,13 +81,10 @@ export async function GET(request: NextRequest) {
 
     if (profileError || !userProfile) {
       console.error('Profile lookup error:', profileError);
-      return NextResponse.json(
-        { error: 'User not found', code: 'USER_NOT_FOUND' },
-        { status: 404 }
-      );
+      return apiError('User not found', 404, { code: 'USER_NOT_FOUND' });
     }
 
-    return NextResponse.json({
+    return apiSuccess({
       id: userProfile.id,
       email: userProfile.email,
       role: userProfile.role,
@@ -95,9 +93,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in GET /api/user/profile:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
 import { z } from 'zod';
 
 const createChatSchema = z.object({
@@ -50,13 +51,10 @@ export async function GET(request: NextRequest) {
       updated_at: chat.updated_at as string,
     })) || [];
 
-    return NextResponse.json({ chats: formattedChats });
+    return apiSuccess(formattedChats);
   } catch (error) {
     console.error('Error in GET /api/chats:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }
 
@@ -118,12 +116,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ chat }, { status: 201 });
+    return apiSuccess(chat, 201);
   } catch (error) {
     console.error('Error in POST /api/chats:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

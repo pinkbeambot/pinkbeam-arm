@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 export interface DashboardStats {
   activeAgents: number;
@@ -86,24 +87,15 @@ export async function GET(request: NextRequest) {
     // Check for errors
     if (agentsError) {
       console.error('Error fetching agents:', agentsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch agent stats' },
-        { status: 500 }
-      );
+      return apiError('Failed to fetch agent stats', 500);
     }
     if (tasksError) {
       console.error('Error fetching tasks:', tasksError);
-      return NextResponse.json(
-        { error: 'Failed to fetch task stats' },
-        { status: 500 }
-      );
+      return apiError('Failed to fetch task stats', 500);
     }
     if (escalationsError) {
       console.error('Error fetching escalations:', escalationsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch escalation stats' },
-        { status: 500 }
-      );
+      return apiError('Failed to fetch escalation stats', 500);
     }
 
     const stats: DashboardStats = {
@@ -113,12 +105,9 @@ export async function GET(request: NextRequest) {
       avgResponseTime: null, // Will be implemented when we have metrics data
     };
 
-    return NextResponse.json(stats);
+    return apiSuccess(stats);
   } catch (error) {
     console.error('Error in GET /api/dashboard/stats:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

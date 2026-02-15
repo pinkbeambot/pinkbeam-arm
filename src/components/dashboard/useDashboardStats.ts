@@ -70,7 +70,7 @@ export function useDashboardStats(): UseDashboardStatsReturn {
         throw new Error(errorData.error || `Failed to fetch stats: ${response.status}`);
       }
 
-      const data = await response.json();
+      const { data } = await response.json();
       setStats({
         activeAgents: data.activeAgents || 0,
         tasksCompletedToday: data.tasksCompletedToday || 0,

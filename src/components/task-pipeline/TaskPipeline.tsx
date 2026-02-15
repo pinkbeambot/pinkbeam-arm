@@ -48,7 +48,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { TaskPipelineColumn } from './TaskPipelineColumn';
 import { PipelineStatsPanel, CompactPipelineStats } from './PipelineStatsPanel';
 import { useTaskPipeline } from './useTaskPipeline';
-import type { TaskPipelineProps, PipelineColumn, PipelineTask } from './types';
+import type { TaskPipelineProps, PipelineColumn, PipelineTask, KeyboardDragState, KeyboardDragHandlers } from './types';
 import type { TaskStatus } from '@/types';
 
 // ============================================================================
@@ -259,6 +259,8 @@ export function TaskPipeline({
 
   const [draggingTaskId, setDraggingTaskId] = React.useState<string | null>(null);
   const [viewMode, setViewMode] = React.useState<'board'>('board');
+  const [keyboardDragState, setKeyboardDragState] = React.useState<KeyboardDragState | null>(null);
+  const [liveAnnouncement, setLiveAnnouncement] = React.useState('');
 
   // Group tasks by status
   const tasksByColumn = React.useMemo(() => {
@@ -282,6 +284,51 @@ export function TaskPipeline({
     }
     setDraggingTaskId(null);
   }, [updateTaskStatus]);
+
+  // Keyboard drag-and-drop handlers
+  const getColumnLabel = React.useCallback((columnId: TaskStatus) => {
+    return PIPELINE_COLUMNS.find(c => c.id === columnId)?.label ?? columnId;
+  }, []);
+
+  const keyboardDragHandlers: KeyboardDragHandlers = React.useMemo(() => ({
+    onKeyboardGrab: (taskId: string, taskTitle: string, sourceColumnId: TaskStatus) => {
+      setKeyboardDragState({ taskId, taskTitle, sourceColumnId, targetColumnId: sourceColumnId });
+      setLiveAnnouncement(
+        `Grabbed task "${taskTitle}" from ${getColumnLabel(sourceColumnId)}. Use Left and Right arrow keys to move between columns, Space to drop, Escape to cancel.`
+      );
+    },
+    onKeyboardMove: (direction: 'left' | 'right') => {
+      setKeyboardDragState(prev => {
+        if (!prev) return null;
+        const currentIndex = PIPELINE_COLUMNS.findIndex(c => c.id === prev.targetColumnId);
+        const nextIndex = direction === 'right' ? currentIndex + 1 : currentIndex - 1;
+        if (nextIndex < 0 || nextIndex >= PIPELINE_COLUMNS.length) return prev;
+        const nextColumn = PIPELINE_COLUMNS[nextIndex];
+        setLiveAnnouncement(`Over ${nextColumn.label}`);
+        return { ...prev, targetColumnId: nextColumn.id };
+      });
+    },
+    onKeyboardDrop: () => {
+      setKeyboardDragState(prev => {
+        if (!prev) return null;
+        if (prev.sourceColumnId !== prev.targetColumnId) {
+          handleStatusChange(prev.taskId, prev.targetColumnId);
+          setLiveAnnouncement(`Dropped task "${prev.taskTitle}" in ${getColumnLabel(prev.targetColumnId)}`);
+        } else {
+          setLiveAnnouncement(`Task "${prev.taskTitle}" returned to ${getColumnLabel(prev.sourceColumnId)}`);
+        }
+        return null;
+      });
+    },
+    onKeyboardCancel: () => {
+      setKeyboardDragState(prev => {
+        if (prev) {
+          setLiveAnnouncement(`Drop cancelled. Task "${prev.taskTitle}" returned to ${getColumnLabel(prev.sourceColumnId)}`);
+        }
+        return null;
+      });
+    },
+  }), [getColumnLabel, handleStatusChange]);
 
   // Use initial tasks if provided (for controlled mode)
   const displayTasks = initialTasks || tasks;
@@ -319,6 +366,16 @@ export function TaskPipeline({
 
   return (
     <Card className={cn('w-full overflow-hidden', className)}>
+      {/* ARIA Live Region for keyboard drag announcements */}
+      <div
+        role="status"
+        aria-live="assertive"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {liveAnnouncement}
+      </div>
+
       {/* Header */}
       <CardHeader className="pb-4">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -391,6 +448,8 @@ export function TaskPipeline({
                   onDragStart={handleDragStart}
                   draggingTaskId={draggingTaskId}
                   readOnly={readOnly}
+                  keyboardDragState={keyboardDragState}
+                  keyboardDragHandlers={keyboardDragHandlers}
                 />
               ))}
             </AnimatePresence>

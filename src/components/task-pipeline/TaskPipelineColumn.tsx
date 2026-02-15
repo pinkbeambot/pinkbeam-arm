@@ -33,6 +33,8 @@ export function TaskPipelineColumn({
   draggingTaskId,
   readOnly = false,
   highlightNew = true,
+  keyboardDragState,
+  keyboardDragHandlers,
 }: TaskPipelineColumnProps) {
   const {
     isDragOver,
@@ -41,6 +43,9 @@ export function TaskPipelineColumn({
     handleDrop,
     handleDragOver,
   } = useTaskPipelineColumn(column.id, tasks, onStatusChange);
+
+  const isKeyboardDragTarget = keyboardDragState?.targetColumnId === column.id;
+  const isHighlighted = isDragOver || isKeyboardDragTarget;
 
   const handleDragStartWrapper = (e: React.DragEvent, taskId: string) => {
     e.dataTransfer.setData('taskId', taskId);
@@ -66,11 +71,13 @@ export function TaskPipelineColumn({
   return (
     <motion.div
       layout
+      role="group"
+      aria-label={`${column.label} column, ${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`}
       className={cn(
         'flex flex-col min-w-[280px] max-w-[320px] rounded-xl',
         'bg-muted/30 border-2 transition-all duration-300',
-        isDragOver 
-          ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]' 
+        isHighlighted
+          ? 'border-primary bg-primary/5 shadow-lg scale-[1.02]'
           : 'border-transparent hover:border-muted-foreground/10',
         'flex-shrink-0'
       )}
@@ -86,7 +93,7 @@ export function TaskPipelineColumn({
           <div className={cn(
             'w-3 h-3 rounded-full transition-transform duration-200',
             column.color,
-            isDragOver && 'scale-125'
+            isHighlighted && 'scale-125'
           )} />
           
           {/* Column Label */}
@@ -95,11 +102,11 @@ export function TaskPipelineColumn({
           </h3>
           
           {/* Task Count */}
-          <Badge 
-            variant="secondary" 
+          <Badge
+            variant="secondary"
             className={cn(
               'text-xs font-medium tabular-nums transition-all duration-200',
-              isDragOver && 'bg-primary/20 text-primary'
+              isHighlighted && 'bg-primary/20 text-primary'
             )}
           >
             {tasks.length}
@@ -148,6 +155,9 @@ export function TaskPipelineColumn({
                   onDelete={onTaskDelete}
                   isDragging={draggingTaskId === task.id}
                   isNew={highlightNew && task.isNew}
+                  columnId={column.id}
+                  isKeyboardGrabbed={keyboardDragState?.taskId === task.id}
+                  keyboardDragHandlers={keyboardDragHandlers}
                 />
               </motion.div>
             ))}
@@ -161,13 +171,13 @@ export function TaskPipelineColumn({
               className={cn(
                 'flex flex-col items-center justify-center py-8',
                 'text-muted-foreground border-2 border-dashed border-border/50 rounded-lg',
-                isDragOver && 'border-primary/50 bg-primary/5'
+                isHighlighted && 'border-primary/50 bg-primary/5'
               )}
             >
               <Circle className="w-8 h-8 mb-2 opacity-20" />
               <p className="text-xs font-medium">No tasks</p>
               <p className="text-[10px] opacity-60 mt-0.5">
-                {isDragOver ? 'Drop here' : 'Drag tasks here'}
+                {isHighlighted ? 'Drop here' : 'Drag tasks here'}
               </p>
             </motion.div>
           )}
@@ -176,7 +186,7 @@ export function TaskPipelineColumn({
 
       {/* Drop Zone Indicator */}
       <AnimatePresence>
-        {isDragOver && (
+        {isHighlighted && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}

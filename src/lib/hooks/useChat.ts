@@ -55,7 +55,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch messages');
 
-      const { messages: newMessages, has_more } = await response.json();
+      const { data: { messages: newMessages, has_more } } = await response.json();
 
       if (before) {
         // Prepend older messages
@@ -89,7 +89,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         // Fetch existing chat
         const response = await fetch(`/api/chats`);
         if (!response.ok) throw new Error('Failed to fetch chats');
-        const { chats } = await response.json();
+        const { data: chats } = await response.json();
         chatData = chats.find((c: Chat) => c.id === chatId) || null;
       } else if (agentId) {
         // Create new chat with agent
@@ -99,7 +99,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
           body: JSON.stringify({ agent_id: agentId }),
         });
         if (!response.ok) throw new Error('Failed to create chat');
-        const { chat: newChat } = await response.json();
+        const { data: newChat } = await response.json();
         chatData = newChat;
       }
 
@@ -147,7 +147,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         throw new Error(errorData.error || 'Failed to send message');
       }
 
-      const { message: savedMessage } = await response.json();
+      const { data: savedMessage } = await response.json();
 
       // Replace optimistic message with saved message
       setMessages(prev =>
@@ -314,7 +314,7 @@ export function useChats() {
       setLoading(true);
       const response = await fetch('/api/chats');
       if (!response.ok) throw new Error('Failed to fetch chats');
-      const { chats: fetchedChats } = await response.json();
+      const { data: fetchedChats } = await response.json();
       setChats(fetchedChats);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch chats'));

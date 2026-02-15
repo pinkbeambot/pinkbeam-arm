@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { apiDeleted, apiError } from '@/lib/api/response';
 import { updateAgentSchema } from '@/lib/validation';
 import { requirePermission, requireAnyPermission } from '@/lib/rbac';
 import { z } from 'zod';
@@ -443,21 +444,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    return NextResponse.json(
-      {
-        message: 'Agent deleted successfully',
-        deleted_agent: {
-          id,
-          name: existingAgent.name,
-        }
-      },
-      { status: 200 }
-    );
+    return apiDeleted({ id, name: existingAgent.name });
   } catch (error) {
     console.error('Unexpected error in DELETE /api/agents/:id:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

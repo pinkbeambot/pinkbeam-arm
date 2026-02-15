@@ -133,6 +133,10 @@ export interface TaskPipelineColumnProps {
   isDragOver?: boolean;
   readOnly?: boolean;
   highlightNew?: boolean;
+  /** Keyboard drag-and-drop state */
+  keyboardDragState?: KeyboardDragState | null;
+  /** Keyboard drag-and-drop handlers */
+  keyboardDragHandlers?: KeyboardDragHandlers;
 }
 
 export interface TaskPipelineCardProps {
@@ -143,6 +147,12 @@ export interface TaskPipelineCardProps {
   isDragging?: boolean;
   isNew?: boolean;
   showProgress?: boolean;
+  /** Column this card belongs to (for keyboard drag) */
+  columnId?: TaskStatus;
+  /** Whether this card is currently grabbed via keyboard */
+  isKeyboardGrabbed?: boolean;
+  /** Keyboard drag-and-drop handlers */
+  keyboardDragHandlers?: KeyboardDragHandlers;
 }
 
 export interface TaskStatusBadgeProps {
@@ -156,6 +166,24 @@ export interface PipelineStatsPanelProps {
   stats: PipelineStats;
   className?: string;
   isRealtime?: boolean;
+}
+
+// ============================================================================
+// Keyboard Drag Types
+// ============================================================================
+
+export interface KeyboardDragState {
+  taskId: string;
+  taskTitle: string;
+  sourceColumnId: TaskStatus;
+  targetColumnId: TaskStatus;
+}
+
+export interface KeyboardDragHandlers {
+  onKeyboardGrab: (taskId: string, taskTitle: string, sourceColumnId: TaskStatus) => void;
+  onKeyboardMove: (direction: 'left' | 'right') => void;
+  onKeyboardDrop: () => void;
+  onKeyboardCancel: () => void;
 }
 
 // ============================================================================

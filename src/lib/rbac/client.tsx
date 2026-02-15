@@ -104,8 +104,8 @@ export function RBACProvider({ children, authToken }: RBACProviderProps) {
         throw new Error(`Failed to fetch user profile: ${response.status}`);
       }
 
-      const data = await response.json();
-      
+      const { data } = await response.json();
+
       setUser({
         id: data.id,
         email: data.email,

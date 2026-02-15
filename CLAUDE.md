@@ -16,16 +16,23 @@ npm run lint         # ESLint (flat config, Next.js + TypeScript rules)
 ```
 
 ```bash
-npm run test             # Vitest (unit tests)
-npm run test:watch       # Vitest watch mode
-npm run test:e2e         # Playwright e2e tests
+npm run test                # Vitest (unit tests)
+npm run test:watch          # Vitest watch mode
+npm run test:coverage       # Vitest with coverage report
+npm run test:e2e            # Playwright e2e tests
+npm run test:e2e:ui         # Playwright UI mode (debugging)
+npm run test:e2e:headed     # Playwright with visible browser
+npm run test:visual         # Visual regression tests
+npm run test:visual:update  # Update visual baselines
+npm run lighthouse          # Performance audits
+npm run analyze             # Bundle size analysis
 ```
 
 ## Tech Stack
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript 5** (strict mode)
 - **Tailwind CSS 4** via `@tailwindcss/postcss`
-- **Supabase**: PostgreSQL (22 migrations with RLS), Auth (OTP magic code), Realtime (WebSocket), Edge Functions, Storage
+- **Supabase**: PostgreSQL (33 migrations with RLS), Auth (OTP magic code), Realtime (WebSocket), Edge Functions, Storage
 - **Resend**: Transactional emails. Client at `src/lib/resend.ts`, templates in `src/lib/emails/`. Server-side only (`RESEND_API_KEY`, no `NEXT_PUBLIC_` prefix).
 - **UI**: 52 shadcn/ui components in `src/components/ui/` with barrel export at `src/components/ui/index.ts`
 - **Testing**: Vitest (unit) + Playwright (e2e + visual regression)
@@ -46,7 +53,7 @@ All state changes on agents, tasks, decisions, and escalations fire the `log_act
 
 ### Database Schema
 
-Core tables: `tenants`, `users`, `agents`, `tasks`, `task_dependencies`, `decisions`, `escalations`, `activities`, `messages`, `agent_sessions`, `analytics_daily`, `files`, `agent_presence`. Migrations live in `supabase/migrations/` (001–022). Key stored functions: `get_agent_descendants()`, `get_task_chain()`, `rollup_daily_analytics()`, `calculate_escalation_sla()`.
+Core tables: `tenants`, `users`, `agents`, `tasks`, `task_dependencies`, `decisions`, `escalations`, `activities`, `messages`, `agent_sessions`, `analytics_daily`, `files`, `agent_presence`. Migrations live in `supabase/migrations/` (33 migrations total). Key stored functions: `get_agent_descendants()`, `get_task_chain()`, `rollup_daily_analytics()`, `calculate_escalation_sla()`.
 
 ### Key Enums
 
@@ -84,6 +91,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY  # Client-side (RLS-enforced)
 SUPABASE_SERVICE_ROLE_KEY      # Server-side (bypasses RLS)
 NEXT_PUBLIC_APP_URL            # App URL (default: http://localhost:3000)
 RESEND_API_KEY                 # Server-side only — transactional emails
+STRIPE_SECRET_KEY              # Stripe API key (test: sk_test_...)
+STRIPE_WEBHOOK_SECRET          # Stripe webhook signing secret
+DEV_AUTH_BYPASS                # For E2E tests only - bypasses auth (NEVER in production)
 ```
 
 ## Key Documentation
@@ -96,6 +106,12 @@ RESEND_API_KEY                 # Server-side only — transactional emails
 ### API Route Pattern
 
 All protected API routes use `authenticateRequest()` from `@/lib/api/auth`. Returns `{ tenantId, userId, supabase }` (service role client). Always filter queries by `tenant_id`. Validate request bodies with Zod.
+
+## Testing
+
+### E2E Testing Gotcha
+
+E2E tests require `DEV_AUTH_BYPASS=true` in `.env.local` to bypass authentication. The test fixtures (`src/__tests__/e2e/fixtures.ts`) rely on this to create authenticated sessions. **Never enable in production** — the build will fail if this variable is set in production environments.
 
 ## Development Status
 
