@@ -95,13 +95,11 @@ export function useRealtimeAgentStatus(
 
   // Handle realtime updates
   const handleUpdate = useCallback((
-    newRecord: Record<string, unknown> | null,
-    oldRecord: Record<string, unknown> | null
+    newRecord: object,
+    oldRecord: object
   ) => {
-    if (!newRecord) return;
-
     const update = newRecord as unknown as AgentStatusUpdate;
-    const oldUpdate = oldRecord as unknown as AgentStatusUpdate | null;
+    const oldUpdate = oldRecord as unknown as AgentStatusUpdate;
 
     setAgents(prevAgents => {
       const index = prevAgents.findIndex(a => a.id === update.id);

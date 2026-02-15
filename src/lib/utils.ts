@@ -141,7 +141,12 @@ export function getInitials(name: string): string {
 }
 
 export function escapeIlike(term: string): string {
-  return term.replace(/[%_\\]/g, '\\$&')
+  // Truncate to max 200 chars to prevent abuse
+  const truncated = term.slice(0, 200);
+  // Strip HTML tags
+  const stripped = truncated.replace(/<[^>]*>/g, '');
+  // Escape ILIKE special characters
+  return stripped.replace(/[%_\\]/g, '\\$&');
 }
 
 /**

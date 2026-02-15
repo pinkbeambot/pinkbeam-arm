@@ -370,7 +370,7 @@ export interface UseRealtimeActivitiesOptions {
   agentId?: string;
   category?: string;
   enabled?: boolean;
-  onInsert?: (activity: Record<string, unknown>) => void;
+  onInsert?: (activity: object) => void;
 }
 
 export function useRealtimeActivities(options: UseRealtimeActivitiesOptions) {
