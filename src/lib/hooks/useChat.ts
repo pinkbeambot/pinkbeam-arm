@@ -19,9 +19,12 @@ interface UseChatReturn {
   error: Error | null;
   hasMore: boolean;
   sending: boolean;
+  agentResponding: boolean;
+  agentResponseError: Error | null;
   sendMessage: (content: string) => Promise<void>;
   loadMore: () => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
+  retryLastMessage: () => Promise<void>;
 }
 
 /**
@@ -35,7 +38,11 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [sending, setSending] = useState(false);
+  const [agentResponding, setAgentResponding] = useState(false);
+  const [agentResponseError, setAgentResponseError] = useState<Error | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastMessageTimeRef = useRef<number>(0);
 
   // Fetch messages for a chat - defined first to avoid dependency issues
   const fetchMessages = useCallback(async (id: string, before?: string) => {
@@ -114,6 +121,8 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
 
     try {
       setSending(true);
+      setAgentResponseError(null);
+      setLastUserMessage(content.trim());
 
       // Optimistically add user message
       const optimisticMessage: ChatMessage = {
@@ -132,7 +141,10 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         body: JSON.stringify({ content: content.trim() }),
       });
 
-      if (!response.ok) throw new Error('Failed to send message');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to send message');
+      }
 
       const { message: savedMessage } = await response.json();
 
@@ -140,14 +152,40 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
       setMessages(prev =>
         prev.map(m => (m.id === optimisticMessage.id ? savedMessage : m))
       );
+
+      // Agent is now responding (we expect a realtime update soon)
+      setAgentResponding(true);
+      lastMessageTimeRef.current = Date.now();
+
+      // Set a timeout to check if agent responded
+      setTimeout(() => {
+        setAgentResponding(current => {
+          // Only turn off if we haven't received an agent message in 30 seconds
+          const timeSinceLastMessage = Date.now() - lastMessageTimeRef.current;
+          if (timeSinceLastMessage > 30000) {
+            return false;
+          }
+          return current;
+        });
+      }, 30000);
+
     } catch (err) {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')));
+      setAgentResponseError(err instanceof Error ? err : new Error('Failed to send message'));
       throw err;
     } finally {
       setSending(false);
     }
   }, [chat?.id]);
+
+  // Retry the last message
+  const retryLastMessage = useCallback(async () => {
+    if (lastUserMessage && chat?.id) {
+      setAgentResponseError(null);
+      await sendMessage(lastUserMessage);
+    }
+  }, [lastUserMessage, chat?.id, sendMessage]);
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
@@ -186,7 +224,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     if (!chat?.id) return;
 
     const channel = (supabase
-      .channel(`chat:${chat.id}`) as any)
+      .channel(`chat:${chat.id}`) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
       .on(
         'postgres_changes',
         {
@@ -198,6 +236,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         (payload: { new: ChatMessage | null }) => {
           if (!payload.new) return;
           const newMessage = payload.new;
+          
           setMessages(current => {
             // Check if message already exists
             if (current.find(m => m.id === newMessage.id)) {
@@ -206,6 +245,13 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
             // Add new message
             return [...current, newMessage];
           });
+
+          // If this is an agent message, turn off responding state
+          if (newMessage.role === 'agent') {
+            setAgentResponding(false);
+            setAgentResponseError(null);
+            lastMessageTimeRef.current = Date.now();
+          }
         }
       )
       .on(
@@ -243,9 +289,12 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     error,
     hasMore,
     sending,
+    agentResponding,
+    agentResponseError,
     sendMessage,
     loadMore,
     deleteMessage,
+    retryLastMessage,
   };
 }
 
@@ -280,7 +329,7 @@ export function useChats() {
   // Subscribe to chat updates
   useEffect(() => {
     const channel = (supabase
-      .channel(`user_chats:${DEMO_TENANT_ID}`) as any)
+      .channel(`user_chats:${DEMO_TENANT_ID}`) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
       .on(
         'postgres_changes',
         {
