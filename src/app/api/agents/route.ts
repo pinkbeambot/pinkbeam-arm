@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { generateUniqueSlug } from '@/lib/api/slug';
 import { createAgentSchema, listAgentsQuerySchema } from '@/lib/validation';
+import { canCreateAgent, getTenantBilling, getSubscriptionTier } from '@/lib/billing/service';
 import { z } from 'zod';
 import { escapeIlike } from '@/lib/utils';
 
@@ -236,6 +237,26 @@ export async function POST(request: NextRequest) {
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
     const { tenantId, supabase } = auth;
+
+    // Check billing limits before creating agent
+    const canCreate = await canCreateAgent(supabase, tenantId);
+    if (!canCreate) {
+      const billing = await getTenantBilling(supabase, tenantId);
+      const tier = billing?.current_tier || 'starter';
+      const tierConfig = await getSubscriptionTier(supabase, tier);
+      const agentLimit = tierConfig?.agentLimit ?? 3;
+
+      return NextResponse.json(
+        {
+          error: 'Agent limit reached',
+          message: `Your ${tier} plan allows up to ${agentLimit === null ? 'unlimited' : agentLimit} agents. Please upgrade to add more agents.`,
+          code: 'AGENT_LIMIT_REACHED',
+          currentTier: tier,
+          agentLimit,
+        },
+        { status: 403 }
+      );
+    }
 
     // Calculate hierarchy values if parent is provided
     let parentDepth = 0;

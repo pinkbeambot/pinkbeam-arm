@@ -2,240 +2,263 @@
 
 import * as React from 'react';
 import { PortalLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
+import { PlanCard, UsageMeter, InvoiceTable } from '@/components/billing';
 import { useBilling, useAgentLimit, useTrial } from '@/lib/hooks/useBilling';
-import { UsageMeter } from '@/components/billing/UsageMeter';
-import { PlanCard } from '@/components/billing/PlanCard';
-import { InvoiceTable } from '@/components/billing/InvoiceTable';
+import type { SubscriptionTier } from '@/types';
 import {
   CreditCard,
-  Receipt,
-  BarChart3,
-  ExternalLink,
+  Calendar,
   AlertCircle,
-  Clock,
-  CheckCircle,
-  XCircle,
+  Check,
+  ExternalLink,
+  Loader2,
+  Zap,
+  BarChart3,
+  Receipt,
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import type { SubscriptionTier, SubscriptionStatus } from '@/types/billing';
+import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
+import { useSearchParams } from 'next/navigation';
 
-const STATUS_CONFIG: Record<SubscriptionStatus, { label: string; icon: typeof CheckCircle; className: string }> = {
-  active: { label: 'Active', icon: CheckCircle, className: 'text-green-600 bg-green-50 border-green-200' },
-  trialing: { label: 'Trial', icon: Clock, className: 'text-blue-600 bg-blue-50 border-blue-200' },
-  past_due: { label: 'Past Due', icon: AlertCircle, className: 'text-red-600 bg-red-50 border-red-200' },
-  canceled: { label: 'Canceled', icon: XCircle, className: 'text-gray-600 bg-gray-50 border-gray-200' },
-  incomplete: { label: 'Incomplete', icon: AlertCircle, className: 'text-amber-600 bg-amber-50 border-amber-200' },
-  incomplete_expired: { label: 'Expired', icon: XCircle, className: 'text-gray-600 bg-gray-50 border-gray-200' },
-  unpaid: { label: 'Unpaid', icon: AlertCircle, className: 'text-red-600 bg-red-50 border-red-200' },
-  paused: { label: 'Paused', icon: Clock, className: 'text-amber-600 bg-amber-50 border-amber-200' },
-};
-
-function LoadingSkeleton() {
+function BillingLoadingSkeleton() {
   return (
-    <div className="space-y-6 max-w-5xl">
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="h-4 w-64" />
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-4 w-48" />
-        </CardContent>
-      </Card>
-      <div className="grid gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
+    <div className="space-y-6 max-w-6xl">
+      <div className="grid gap-4 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, i) => (
           <Card key={i}>
             <CardHeader>
-              <Skeleton className="h-5 w-20 mx-auto" />
-              <Skeleton className="h-8 w-16 mx-auto" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-6 w-32" />
             </CardHeader>
-            <CardContent>
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4 mt-2" />
-            </CardContent>
           </Card>
         ))}
       </div>
+      <Card>
+        <CardHeader>
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-8 w-full" />
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
 }
 
+const statusLabels: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  active: { label: 'Active', variant: 'default' },
+  trialing: { label: 'Trial', variant: 'secondary' },
+  past_due: { label: 'Past Due', variant: 'destructive' },
+  canceled: { label: 'Canceled', variant: 'outline' },
+  incomplete: { label: 'Incomplete', variant: 'outline' },
+  unpaid: { label: 'Unpaid', variant: 'destructive' },
+  paused: { label: 'Paused', variant: 'outline' },
+};
+
 export default function BillingSettingsPage() {
+  const searchParams = useSearchParams();
+  const success = searchParams.get('success');
+  const canceled = searchParams.get('canceled');
+
   const {
-    billing,
-    usage,
-    plans,
-    invoices,
-    loading,
+    billing: billingData,
+    isLoading,
     error,
+    refetch,
     createCheckoutSession,
     createPortalSession,
+    isCreatingCheckout,
+    isCreatingPortal,
   } = useBilling();
-  const { isAtLimit } = useAgentLimit();
-  const { isTrialing, daysRemaining, isTrialExpired } = useTrial();
-  const [checkoutLoading, setCheckoutLoading] = React.useState(false);
-  const [portalLoading, setPortalLoading] = React.useState(false);
+
+  const { canCreate, currentCount, limit, percentUsed } = useAgentLimit();
+  const { isTrialing, daysRemaining } = useTrial();
+
+  const [selectedTier, setSelectedTier] = React.useState<SubscriptionTier | null>(null);
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
-    setCheckoutLoading(true);
+    setSelectedTier(tier);
     const url = await createCheckoutSession(tier);
     if (url) {
       window.location.href = url;
     }
-    setCheckoutLoading(false);
+    setSelectedTier(null);
   };
 
-  const handleManageBilling = async () => {
-    setPortalLoading(true);
+  const handleManageSubscription = async () => {
     const url = await createPortalSession();
     if (url) {
       window.location.href = url;
     }
-    setPortalLoading(false);
   };
 
-  const statusConfig = billing
-    ? STATUS_CONFIG[billing.subscriptionStatus] || STATUS_CONFIG.active
-    : STATUS_CONFIG.active;
-  const StatusIcon = statusConfig.icon;
-
-  if (loading) {
+  if (isLoading) {
     return (
       <PortalLayout>
         <PageContainer>
           <PageHeader
             title="Billing & Subscription"
-            description="Manage your plan, usage, and payment methods."
+            description="Manage your subscription plan and billing information"
           />
-          <LoadingSkeleton />
+          <BillingLoadingSkeleton />
         </PageContainer>
       </PortalLayout>
     );
   }
+
+  const billing = billingData?.billing;
+  const usage = billingData?.usage;
+  const plans = billingData?.plans || [];
+  const invoices = billingData?.invoices || [];
+  const currentTier = billing?.currentTier || 'starter';
+  const statusInfo = statusLabels[billing?.subscriptionStatus || 'trialing'] || statusLabels.trialing;
 
   return (
     <PortalLayout>
       <PageContainer>
         <PageHeader
           title="Billing & Subscription"
-          description="Manage your plan, usage, and payment methods."
+          description="Manage your subscription plan and billing information"
         >
           {billing?.stripeCustomerId && (
             <Button
               variant="outline"
               size="sm"
-              onClick={handleManageBilling}
-              disabled={portalLoading}
+              onClick={handleManageSubscription}
+              disabled={isCreatingPortal}
             >
-              {portalLoading ? (
-                <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-current border-t-transparent" />
+              {isCreatingPortal ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <ExternalLink className="h-4 w-4 mr-2" />
               )}
-              Manage in Stripe
+              Manage Subscription
             </Button>
           )}
         </PageHeader>
 
-        <div className="space-y-6 max-w-5xl">
+        <div className="space-y-6 max-w-6xl">
+          {/* Success/Cancel alerts */}
+          {success && (
+            <Alert className="bg-green-50 border-green-200 text-green-800 dark:bg-green-950/20 dark:border-green-800 dark:text-green-200">
+              <Check className="h-4 w-4 text-green-600" />
+              <AlertDescription>
+                Your subscription has been updated successfully. It may take a moment to reflect.
+              </AlertDescription>
+            </Alert>
+          )}
+          {canceled && (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Checkout was canceled. No changes have been made to your subscription.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error.message}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Trial banner */}
-          {isTrialing && !isTrialExpired && daysRemaining !== null && (
-            <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-              <Clock className="h-4 w-4 text-blue-600" />
-              <AlertDescription className="text-blue-800 dark:text-blue-200">
-                Your trial ends in <strong>{daysRemaining} day{daysRemaining !== 1 ? 's' : ''}</strong>.
-                Subscribe to a plan to keep your agents running.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {isTrialExpired && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Your trial has expired. Subscribe to a plan to continue using ARM.
+                {error.message}
+                <Button variant="link" size="sm" onClick={refetch} className="ml-2 p-0 h-auto">
+                  Retry
+                </Button>
               </AlertDescription>
             </Alert>
           )}
 
-          {billing?.cancelAtPeriodEnd && (
-            <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
-              <AlertCircle className="h-4 w-4 text-amber-600" />
-              <AlertDescription className="text-amber-800 dark:text-amber-200">
-                Your subscription will cancel at the end of the current period
-                ({formatDate(billing.currentPeriodEndsAt)}).
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Current Plan Overview */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-primary" />
-                Current Plan
-              </CardTitle>
-              <CardDescription>
-                Your subscription details and current billing period
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-2xl font-bold capitalize">
-                    {billing?.currentTier || 'Starter'}
+          {/* Status Overview Cards */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  Current Plan
+                </CardDescription>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="capitalize">{currentTier}</span>
+                  <Badge variant={statusInfo.variant}>
+                    {statusInfo.label}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {billing?.cancelAtPeriodEnd && (
+                  <p className="text-xs text-destructive">
+                    Cancels at end of billing period
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={statusConfig.className}>
-                      <StatusIcon className="h-3 w-3 mr-1" />
-                      {statusConfig.label}
-                    </Badge>
-                    {billing?.currentPeriodEndsAt && (
-                      <span className="text-xs text-muted-foreground">
-                        Renews {formatDate(billing.currentPeriodEndsAt)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {billing?.stripeCustomerId && (
-                  <Button variant="outline" size="sm" onClick={handleManageBilling} disabled={portalLoading}>
-                    Manage Subscription
-                  </Button>
                 )}
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Usage Overview */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <Zap className="h-3.5 w-3.5" />
+                  Agents
+                </CardDescription>
+                <CardTitle>
+                  {currentCount} / {limit === null ? 'Unlimited' : limit}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!canCreate && (
+                  <p className="text-xs text-destructive">Agent limit reached</p>
+                )}
+                {canCreate && percentUsed !== null && percentUsed >= 80 && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                    {percentUsed}% of agent limit used
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription className="flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {isTrialing ? 'Trial Ends' : 'Current Period'}
+                </CardDescription>
+                <CardTitle className="text-lg">
+                  {isTrialing && daysRemaining !== null ? (
+                    `${daysRemaining} days left`
+                  ) : billing?.currentPeriodEndsAt ? (
+                    new Date(billing.currentPeriodEndsAt).toLocaleDateString()
+                  ) : (
+                    '-'
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isTrialing && daysRemaining !== null && daysRemaining <= 3 && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                    Trial ending soon - upgrade to keep your workspace
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Usage Section */}
           {usage && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-base flex items-center gap-2">
+                  <BarChart3 className="h-4 w-4" />
                   Usage
                 </CardTitle>
                 <CardDescription>
-                  Current resource usage against your plan limits
+                  Current resource usage for your workspace
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -251,23 +274,15 @@ export default function BillingSettingsPage() {
                 />
                 <UsageMeter
                   label="Storage"
-                  current={Math.round(usage.storageUsedMb)}
+                  current={Math.round(usage.storageUsedMb * 10) / 10}
                   limit={usage.storageLimitMb}
-                  unit="MB"
+                  unit=" MB"
                 />
-                {isAtLimit && (
-                  <Alert variant="destructive" className="mt-4">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                      You&apos;ve reached your agent limit. Upgrade your plan to create more agents.
-                    </AlertDescription>
-                  </Alert>
-                )}
               </CardContent>
             </Card>
           )}
 
-          {/* Available Plans */}
+          {/* Plans Grid */}
           {plans.length > 0 && (
             <>
               <Separator />
@@ -277,38 +292,43 @@ export default function BillingSettingsPage() {
                   Choose the plan that best fits your needs
                 </p>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                  {plans
-                    .filter((p) => p.isActive)
-                    .sort((a, b) => a.sortOrder - b.sortOrder)
-                    .map((plan) => (
-                      <PlanCard
-                        key={plan.id}
-                        plan={plan}
-                        currentTier={billing?.currentTier || 'starter'}
-                        onSelect={handleUpgrade}
-                        loading={checkoutLoading}
-                      />
-                    ))}
+                  {plans.map((plan) => (
+                    <PlanCard
+                      key={plan.id}
+                      name={plan.name}
+                      description={plan.description}
+                      priceMonthly={plan.priceMonthly}
+                      agentLimit={plan.agentLimit}
+                      features={plan.features}
+                      isCurrent={plan.id === currentTier}
+                      isPopular={plan.id === 'pro'}
+                      onSelect={() => handleUpgrade(plan.id as SubscriptionTier)}
+                      isLoading={isCreatingCheckout && selectedTier === plan.id}
+                      disabled={isCreatingCheckout}
+                    />
+                  ))}
                 </div>
               </div>
             </>
           )}
 
-          {/* Invoice History */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Receipt className="h-5 w-5 text-primary" />
-                Invoice History
-              </CardTitle>
-              <CardDescription>
-                Your recent invoices and payment history
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <InvoiceTable invoices={invoices} />
-            </CardContent>
-          </Card>
+          {/* Invoices */}
+          {invoices.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Receipt className="h-4 w-4" />
+                  Recent Invoices
+                </CardTitle>
+                <CardDescription>
+                  Your billing history
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <InvoiceTable invoices={invoices} />
+              </CardContent>
+            </Card>
+          )}
         </div>
       </PageContainer>
     </PortalLayout>
