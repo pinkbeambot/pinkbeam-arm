@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Bot, Sparkles, User, Wrench, Shield, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { cn, getInitials, getAvatarColor } from '@/lib/utils';
+import { SUPPORTED_MODELS } from '@/lib/constants/models';
 import type { Agent, AgentRole, Capability, CreateAgentInput } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,14 +91,6 @@ const capabilities: { id: Capability; label: string; description: string }[] = [
   { id: 'escalate', label: 'Escalate', description: 'Can request human input' },
   { id: 'access_external', label: 'External APIs', description: 'Can call external APIs and tools' },
   { id: 'modify_config', label: 'Modify Config', description: 'Can change agent settings' },
-];
-
-const models = [
-  { value: 'claude-3-opus', label: 'Claude 3 Opus (Most capable)' },
-  { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet (Balanced)' },
-  { value: 'claude-3-haiku', label: 'Claude 3 Haiku (Fastest)' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
 ];
 
 export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: CreateAgentModalProps) {
@@ -331,7 +324,7 @@ function BasicInfoStep({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {models.map((model) => (
+            {SUPPORTED_MODELS.map((model) => (
               <SelectItem key={model.value} value={model.value}>
                 {model.label}
               </SelectItem>
@@ -435,7 +428,7 @@ function ReviewStep({
 
         <div>
           <span className="text-sm font-medium text-muted-foreground">Model</span>
-          <p className="text-sm">{models.find(m => m.value === formData.model)?.label || formData.model}</p>
+          <p className="text-sm">{SUPPORTED_MODELS.find(m => m.value === formData.model)?.label || formData.model}</p>
         </div>
 
         <Separator />
