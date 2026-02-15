@@ -105,8 +105,9 @@ export function useRealtimeActivities(
   const onNewActivityRef = React.useRef(onNewActivity);
   onNewActivityRef.current = onNewActivity;
 
-  // Fetch initial activities
-  const fetchActivities = React.useCallback(async (cursor?: string) => {
+  // Fetch activities — reads filter from filterRef so the callback identity
+  // only changes when accessToken changes, not when filter reference changes.
+  const fetchActivities = React.useCallback(async (cursorParam?: string) => {
     if (!accessToken) {
       setIsLoading(false);
       return;
@@ -116,22 +117,24 @@ export function useRealtimeActivities(
       setIsLoading(true);
       setError(null);
 
+      const currentFilter = filterRef.current;
+
       // Build query params
       const params = new URLSearchParams();
-      if (filter?.type && filter.type !== 'all') {
-        params.append('category', filter.type);
+      if (currentFilter?.type && currentFilter.type !== 'all') {
+        params.append('category', currentFilter.type);
       }
-      if (filter?.agentId) {
-        params.append('agent_id', filter.agentId);
+      if (currentFilter?.agentId) {
+        params.append('agent_id', currentFilter.agentId);
       }
-      if (filter?.timeRange && filter.timeRange !== 'all') {
-        params.append('time_range', filter.timeRange);
+      if (currentFilter?.timeRange && currentFilter.timeRange !== 'all') {
+        params.append('time_range', currentFilter.timeRange);
       }
-      if (filter?.search) {
-        params.append('search', filter.search);
+      if (currentFilter?.search) {
+        params.append('search', currentFilter.search);
       }
-      if (cursor) {
-        params.append('cursor', cursor);
+      if (cursorParam) {
+        params.append('cursor', cursorParam);
       }
       params.append('limit', '50');
 
@@ -151,7 +154,7 @@ export function useRealtimeActivities(
 
       const newEvents = (data.activities || []).map(transformActivity);
 
-      if (cursor) {
+      if (cursorParam) {
         setEvents(prev => [...prev, ...newEvents]);
       } else {
         setEvents(newEvents);
@@ -164,14 +167,14 @@ export function useRealtimeActivities(
     } finally {
       setIsLoading(false);
     }
-  }, [filter, accessToken]);
+  }, [accessToken]);
 
-  // Initial fetch
+  // Initial fetch + refetch when filter changes
   React.useEffect(() => {
     if (enabled) {
       fetchActivities();
     }
-  }, [enabled, fetchActivities]);
+  }, [enabled, fetchActivities, filter]);
 
   // Realtime subscription — deps are only stable values (enabled, supabase)
   // so the channel isn't torn down/recreated on every render.

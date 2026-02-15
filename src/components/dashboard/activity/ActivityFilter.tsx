@@ -48,14 +48,17 @@ export function ActivityFilterBar({
   const [searchValue, setSearchValue] = React.useState(filter.search || '');
   const [showFilters, setShowFilters] = React.useState(false);
   
-  // Debounce search
+  // Debounce search — normalize empty string to undefined so the comparison
+  // doesn't treat '' and undefined as different (which would cause an
+  // infinite re-render loop).
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchValue !== filter.search) {
-        onFilterChange({ ...filter, search: searchValue || undefined });
+      const normalizedSearch = searchValue || undefined;
+      if (normalizedSearch !== filter.search) {
+        onFilterChange({ ...filter, search: normalizedSearch });
       }
     }, 300);
-    
+
     return () => clearTimeout(timer);
   }, [searchValue, filter, onFilterChange]);
   
