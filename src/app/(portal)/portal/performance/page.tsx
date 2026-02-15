@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { cn } from '@/lib/utils';
 import { PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { DashboardLayout } from '@/components/dashboard/layout';
 import { Button } from '@/components/ui/button';
@@ -174,9 +175,4 @@ export default function PerformancePage() {
       </PageContainer>
     </DashboardLayout>
   );
-}
-
-// Utility for class merging
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }
