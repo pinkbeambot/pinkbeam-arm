@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
+import { ApiError } from '@/lib/errors';
 import type { Decision, DecisionStatus, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
@@ -86,7 +87,7 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch decisions: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_FETCH_FAILED', errorData.error || `Failed to fetch decisions: ${response.status}`);
       }
 
       const result: DecisionsResponse = await response.json();
@@ -150,13 +151,13 @@ export function useDecisionDetail(decisionId: string | null) {
       if (!response.ok) {
         if (response.status === 404) { setDecision(null); return; }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch decision: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_FETCH_FAILED', errorData.error || `Failed to fetch decision: ${response.status}`);
       }
       const result = await response.json();
       setDecision(result.data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch decision'));
+      setError(err instanceof ApiError ? err : new Error('Failed to fetch decision'));
     } finally {
       setLoading(false);
     }
@@ -188,11 +189,11 @@ export function useOverrideDecision() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to override decision: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_OVERRIDE_FAILED', errorData.error || `Failed to override decision: ${response.status}`);
       }
       return (await response.json()).data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to override decision');
+      const error = err instanceof ApiError ? err : new Error('Failed to override decision');
       setError(error);
       throw error;
     } finally {
@@ -222,11 +223,11 @@ export function useUpdateDecision() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to update decision: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_UPDATE_FAILED', errorData.error || `Failed to update decision: ${response.status}`);
       }
       return (await response.json()).data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to update decision');
+      const error = err instanceof ApiError ? err : new Error('Failed to update decision');
       setError(error);
       throw error;
     } finally {
