@@ -7,12 +7,16 @@ import type { Agent, AgentStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card } from '@/components/ui/card';
 
 interface AgentTableViewProps {
   agents: Agent[];
   selectedAgentId?: string;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (agentId: string) => void;
+  onSelectAll?: () => void;
   onSelectAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
   onToggleStatus: (agent: Agent) => void;
@@ -23,18 +27,34 @@ interface AgentTableViewProps {
 export function AgentTableView({
   agents,
   selectedAgentId,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
   onSelectAgent,
   onEditAgent,
   onToggleStatus,
   onDeleteAgent,
   onCloneAgent,
 }: AgentTableViewProps) {
+  const selectionEnabled = !!selectedIds && !!onToggleSelect;
+  const allSelected = selectionEnabled && agents.length > 0 && agents.every(a => selectedIds!.has(a.id));
+  const someSelected = selectionEnabled && agents.some(a => selectedIds!.has(a.id)) && !allSelected;
+
   return (
     <Card>
       <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-muted/50 border-b border-border">
             <tr>
+              {selectionEnabled && (
+                <th className="w-12 px-4 py-3">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                    onCheckedChange={() => onSelectAll?.()}
+                    aria-label="Select all agents"
+                  />
+                </th>
+              )}
               <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Agent</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Role</th>
               <th className="text-left px-4 py-3 text-sm font-medium text-muted-foreground">Status</th>
@@ -53,6 +73,15 @@ export function AgentTableView({
                 )}
                 onClick={() => onSelectAgent(agent)}
               >
+                {selectionEnabled && (
+                  <td className="w-12 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedIds!.has(agent.id)}
+                      onCheckedChange={() => onToggleSelect!(agent.id)}
+                      aria-label={`Select ${agent.name}`}
+                    />
+                  </td>
+                )}
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-3">
                     <div className="relative">

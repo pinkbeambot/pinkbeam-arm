@@ -528,6 +528,61 @@ export function useImportAgent() {
 }
 
 /**
+ * Hook to perform bulk operations on multiple agents via API
+ */
+export function useBulkAgentActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const executeBulkAction = useCallback(async (agentIds: string[], action: 'pause' | 'resume' | 'delete') => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/batch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agent_ids: agentIds, action }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'BULK_ACTION_FAILED', errorData.error || `Bulk ${action} failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data as {
+        action: string;
+        total: number;
+        succeeded: number;
+        failed: number;
+        results: { id: string; success: boolean; error?: string }[];
+      };
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error(`Failed to ${action} agents`);
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  const bulkPause = useCallback((agentIds: string[]) => executeBulkAction(agentIds, 'pause'), [executeBulkAction]);
+  const bulkResume = useCallback((agentIds: string[]) => executeBulkAction(agentIds, 'resume'), [executeBulkAction]);
+  const bulkDelete = useCallback((agentIds: string[]) => executeBulkAction(agentIds, 'delete'), [executeBulkAction]);
+
+  return { executeBulkAction, bulkPause, bulkResume, bulkDelete, loading, error };
+}
+
+/**
  * Convenience hook for fetching all agents
  * Uses useTenant() to get the real tenant ID from auth context
  */

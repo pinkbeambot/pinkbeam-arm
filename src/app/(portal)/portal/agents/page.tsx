@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Plus, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
+import { BulkActionBar } from '@/components/dashboard/agents/BulkActionBar';
 import { ChatPanel } from '@/components/chat';
-import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent, useCloneAgent } from '@/lib/hooks/useAgents';
+import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent, useCloneAgent, useBulkAgentActions } from '@/lib/hooks/useAgents';
 import { useTenant } from '@/lib/hooks/useTenant';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -22,8 +23,10 @@ export default function AgentsPage() {
   const { deleteAgent, loading: deleteLoading } = useDeleteAgent();
   const { createAgent, loading: createLoading } = useCreateAgent();
   const { cloneAgent, loading: cloneLoading } = useCloneAgent();
+  const { bulkPause, bulkResume, bulkDelete, loading: bulkLoading } = useBulkAgentActions();
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all');
   const [roleFilter, setRoleFilter] = useState<AgentRole | 'all'>('all');
@@ -37,10 +40,15 @@ export default function AgentsPage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
 
-  const filteredAgents = useMemo(() => 
+  const filteredAgents = useMemo(() =>
     filterAndSortAgents(agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder),
     [agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder]
   );
+
+  // Clear bulk selection when filters change to avoid stale references
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, statusFilter, roleFilter]);
 
   const handleSelectAgent = useCallback((agent: Agent) => {
     setSelectedAgent(agent);
@@ -92,6 +100,83 @@ export default function AgentsPage() {
       toast({ title: 'Error', description: 'Failed to clone agent.', variant: 'destructive' });
     }
   }, [cloneAgent, refetch, toast]);
+
+  const handleToggleSelect = useCallback((agentId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(agentId)) {
+        next.delete(agentId);
+      } else {
+        next.add(agentId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const allIds = filteredAgents.map(a => a.id);
+    const allSelected = allIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }, [filteredAgents, selectedIds]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkPause = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await bulkPause(ids);
+      toast({
+        title: 'Agents Paused',
+        description: `${result.succeeded} of ${result.total} agent${result.total !== 1 ? 's' : ''} paused.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to pause agents.', variant: 'destructive' });
+    }
+  }, [selectedIds, bulkPause, refetch, toast]);
+
+  const handleBulkResume = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await bulkResume(ids);
+      toast({
+        title: 'Agents Resumed',
+        description: `${result.succeeded} of ${result.total} agent${result.total !== 1 ? 's' : ''} resumed.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to resume agents.', variant: 'destructive' });
+    }
+  }, [selectedIds, bulkResume, refetch, toast]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const count = selectedIds.size;
+    if (!confirm(`Are you sure you want to delete ${count} agent${count !== 1 ? 's' : ''}? This action cannot be undone.`)) return;
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await bulkDelete(ids);
+      toast({
+        title: 'Agents Deleted',
+        description: `${result.succeeded} of ${result.total} agent${result.total !== 1 ? 's' : ''} deleted.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+      });
+      if (selectedAgent && selectedIds.has(selectedAgent.id)) {
+        setDetailOpen(false);
+        setSelectedAgent(null);
+      }
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete agents.', variant: 'destructive' });
+    }
+  }, [selectedIds, bulkDelete, selectedAgent, refetch, toast]);
 
   const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
     if (!tenantId) {
@@ -166,6 +251,9 @@ export default function AgentsPage() {
             loading={agentsLoading || tenantLoading}
             viewMode={viewMode}
             selectedAgentId={selectedAgent?.id}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
             onSelectAgent={handleSelectAgent}
             onEditAgent={handleEditAgent}
             onToggleStatus={handleToggleStatus}
@@ -193,6 +281,17 @@ export default function AgentsPage() {
         />
 
         <ChatPanel chatId={null} agentId={chatAgentId || undefined} open={chatOpen} onOpenChange={setChatOpen} />
+
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          totalCount={filteredAgents.length}
+          onPauseSelected={handleBulkPause}
+          onResumeSelected={handleBulkResume}
+          onDeleteSelected={handleBulkDelete}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          loading={bulkLoading}
+        />
       </PageContainer>
     </DashboardLayout>
   );

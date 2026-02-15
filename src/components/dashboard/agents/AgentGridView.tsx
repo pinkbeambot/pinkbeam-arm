@@ -7,6 +7,7 @@ import type { Agent, AgentStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -19,6 +20,8 @@ import {
 interface AgentGridViewProps {
   agents: Agent[];
   selectedAgentId?: string;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (agentId: string) => void;
   onSelectAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
   onToggleStatus: (agent: Agent) => void;
@@ -29,12 +32,16 @@ interface AgentGridViewProps {
 export function AgentGridView({
   agents,
   selectedAgentId,
+  selectedIds,
+  onToggleSelect,
   onSelectAgent,
   onEditAgent,
   onToggleStatus,
   onDeleteAgent,
   onCloneAgent,
 }: AgentGridViewProps) {
+  const selectionEnabled = !!selectedIds && !!onToggleSelect;
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {agents.map((agent) => (
@@ -42,6 +49,8 @@ export function AgentGridView({
           key={agent.id}
           agent={agent}
           isSelected={agent.id === selectedAgentId}
+          isChecked={selectionEnabled ? selectedIds!.has(agent.id) : undefined}
+          onToggleSelect={selectionEnabled ? () => onToggleSelect!(agent.id) : undefined}
           onClick={() => onSelectAgent(agent)}
           onEdit={() => onEditAgent(agent)}
           onToggleStatus={() => onToggleStatus(agent)}
@@ -56,6 +65,8 @@ export function AgentGridView({
 interface AgentCardProps {
   agent: Agent;
   isSelected?: boolean;
+  isChecked?: boolean;
+  onToggleSelect?: () => void;
   onClick: () => void;
   onEdit: () => void;
   onToggleStatus: () => void;
@@ -63,18 +74,31 @@ interface AgentCardProps {
   onClone: () => void;
 }
 
-function AgentCard({ agent, isSelected, onClick, onEdit, onToggleStatus, onDelete, onClone }: AgentCardProps) {
+function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEdit, onToggleStatus, onDelete, onClone }: AgentCardProps) {
   return (
     <Card
       className={cn(
-        'cursor-pointer transition-all hover:shadow-md',
-        isSelected && 'ring-2 ring-primary'
+        'cursor-pointer transition-all hover:shadow-md relative',
+        isSelected && 'ring-2 ring-primary',
+        isChecked && 'ring-2 ring-primary bg-primary/5'
       )}
       onClick={onClick}
     >
       <CardContent className="p-4">
+        {onToggleSelect !== undefined && (
+          <div
+            className="absolute top-3 left-3 z-10"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={() => onToggleSelect()}
+              aria-label={`Select ${agent.name}`}
+            />
+          </div>
+        )}
         <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
+          <div className={cn("flex items-center gap-3", onToggleSelect !== undefined && "ml-7")}>
             <div className="relative">
               <Avatar className="h-12 w-12">
                 <AvatarImage src={agent.avatar_url} />

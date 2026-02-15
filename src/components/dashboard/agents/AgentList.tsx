@@ -1,7 +1,7 @@
 'use client';
 
 import { Bot } from 'lucide-react';
-import type { Agent, AgentStatus, ViewMode, SortField, SortOrder } from '@/types';
+import type { Agent, ViewMode } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AgentGridView } from './AgentGridView';
@@ -12,6 +12,9 @@ interface AgentListProps {
   loading: boolean;
   viewMode: ViewMode;
   selectedAgentId?: string;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (agentId: string) => void;
+  onSelectAll?: () => void;
   onSelectAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
   onToggleStatus: (agent: Agent) => void;
@@ -24,6 +27,9 @@ export function AgentList({
   loading,
   viewMode,
   selectedAgentId,
+  selectedIds,
+  onToggleSelect,
+  onSelectAll,
   onSelectAgent,
   onEditAgent,
   onToggleStatus,
@@ -42,6 +48,8 @@ export function AgentList({
     <AgentGridView
       agents={agents}
       selectedAgentId={selectedAgentId}
+      selectedIds={selectedIds}
+      onToggleSelect={onToggleSelect}
       onSelectAgent={onSelectAgent}
       onEditAgent={onEditAgent}
       onToggleStatus={onToggleStatus}
@@ -52,6 +60,9 @@ export function AgentList({
     <AgentTableView
       agents={agents}
       selectedAgentId={selectedAgentId}
+      selectedIds={selectedIds}
+      onToggleSelect={onToggleSelect}
+      onSelectAll={onSelectAll}
       onSelectAgent={onSelectAgent}
       onEditAgent={onEditAgent}
       onToggleStatus={onToggleStatus}
