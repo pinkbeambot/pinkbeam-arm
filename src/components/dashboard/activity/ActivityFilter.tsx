@@ -202,7 +202,7 @@ export function ActivityFilterBar({
           <span className="text-sm text-muted-foreground">Active filters:</span>
           
           {filter.type && filter.type !== 'all' && (
-            <ActivityCategoryBadge category={filter.type as any} />
+            <ActivityCategoryBadge category={filter.type as Exclude<ActivityFilterType, 'all'>} />
           )}
           
           {filter.agentId && (

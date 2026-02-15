@@ -126,7 +126,7 @@ describe('Reconnection Logic', () => {
 
   it('should respect max reconnect attempts', () => {
     const maxReconnectAttempts = 5;
-    let reconnectAttempts = 5;
+    const reconnectAttempts = 5;
 
     const shouldReconnect = reconnectAttempts < maxReconnectAttempts;
     expect(shouldReconnect).toBe(false);

@@ -1,21 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { 
-  getTenantContextFromHeaders, 
-  setTenantContext, 
+import {
+  getTenantContextFromHeaders,
+  setTenantContext,
   extractBearerToken as extractToken,
-  type TenantContext 
+  type TenantContext
 } from './tenant-context';
 import { AuthError, authErrors as errorHelpers, handleAuthError, isZodError } from './errors';
 import { z } from 'zod';
+import type { TypedDatabase } from '@/lib/database';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Type for Supabase client
-type TypedSupabaseClient = SupabaseClient<Record<string, unknown>>;
+type TypedSupabaseClient = SupabaseClient<TypedDatabase>;
 
 /**
  * Extended request type with tenant context
@@ -37,7 +38,7 @@ type AuthenticatedHandler = (
  */
 export function createAuthClient(authToken?: string): TypedSupabaseClient {
   if (authToken) {
-    return createClient(supabaseUrl, supabaseAnonKey, {
+    return createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -49,7 +50,7 @@ export function createAuthClient(authToken?: string): TypedSupabaseClient {
       },
     });
   }
-  return createClient(supabaseUrl, supabaseAnonKey);
+  return createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey);
 }
 
 /**

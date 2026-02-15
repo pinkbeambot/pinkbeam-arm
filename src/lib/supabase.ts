@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './database';
 
 // Environment variables - safe for client
@@ -27,9 +27,8 @@ export function createServerClient(authToken?: string) {
 }
 
 // Helper to set tenant context for RLS
-export async function setTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.rpc as any)('set_tenant_context', { tenant_id: tenantId });
+export async function setTenantContext(supabase: SupabaseClient<Database>, tenantId: string) {
+  await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 }
 
 // Get current user from session
@@ -60,8 +59,7 @@ export async function getCurrentTenant(authToken: string) {
   const { data: tenant } = await supabase
     .from('tenants')
     .select('*')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .eq('id', (user as any).tenant_id)
+    .eq('id', user.tenant_id)
     .single();
   
   return tenant;

@@ -1106,3 +1106,28 @@ export type Enums<
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
     ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
     : never
+
+// ============================================================================
+// Supabase JS v2.95+ Compatibility
+// ============================================================================
+// The auto-generated Database type lacks `Relationships` on tables, which is
+// required by GenericTable in @supabase/supabase-js v2.95+. Without it,
+// Database['public'] doesn't extend GenericSchema, causing Schema to resolve
+// to `never` and breaking typed .rpc() / .from() calls.
+//
+// TypedDatabase adds `Relationships: []` to every table so that
+// SupabaseClient<TypedDatabase> resolves Schema correctly.
+
+type AddRelationships<T> = {
+  [K in keyof T]: T[K] & { Relationships: [] }
+}
+
+export type TypedDatabase = {
+  public: {
+    Tables: AddRelationships<Database['public']['Tables']>
+    Views: Database['public']['Views']
+    Functions: Database['public']['Functions']
+    Enums: Database['public']['Enums']
+    CompositeTypes: Database['public']['CompositeTypes']
+  }
+}

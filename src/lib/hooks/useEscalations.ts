@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type { Escalation, EscalationUrgency, EscalationType, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
@@ -135,9 +136,9 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
       const subscription = supabase
         .channel(`escalations:${tenantId}`)
         .on(
-          'postgres_changes' as any,
+          REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
           {
-            event: '*',
+            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
             schema: 'public',
             table: 'escalations',
             filter: `tenant_id=eq.${tenantId}`,
@@ -366,9 +367,9 @@ export function useEscalationStats(days: number = 30) {
       const subscription = supabase
         .channel(`escalations-stats:${tenantId}`)
         .on(
-          'postgres_changes' as any,
+          REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
           {
-            event: '*',
+            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
             schema: 'public',
             table: 'escalations',
             filter: `tenant_id=eq.${tenantId}`,

@@ -5,6 +5,7 @@ import { createServerClient } from '@supabase/ssr';
 import { tenantContextSchema, authorizationHeaderSchema } from '@/lib/validation';
 import { AuthError, authErrors } from './errors';
 import { z } from 'zod';
+import type { TypedDatabase } from '@/lib/database';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -12,7 +13,13 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Type for Supabase client
-type TypedSupabaseClient = SupabaseClient<Record<string, unknown>>;
+type TypedSupabaseClient = SupabaseClient<TypedDatabase>;
+
+// Type for user metadata from Supabase Auth
+interface UserMetadataWithTenant {
+  tenant_id?: string;
+  [key: string]: unknown;
+}
 
 /**
  * Tenant Context Types
@@ -91,9 +98,8 @@ export async function setTenantContext(
     }]);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.rpc as any)('set_tenant_context', { 
-    tenant_id: tenantId 
+  const { error } = await supabase.rpc('set_tenant_context', {
+    tenant_id: tenantId
   });
 
   if (error) {
@@ -287,10 +293,12 @@ export async function validateAuthAndGetContext(
     }
 
     // Get tenant_id from user metadata or database
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let tenantId = (user.user_metadata as any)?.tenant_id || (user.app_metadata as any)?.tenant_id;
-    
-    if (!tenantId) {
+    const metadataTenantId = (user.user_metadata as UserMetadataWithTenant)?.tenant_id || (user.app_metadata as UserMetadataWithTenant)?.tenant_id;
+
+    let tenantId: string;
+    if (metadataTenantId) {
+      tenantId = metadataTenantId;
+    } else {
       // Fetch from database
       const { data: userProfile, error: profileError } = await supabase
         .from('users')
@@ -298,13 +306,11 @@ export async function validateAuthAndGetContext(
         .eq('auth_id', user.id)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (profileError || !(userProfile as any)?.tenant_id) {
+      if (profileError || !userProfile?.tenant_id) {
         throw authErrors.tenantNotFound();
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tenantId = (userProfile as any).tenant_id;
+      tenantId = userProfile.tenant_id;
     }
 
     // Set tenant context
@@ -364,8 +370,7 @@ export async function getTenantContextFromSession(): Promise<TenantContext | nul
     }
 
     const user = session.user;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let tenantId = (user.user_metadata as any)?.tenant_id || (user.app_metadata as any)?.tenant_id;
+    let tenantId = (user.user_metadata as UserMetadataWithTenant)?.tenant_id || (user.app_metadata as UserMetadataWithTenant)?.tenant_id;
 
     if (!tenantId) {
       // Fetch from database
@@ -375,8 +380,7 @@ export async function getTenantContextFromSession(): Promise<TenantContext | nul
         .eq('auth_id', user.id)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tenantId = (userProfile as any)?.tenant_id;
+      tenantId = userProfile?.tenant_id;
     }
 
     if (!tenantId) {
@@ -434,8 +438,7 @@ export async function userHasCapability(
       return false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ((agent as any).capabilities as string[])?.includes(capability) || false;
+    return agent.capabilities?.includes(capability) || false;
   } catch (error) {
     console.error('Capability check error:', error);
     return false;

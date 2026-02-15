@@ -29,11 +29,12 @@ interface ExportButtonProps {
 
 export function ExportButton({ dateRange, className, disabled }: ExportButtonProps) {
   const [isExporting, setIsExporting] = React.useState(false);
-  const [selectedSections, setSelectedSections] = React.useState<Set<string>>(
-    new Set(['metrics', 'leaderboard', 'roi', 'bottlenecks'])
+  type ExportSection = ExportOptions['sections'][number];
+  const [selectedSections, setSelectedSections] = React.useState<Set<ExportSection>>(
+    new Set<ExportSection>(['metrics', 'leaderboard', 'roi', 'bottlenecks'])
   );
 
-  const toggleSection = (section: string) => {
+  const toggleSection = (section: ExportSection) => {
     setSelectedSections(prev => {
       const next = new Set(prev);
       if (next.has(section)) {
@@ -53,7 +54,7 @@ export function ExportButton({ dateRange, className, disabled }: ExportButtonPro
     
     const exportData: ExportOptions = {
       format,
-      sections: Array.from(selectedSections) as any,
+      sections: Array.from(selectedSections),
       dateRange,
     };
 

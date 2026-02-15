@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 
 import { ApiError } from '@/lib/errors';
 import { createAgentSchema, updateAgentSchema } from '@/lib/validation';
@@ -128,18 +129,19 @@ export function useAgentsRealtime(tenantId: string | null) {
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'agents',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload: RealtimeChangePayload<Agent>) => {
+        (payload) => {
+          const change = payload as unknown as RealtimeChangePayload<Agent>;
           // Queue the change
           pendingChangesRef.current.push({
-            type: payload.eventType,
-            payload,
+            type: change.eventType,
+            payload: change,
           });
           
           // Clear existing timer and set new one
@@ -224,9 +226,9 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'agents',
           filter: `id=eq.${agentId}`,

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { ApiError } from '@/lib/errors';
 import { createTaskSchema, updateTaskSchema } from '@/lib/validation';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type { Task, TaskStatus, TaskPriority, RealtimeChangePayload } from '@/types';
 
 interface UseTasksOptions {
@@ -140,9 +141,9 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const channel = supabase
       .channel('tasks_changes')
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'tasks',
         },
@@ -155,7 +156,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
               if (
                 newTask &&
                 (!status || newTask.status === status) &&
-                (!assignee_id || (newTask as any).assignee_id === assignee_id) &&
+                (!assignee_id || newTask.assignee_id === assignee_id) &&
                 (!priority || newTask.priority === priority)
               ) {
                 return [newTask, ...currentTasks];
@@ -441,9 +442,9 @@ export function useTask(taskId: string | null) {
     const channel = supabase
       .channel(`task_${taskId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'UPDATE',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.UPDATE,
           schema: 'public',
           table: 'tasks',
           filter: `id=eq.${taskId}`,
@@ -473,9 +474,17 @@ export function useTask(taskId: string | null) {
 /**
  * Hook for task dependencies
  */
+interface TaskDependencyRow {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: 'blocks' | 'requires' | 'optional';
+  created_at: string;
+}
+
 export function useTaskDependencies(taskId: string | null) {
-  const [dependencies, setDependencies] = useState<any[]>([]);
-  const [dependents, setDependents] = useState<any[]>([]);
+  const [dependencies, setDependencies] = useState<TaskDependencyRow[]>([]);
+  const [dependents, setDependents] = useState<TaskDependencyRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

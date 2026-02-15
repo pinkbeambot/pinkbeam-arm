@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '@/lib/database';
+import { type TypedDatabase } from '@/lib/database';
 
 // Environment variables - server-side only
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -16,7 +16,7 @@ if (!supabaseServiceKey) {
  * ⚠️ WARNING: Only use in server contexts (API routes, Edge Functions)
  * This client has unrestricted database access
  */
-export const supabaseService = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+export const supabaseService = createClient<TypedDatabase>(supabaseUrl, supabaseServiceKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,

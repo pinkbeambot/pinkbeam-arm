@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type {
   Notification,
   NotificationType,
@@ -233,9 +234,9 @@ export function useNotifications({
     const channel = supabase
       .channel(`notifications:${tenantId}:${userId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,
@@ -328,9 +329,9 @@ export function useUnreadNotificationCount(
     const channel = supabase
       .channel(`notifications-count:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,

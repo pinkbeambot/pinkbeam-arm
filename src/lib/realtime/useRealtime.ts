@@ -22,7 +22,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js';
 
 export type ConnectionState = 
   | 'connecting' 
@@ -242,8 +242,13 @@ export function useRealtime(
         : events.filter(e => e !== '*');
 
       for (const event of eventTypes) {
-        const postgresChangesFilter: Record<string, string> = {
-          event,
+        const postgresChangesFilter: {
+          event: `${REALTIME_POSTGRES_CHANGES_LISTEN_EVENT}`;
+          schema: string;
+          table: string;
+          filter?: string;
+        } = {
+          event: event as `${REALTIME_POSTGRES_CHANGES_LISTEN_EVENT}`,
           schema,
           table,
         };
@@ -253,7 +258,7 @@ export function useRealtime(
         }
 
         channel = channel.on(
-          'postgres_changes' as any,
+          REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
           postgresChangesFilter,
           (payload: { eventType: RealtimeEventType; new: object | null; old: object | null }) => {
             try {

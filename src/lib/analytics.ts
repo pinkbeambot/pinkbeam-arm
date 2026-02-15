@@ -3,15 +3,16 @@
  * Client-side service for fetching analytics data from the API
  */
 
-import type { 
-  PerformanceDashboardData, 
-  AgentPerformance, 
+import type {
+  PerformanceDashboardData,
+  AgentPerformance,
   TimeSeriesDataPoint,
   Bottleneck,
   ROIMetrics,
   TaskStageMetrics,
-  DateRange 
+  DateRange
 } from '@/components/dashboard/performance/types';
+import type { AgentRole, AgentStatus } from '@/types';
 
 // API Response types
 interface OverviewSummary {
@@ -326,8 +327,8 @@ export async function fetchPerformanceData(dateRange: DateRange, token: string):
       tenant_id: '', // Will be filled by parent context
       name: entry.name,
       slug: entry.name.toLowerCase().replace(/\s+/g, '-'),
-      role: entry.role as any,
-      status: entry.status as any,
+      role: entry.role as AgentRole,
+      status: entry.status as AgentStatus,
       avatar_url: entry.avatarUrl,
       description: '',
       capabilities: [],

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import type { Chat, ChatMessage } from '@/types';
 
@@ -223,20 +224,20 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   useEffect(() => {
     if (!chat?.id) return;
 
-    const channel = (supabase
-      .channel(`chat:${chat.id}`) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+    const channel = supabase
+      .channel(`chat:${chat.id}`)
       .on(
-        'postgres_changes',
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'INSERT',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.INSERT,
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload: { new: ChatMessage | null }) => {
-          if (!payload.new) return;
-          const newMessage = payload.new;
-          
+        (payload) => {
+          const newMessage = payload.new as ChatMessage;
+          if (!newMessage?.id) return;
+
           setMessages(current => {
             // Check if message already exists
             if (current.find(m => m.id === newMessage.id)) {
@@ -255,16 +256,16 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
         }
       )
       .on(
-        'postgres_changes',
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'DELETE',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.DELETE,
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload: { old: ChatMessage | null }) => {
-          if (!payload.old) return;
-          const deletedId = payload.old.id;
+        (payload) => {
+          const deletedId = (payload.old as Partial<ChatMessage>)?.id;
+          if (!deletedId) return;
           setMessages(current =>
             current.filter(m => m.id !== deletedId)
           );
@@ -328,12 +329,12 @@ export function useChats() {
 
   // Subscribe to chat updates
   useEffect(() => {
-    const channel = (supabase
-      .channel(`user_chats:${DEMO_TENANT_ID}`) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+    const channel = supabase
+      .channel(`user_chats:${DEMO_TENANT_ID}`)
       .on(
-        'postgres_changes',
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'chats',
           filter: `tenant_id=eq.${DEMO_TENANT_ID}`,

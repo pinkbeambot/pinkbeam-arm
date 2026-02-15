@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type { Notification as AppNotification } from '@/types/notification';
 
 // ============================================================================
@@ -71,7 +72,7 @@ const BROWSER_NOTIFICATION_TYPES = new Set([
 
 function playNotificationSound() {
   try {
-    const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+    const AudioContext = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext;
     if (!AudioContext) return;
 
     const ctx = new AudioContext();
@@ -284,9 +285,9 @@ export function useBrowserNotifications({
     const channel = supabase
       .channel(`browser-notifications:${tenantId}:${userId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,

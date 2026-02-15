@@ -23,32 +23,32 @@ interface BottleneckVisualizationProps {
 }
 
 const severityConfig = {
-  critical: { 
-    color: 'text-red-600', 
-    bg: 'bg-red-50 dark:bg-red-950/20', 
+  critical: {
+    color: 'text-red-600',
+    bg: 'bg-red-50 dark:bg-red-950/20',
     border: 'border-red-200 dark:border-red-800',
-    badge: 'destructive',
+    badge: 'destructive' as const,
     icon: AlertCircle,
   },
-  high: { 
-    color: 'text-amber-600', 
-    bg: 'bg-amber-50 dark:bg-amber-950/20', 
+  high: {
+    color: 'text-amber-600',
+    bg: 'bg-amber-50 dark:bg-amber-950/20',
     border: 'border-amber-200 dark:border-amber-800',
-    badge: 'secondary',
+    badge: 'secondary' as const,
     icon: AlertTriangle,
   },
-  medium: { 
-    color: 'text-blue-600', 
-    bg: 'bg-blue-50 dark:bg-blue-950/20', 
+  medium: {
+    color: 'text-blue-600',
+    bg: 'bg-blue-50 dark:bg-blue-950/20',
     border: 'border-blue-200 dark:border-blue-800',
-    badge: 'outline',
+    badge: 'outline' as const,
     icon: Clock,
   },
-  low: { 
-    color: 'text-gray-600', 
-    bg: 'bg-gray-50 dark:bg-gray-950/20', 
+  low: {
+    color: 'text-gray-600',
+    bg: 'bg-gray-50 dark:bg-gray-950/20',
     border: 'border-gray-200 dark:border-gray-800',
-    badge: 'outline',
+    badge: 'outline' as const,
     icon: Clock,
   },
 };
@@ -122,7 +122,7 @@ export function BottleneckVisualization({
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-medium text-foreground">{bottleneck.name}</h4>
                       <Badge 
-                        variant={config.badge as any}
+                        variant={config.badge}
                         className="text-xs capitalize"
                       >
                         {bottleneck.severity}
