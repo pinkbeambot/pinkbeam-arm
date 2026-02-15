@@ -6,8 +6,12 @@ import { FadeIn, FadeInOnMount } from "@/components/animations";
 import Link from "next/link";
 import { useState } from "react";
 
-// VALIS quote for hero
-const valisQuote = "Your AI team handles the routine, so your human team can focus on what they do best—creative problem-solving, relationship building, and strategic thinking.";
+// VALIS quotes for hero
+const valisQuotes = [
+  "Build a workforce that scales with your ambition. AI agents handle the details while your team focuses on the big picture.",
+  "What could your team achieve with an extra 1,000 hours per week? AI agents handle the repetitive work so your people can focus on what matters.",
+  "The future of work isn't humans vs. AI. It's humans with AI. Give your team digital colleagues that handle the routine, so they can handle the remarkable."
+];
 
 // Logo placeholder component
 function LogoPlaceholder({ name }: { name: string }) {
@@ -57,14 +61,17 @@ export function Hero() {
             </h1>
           </FadeInOnMount>
           
-          {/* VALIS Quote */}
+          {/* VALIS Quotes */}
           <FadeInOnMount delay={0.2}>
-            <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5">
-              <p className="text-lg text-primary italic mb-3">
-                "Your AI team handles the routine, so your human team can focus on what they do best—
-                creative problem-solving, relationship building, and strategic thinking."
-              </p>
-              <p className="text-sm text-muted-foreground">
+            <div className="mx-auto max-w-3xl mb-10 space-y-4">
+              {valisQuotes.map((quote, index) => (
+                <div key={index} className="p-4 rounded-xl border border-primary/20 bg-primary/5">
+                  <p className="text-base text-primary italic">
+                    "{quote}"
+                  </p>
+                </div>
+              ))}
+              <p className="text-sm text-muted-foreground text-center">
                 — VALIS, Pink Beam CEO
               </p>
             </div>
