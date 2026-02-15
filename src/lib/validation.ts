@@ -487,6 +487,28 @@ export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
 export type CreatePortalInput = z.infer<typeof createPortalSchema>;
 
 // ============================================================================
+// Email Notification Validation
+// ============================================================================
+
+export const sendNotificationEmailSchema = z.object({
+  notification_id: z.string().uuid(),
+});
+
+export const sendTaskCompleteEmailSchema = z.object({
+  task_id: z.string().uuid(),
+  task_title: z.string().min(1),
+  agent_name: z.string().min(1),
+  completed_at: z.string(),
+  duration: z.string().optional(),
+});
+
+export const digestTypeSchema = z.enum(['daily', 'weekly']);
+
+export type SendNotificationEmailInput = z.infer<typeof sendNotificationEmailSchema>;
+export type SendTaskCompleteEmailInput = z.infer<typeof sendTaskCompleteEmailSchema>;
+export type DigestType = z.infer<typeof digestTypeSchema>;
+
+// ============================================================================
 // Re-export Auth Validation
 // ============================================================================
 
