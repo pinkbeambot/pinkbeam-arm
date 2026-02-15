@@ -26,6 +26,7 @@ vi.mock('@/lib/supabase/client', () => ({
       }),
       unsubscribe: vi.fn(),
     }),
+    removeChannel: vi.fn(),
   }),
 }));
 

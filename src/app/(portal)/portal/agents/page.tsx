@@ -10,7 +10,7 @@ import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal
 import { BulkActionBar } from '@/components/dashboard/agents/BulkActionBar';
 import { ChatPanel } from '@/components/chat';
 import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent, useCloneAgent, useBulkAgentActions } from '@/lib/hooks/useAgents';
-import { useTenant } from '@/lib/hooks/useTenant';
+import { useTenant, useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, CreateAgentInput } from '@/types';
@@ -18,12 +18,19 @@ import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, Cre
 export default function AgentsPage() {
   const { toast } = useToast();
   const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
+  const { can, isLoading: rbacLoading } = useRBAC();
   const { agents, loading: agentsLoading, error: agentsError, refetch } = useAgentsRealtime(tenantId);
   const { updateAgent, loading: updateLoading } = useUpdateAgent();
   const { deleteAgent, loading: deleteLoading } = useDeleteAgent();
   const { createAgent, loading: createLoading } = useCreateAgent();
   const { cloneAgent, loading: cloneLoading } = useCloneAgent();
   const { bulkPause, bulkResume, bulkDelete, loading: bulkLoading } = useBulkAgentActions();
+
+  // RBAC permissions
+  const canCreateAgents = can('agents:create');
+  const canUpdateAgents = can('agents:update');
+  const canDeleteAgents = can('agents:delete');
+  const canManageAgents = can('agents:manage');
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -209,10 +216,12 @@ export default function AgentsPage() {
           title="Agent Roster"
           description={`Manage your AI workforce. ${stats.total} agent${stats.total !== 1 ? 's' : ''} total.`}
         >
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Agent
-          </Button>
+          {canCreateAgents && (
+            <Button onClick={() => setCreateModalOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Agent
+            </Button>
+          )}
         </PageHeader>
 
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">

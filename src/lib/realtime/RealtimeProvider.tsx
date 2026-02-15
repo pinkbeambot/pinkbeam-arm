@@ -59,7 +59,7 @@ export interface RealtimeContextValue {
   activeChannelCount: number;
 }
 
-interface RealtimeProviderProps {
+export interface RealtimeProviderProps {
   children: React.ReactNode;
   /** Enable connection monitoring (default: true) */
   enabled?: boolean;

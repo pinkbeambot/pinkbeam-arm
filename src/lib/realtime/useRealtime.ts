@@ -33,7 +33,7 @@ export type ConnectionState =
 
 export type RealtimeEventType = 'INSERT' | 'UPDATE' | 'DELETE' | '*';
 
-export interface UseRealtimeOptions<T> {
+export interface UseRealtimeOptions {
   /** Table name to subscribe to */
   table: string;
   
@@ -47,16 +47,16 @@ export interface UseRealtimeOptions<T> {
   schema?: string;
   
   /** Called when a new record is inserted */
-  onInsert?: (record: T) => void;
+  onInsert?: (record: object) => void;
   
   /** Called when a record is updated */
-  onUpdate?: (record: T, oldRecord: T) => void;
+  onUpdate?: (record: object, oldRecord: object) => void;
   
   /** Called when a record is deleted */
-  onDelete?: (record: T) => void;
+  onDelete?: (record: object) => void;
   
   /** Called when any event occurs */
-  onChange?: (event: { eventType: RealtimeEventType; new: T | null; old: T | null }) => void;
+  onChange?: (event: { eventType: RealtimeEventType; new: object | null; old: object | null }) => void;
   
   /** Called when connection state changes */
   onConnectionChange?: (state: ConnectionState) => void;
@@ -82,28 +82,28 @@ export interface UseRealtimeOptions<T> {
   };
 }
 
-export interface UseRealtimeReturn<T> {
+export interface UseRealtimeReturn {
   /** Current connection state */
   connectionState: ConnectionState;
-  
+
   /** Last connection error */
   error: Error | null;
-  
+
   /** Number of reconnection attempts */
   retryCount: number;
-  
+
   /** Whether currently connected */
   isConnected: boolean;
-  
+
   /** Whether connection is in progress */
   isConnecting: boolean;
-  
+
   /** Manually retry connection */
   retry: () => void;
-  
+
   /** Manually disconnect */
   disconnect: () => void;
-  
+
   /** Manually connect */
   connect: () => void;
 }
@@ -142,9 +142,9 @@ function generateChannelName(
   return parts.join(':');
 }
 
-export function useRealtime<T extends Record<string, unknown>>(
-  options: UseRealtimeOptions<T>
-): UseRealtimeReturn<T> {
+export function useRealtime(
+  options: UseRealtimeOptions
+): UseRealtimeReturn {
   const {
     table,
     filter,
@@ -253,9 +253,9 @@ export function useRealtime<T extends Record<string, unknown>>(
         }
 
         channel = channel.on(
-          'postgres_changes',
+          'postgres_changes' as any,
           postgresChangesFilter,
-          (payload: { eventType: RealtimeEventType; new: T | null; old: T | null }) => {
+          (payload: { eventType: RealtimeEventType; new: object | null; old: object | null }) => {
             try {
               // Call specific handler
               switch (payload.eventType) {
