@@ -30,8 +30,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 export const KANBAN_COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
   { id: 'queued', label: 'Backlog', color: 'bg-gray-500' },
   { id: 'in_progress', label: 'In Progress', color: 'bg-blue-500' },
+  { id: 'blocked', label: 'Blocked', color: 'bg-red-500' },
   { id: 'review', label: 'Review', color: 'bg-amber-500' },
   { id: 'completed', label: 'Done', color: 'bg-green-500' },
+  { id: 'failed', label: 'Failed', color: 'bg-red-600' },
+  { id: 'cancelled', label: 'Cancelled', color: 'bg-gray-400' },
 ];
 
 interface TaskCardProps {
