@@ -138,7 +138,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const channel = supabase
       .channel('tasks_changes')
       .on(
-        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        'postgres_changes' as any,
         {
           event: '*',
           schema: 'public',
@@ -378,7 +378,7 @@ export function useTask(taskId: string | null) {
     const channel = supabase
       .channel(`task_${taskId}`)
       .on(
-        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        'postgres_changes' as any,
         {
           event: 'UPDATE',
           schema: 'public',

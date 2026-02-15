@@ -105,7 +105,7 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
     const subscription = supabase
       .channel('decisions:changes')
       .on(
-        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        'postgres_changes' as any,
         { event: '*', schema: 'public', table: 'decisions' },
         (payload: RealtimeChangePayload<Decision>) => {
           const currentOpts = optionsRef.current;
