@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { X, ChevronDown, Trash2, Bookmark, Search, Download, FileText, FileJson, Loader2 } from 'lucide-react';
+import { X, ChevronDown, Trash2, Bookmark, Search, Download, FileText, FileJson, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn, formatRelativeTime, getAvatarColor, getInitials, getAgentStatusColor } from '@/lib/utils';
@@ -48,8 +48,20 @@ interface SearchResult {
 // ============================================================================
 
 export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProps) {
-  const { chat, messages, loading, error, hasMore, sending, sendMessage, loadMore, deleteMessage } =
-    useChat({ chatId, agentId });
+  const {
+    chat,
+    messages,
+    loading,
+    error,
+    hasMore,
+    sending,
+    agentResponding,
+    agentResponseError,
+    sendMessage,
+    loadMore,
+    deleteMessage,
+    retryLastMessage,
+  } = useChat({ chatId, agentId });
   const scrollRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [showScrollButton, setShowScrollButton] = useState(false);
@@ -507,6 +519,17 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
                       onDelete={() => deleteMessage(message.id)}
                     />
                   ))}
+                  {/* Agent responding indicator */}
+                  {agentResponding && (
+                    <AgentTypingIndicator agentName={agentName} agentAvatar={agentAvatar} />
+                  )}
+                  {/* Agent response error */}
+                  {agentResponseError && (
+                    <AgentResponseError
+                      error={agentResponseError}
+                      onRetry={retryLastMessage}
+                    />
+                  )}
                 </div>
               )}
             </ScrollArea>
@@ -758,6 +781,76 @@ function ChatEmptyState({ agentName }: { agentName: string }) {
       <p className="text-xs text-muted-foreground">
         Send a message to {agentName} to begin chatting.
       </p>
+    </div>
+  );
+}
+
+/**
+ * Agent typing indicator
+ */
+function AgentTypingIndicator({
+  agentName,
+  agentAvatar,
+}: {
+  agentName: string;
+  agentAvatar?: string;
+}) {
+  return (
+    <div className="flex gap-3 flex-row">
+      <div className="flex-shrink-0 w-8">
+        <Avatar className="h-8 w-8">
+          <AvatarImage src={agentAvatar} />
+          <AvatarFallback
+            className={cn('text-white text-xs', getAvatarColor(agentName))}
+          >
+            {getInitials(agentName)}
+          </AvatarFallback>
+        </Avatar>
+      </div>
+      <div className="flex flex-col items-start max-w-[75%]">
+        <div className="rounded-2xl px-4 py-3 text-sm bg-muted text-foreground rounded-bl-md">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            <span className="text-muted-foreground">{agentName} is thinking...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Agent response error
+ */
+function AgentResponseError({
+  error,
+  onRetry,
+}: {
+  error: Error;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="flex gap-3 flex-row">
+      <div className="flex-shrink-0 w-8" />
+      <div className="flex flex-col items-start max-w-[75%]">
+        <div className="rounded-2xl px-4 py-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-bl-md">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <div className="flex flex-col gap-2">
+              <span className="text-sm">Failed to get response: {error.message}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onRetry}
+                className="h-8 gap-1 self-start"
+              >
+                <RefreshCw className="h-3 w-3" />
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

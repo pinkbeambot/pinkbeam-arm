@@ -10,6 +10,11 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
+// Edge Function URL
+const EDGE_FUNCTION_URL = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/chat-agent-response`
+  : null;
+
 /**
  * GET /api/chats/[id]/messages
  * Get messages for a specific chat
@@ -88,7 +93,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 /**
  * POST /api/chats/[id]/messages
- * Send a message to the chat
+ * Send a message to the chat and trigger agent response
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
@@ -110,13 +115,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     const { content } = parsed.data;
 
-    // Verify the chat belongs to the current user
+    // Verify the chat belongs to the current user and get agent info
     const { data: chat, error: chatError } = await supabase
       .from('chats')
       .select(`
         id,
         agent_id,
-        agent:agents(id, name, avatar_url, role, status, description, model, llm_config)
+        agent:agents(id, name, avatar_url, role, status, description, model, llm_config, configuration)
       `)
       .eq('id', chatId)
       .eq('tenant_id', tenantId)
@@ -150,10 +155,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Trigger agent response (async - don't wait for it)
-    // In production, this would be an Edge Function or background job
-    triggerAgentResponse(supabase, chatId, chat.agent_id, tenantId, content.trim())
-      .catch((err: Error) => console.error('Error triggering agent response:', err));
+    // Trigger agent response via Edge Function (async - don't wait for it)
+    // The agent response will be delivered via Supabase Realtime
+    triggerAgentResponseEdgeFunction(
+      chatId,
+      chat.agent_id,
+      tenantId,
+      content.trim(),
+      request.headers.get('authorization') || ''
+    ).catch((err: Error) => console.error('Error triggering agent response:', err));
 
     return NextResponse.json({
       message: userMessage,
@@ -169,164 +179,111 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 /**
  * Trigger agent response via Edge Function
+ * This runs asynchronously and updates the chat via Supabase Realtime
  */
-async function triggerAgentResponse(
-  supabase: Awaited<ReturnType<typeof authenticateRequest>> extends infer R ? R extends { supabase: infer S } ? S : never : never,
+async function triggerAgentResponseEdgeFunction(
+  chatId: string,
+  agentId: string,
+  tenantId: string,
+  userMessage: string,
+  authHeader: string
+): Promise<void> {
+  // Check if edge function URL is configured
+  if (!EDGE_FUNCTION_URL) {
+    console.error('Edge Function URL not configured');
+    // Fall back to simple response generation
+    await generateSimpleAgentResponse(chatId, agentId, tenantId, userMessage);
+    return;
+  }
+
+  try {
+    const response = await fetch(EDGE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        agent_id: agentId,
+        tenant_id: tenantId,
+        user_message: userMessage,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(
+        `Edge Function error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`
+      );
+    }
+
+    const result = await response.json();
+    console.log('Agent response generated:', result);
+  } catch (error) {
+    console.error('Error calling Edge Function:', error);
+    // Fall back to simple response on error
+    await generateSimpleAgentResponse(chatId, agentId, tenantId, userMessage);
+  }
+}
+
+/**
+ * Fallback simple agent response generator
+ * Used when Edge Function is unavailable or fails
+ */
+async function generateSimpleAgentResponse(
   chatId: string,
   agentId: string,
   tenantId: string,
   userMessage: string
-) {
+): Promise<void> {
   try {
-    // For MVP, we'll generate a simple agent response
-    // In production, this would call an Edge Function that:
-    // 1. Fetches context (activities, tasks, decisions, escalations)
-    // 2. Builds system prompt
-    // 3. Calls LLM
-    // 4. Stores and broadcasts response
+    const { createServiceRoleClient } = await import('@/lib/supabase/service-role');
+    const supabase = createServiceRoleClient();
 
     // Get agent details
     const { data: agent } = await supabase
       .from('agents')
-      .select('*')
+      .select('name, description, role')
       .eq('id', agentId)
+      .eq('tenant_id', tenantId)
       .single();
 
     if (!agent) {
       throw new Error('Agent not found');
     }
 
-    // Get context for the agent
-    const context = await fetchAgentContext(supabase, agentId, tenantId);
+    // Generate a simple response
+    let response = `Hello! I'm ${agent.name}. `;
 
-    // Generate a simple response (in production, this would call an LLM)
-    const response = generateAgentResponse(agent, context, userMessage);
+    if (userMessage.toLowerCase().includes('hello') || userMessage.toLowerCase().includes('hi')) {
+      response += 'How can I help you today?';
+    } else if (userMessage.toLowerCase().includes('help')) {
+      response += 'I\'d be happy to help! What do you need assistance with?';
+    } else if (userMessage.toLowerCase().includes('task')) {
+      response += 'I can help you with tasks. Would you like me to create a new task or check on existing ones?';
+    } else if (userMessage.toLowerCase().includes('escalation')) {
+      response += 'I see you mentioned escalations. I can help you view or manage escalations. What would you like to do?';
+    } else {
+      response += `I received your message: "${userMessage}". I'm here to assist you with any questions or tasks you have!`;
+    }
 
     // Store the agent response
-    const { error: insertError } = await supabase
-      .from('chat_messages')
-      .insert({
-        chat_id: chatId,
-        role: 'agent',
-        content: response,
-        metadata: {
-          processing_time_ms: 500,
-          model_used: agent.model || 'claude-3-5-sonnet-20241022',
-        },
-      });
+    const { error: insertError } = await supabase.from('chat_messages').insert({
+      chat_id: chatId,
+      role: 'agent',
+      content: response,
+      metadata: {
+        processing_time_ms: 500,
+        model_used: 'fallback-simple',
+        note: 'Fallback response - Edge Function unavailable',
+      },
+    });
 
     if (insertError) {
-      console.error('Error storing agent response:', insertError);
+      console.error('Error storing fallback agent response:', insertError);
     }
   } catch (error) {
-    console.error('Error in triggerAgentResponse:', error);
+    console.error('Error in fallback response generation:', error);
   }
-}
-
-/**
- * Fetch context for agent response
- */
-async function fetchAgentContext(
-  supabase: Awaited<ReturnType<typeof authenticateRequest>> extends infer R ? R extends { supabase: infer S } ? S : never : never,
-  agentId: string,
-  tenantId: string
-) {
-  // Fetch context in parallel using Promise.all()
-  const [
-    { data: activities },
-    { data: tasks },
-    { data: decisions },
-    { data: escalations },
-  ] = await Promise.all([
-    // Fetch recent activities
-    supabase
-      .from('activities')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('agent_id', agentId)
-      .order('created_at', { ascending: false })
-      .limit(10),
-
-    // Fetch active tasks
-    supabase
-      .from('tasks')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('assignee_id', agentId)
-      .in('status', ['queued', 'in_progress', 'blocked', 'review'])
-      .order('created_at', { ascending: false })
-      .limit(10),
-
-    // Fetch recent decisions
-    supabase
-      .from('decisions')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('agent_id', agentId)
-      .order('created_at', { ascending: false })
-      .limit(5),
-
-    // Fetch open escalations
-    supabase
-      .from('escalations')
-      .select('*')
-      .eq('tenant_id', tenantId)
-      .eq('agent_id', agentId)
-      .eq('status', 'open')
-      .order('created_at', { ascending: false })
-      .limit(5),
-  ]);
-
-  return {
-    activities: activities || [],
-    tasks: tasks || [],
-    decisions: decisions || [],
-    escalations: escalations || [],
-  };
-}
-
-/**
- * Generate a simple agent response (placeholder for LLM)
- */
-function generateAgentResponse(
-  agent: Record<string, unknown>,
-  context: {
-    activities: Record<string, unknown>[];
-    tasks: Record<string, unknown>[];
-    decisions: Record<string, unknown>[];
-    escalations: Record<string, unknown>[];
-  },
-  _userMessage: string
-): string {
-  const agentName = agent.name as string;
-  const activities = context.activities || [];
-  const tasks = context.tasks || [];
-  const escalations = context.escalations || [];
-
-  // Build a contextual response based on available data
-  let response = `Hello! I'm ${agentName}. `;
-
-  // Reference recent activities if relevant
-  if (activities.length > 0) {
-    const recentActivity = activities[0];
-    const title = recentActivity.title as string;
-    response += `I see you've been working on "${title}". `;
-  }
-
-  // Reference active tasks
-  if (tasks.length > 0) {
-    const activeTasks = tasks.filter((t) => t.status === 'in_progress');
-    if (activeTasks.length > 0) {
-      response += `I'm currently working on ${activeTasks.length} task${activeTasks.length > 1 ? 's' : ''}. `;
-    }
-  }
-
-  // Reference escalations
-  if (escalations.length > 0) {
-    response += `I also have ${escalations.length} open escalation${escalations.length > 1 ? 's' : ''} that need attention. `;
-  }
-
-  response += `\n\nHow can I help you today?`;
-
-  return response;
 }
