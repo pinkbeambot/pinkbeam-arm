@@ -86,9 +86,14 @@ export const listTasksQuerySchema = z.object({
   status: z.enum(['queued', 'in_progress', 'blocked', 'review', 'completed', 'failed', 'cancelled']).optional(),
   assignee_id: z.string().uuid().optional(),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  due_after: z.string().datetime().optional(),
+  due_before: z.string().datetime().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-});
+}).refine(
+  data => !data.due_after || !data.due_before || new Date(data.due_before) > new Date(data.due_after),
+  { message: 'due_before must be after due_after', path: ['due_before'] }
+);
 
 // Enhanced task filtering schema for advanced queries
 export const enhancedListTasksQuerySchema = z.object({
@@ -187,11 +192,16 @@ export const listDecisionsQuerySchema = z.object({
   category: z.enum(['action', 'resource', 'escalation', 'strategy', 'system']).optional(),
   date_from: z.string().datetime().optional(),
   date_to: z.string().datetime().optional(),
+  due_after: z.string().datetime().optional(),
+  due_before: z.string().datetime().optional(),
   confidence_min: z.coerce.number().min(0).max(1).optional(),
   search: z.string().min(1).max(200).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
-});
+}).refine(
+  data => !data.due_after || !data.due_before || new Date(data.due_before) > new Date(data.due_after),
+  { message: 'due_before must be after due_after', path: ['due_before'] }
+);
 
 // ============================================================================
 // Escalation Validation
