@@ -4,14 +4,24 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
+import { ApiError } from '@/lib/errors';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
 const API_BASE = '/api/agents';
+const REALTIME_DEBOUNCE_MS = 100;
+
+type PendingChange<T> = {
+  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  payload: RealtimeChangePayload<T>;
+};
 
 /**
  * Hook to subscribe to real-time agent changes via API
  * Uses server-side API routes that properly set tenant context for RLS
  * Falls back to realtime updates via Supabase subscriptions
+ * 
+ * Realtime updates are batched in 100ms windows to prevent excessive re-renders
+ * when multiple changes arrive rapidly.
  */
 export function useAgentsRealtime(tenantId: string | null) {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -20,6 +30,10 @@ export function useAgentsRealtime(tenantId: string | null) {
   const { session, user } = useAuth();
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  
+  // Refs for debouncing realtime updates
+  const pendingChangesRef = useRef<PendingChange<Agent>[]>([]);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch agents via API route (properly handles auth and RLS)
   const fetchAgents = useCallback(async () => {
@@ -42,19 +56,60 @@ export function useAgentsRealtime(tenantId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch agents: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_FETCH_FAILED', errorData.error || `Failed to fetch agents: ${response.status}`);
       }
 
       const result = await response.json();
       setAgents(result.data || []);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agents';
-      setError(new Error(errorMessage));
+      setError(err instanceof ApiError ? err : new Error(errorMessage));
       console.error('Error fetching agents:', err);
     } finally {
       setLoading(false);
     }
   }, [tenantId, session?.access_token]);
+
+  // Flush pending changes after debounce period
+  const flushPendingChanges = useCallback(() => {
+    if (pendingChangesRef.current.length === 0) return;
+    
+    const changes = [...pendingChangesRef.current];
+    pendingChangesRef.current = [];
+    
+    setAgents((current: Agent[]) => {
+      let result: Agent[] = current;
+      
+      for (const change of changes) {
+        const payload = change.payload;
+        
+        if (payload.eventType === 'INSERT') {
+          const newAgent = payload.new;
+          if (newAgent) {
+            // Check if already exists (avoid duplicates from rapid updates)
+            const exists = result.some(agent => agent.id === newAgent.id);
+            if (!exists) {
+              result = [newAgent, ...result];
+            }
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedAgent = payload.new;
+          if (updatedAgent) {
+            result = result.map(agent => 
+              agent.id === updatedAgent.id ? updatedAgent : agent
+            );
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const deletedAgent = payload.old;
+          if (deletedAgent) {
+            result = result.filter(agent => agent.id !== deletedAgent.id);
+          }
+        }
+      }
+      
+      return result;
+    });
+  }, []);
 
   // Set up real-time subscription for live updates
   useEffect(() => {
@@ -67,7 +122,7 @@ export function useAgentsRealtime(tenantId: string | null) {
     // Fetch initial data via API
     fetchAgents();
 
-    // Subscribe to realtime changes
+    // Subscribe to realtime changes with debouncing
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
@@ -79,18 +134,20 @@ export function useAgentsRealtime(tenantId: string | null) {
           filter: `tenant_id=eq.${tenantId}`,
         },
         (payload: RealtimeChangePayload<Agent>) => {
-          setAgents(current => {
-            if (payload.eventType === 'INSERT') {
-              return payload.new ? [payload.new, ...current] : current;
-            } else if (payload.eventType === 'UPDATE') {
-              return current.map(agent => 
-                agent.id === payload.new?.id ? payload.new : agent
-              );
-            } else if (payload.eventType === 'DELETE') {
-              return current.filter(agent => agent.id !== payload.old?.id);
-            }
-            return current;
+          // Queue the change
+          pendingChangesRef.current.push({
+            type: payload.eventType,
+            payload,
           });
+          
+          // Clear existing timer and set new one
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+          }
+          
+          debounceTimerRef.current = setTimeout(() => {
+            flushPendingChanges();
+          }, REALTIME_DEBOUNCE_MS);
         }
       )
       .subscribe();
@@ -98,12 +155,18 @@ export function useAgentsRealtime(tenantId: string | null) {
     channelRef.current = channel;
 
     return () => {
+      // Flush any pending changes before cleanup
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      flushPendingChanges();
+      
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [tenantId, user?.id, supabase, fetchAgents]);
+  }, [tenantId, user?.id, supabase, fetchAgents, flushPendingChanges]);
 
   return { agents, loading, error, refetch: fetchAgents };
 }
@@ -140,14 +203,14 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to fetch agent: ${response.status}`);
+          throw new ApiError(response.status, 'AGENT_FETCH_FAILED', errorData.error || `Failed to fetch agent: ${response.status}`);
         }
 
         const result = await response.json();
         setAgent(result.data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agent';
-        setError(new Error(errorMessage));
+        setError(err instanceof ApiError ? err : new Error(errorMessage));
       } finally {
         setLoading(false);
       }
@@ -217,13 +280,13 @@ export function useCreateAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to create agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_CREATE_FAILED', errorData.error || `Failed to create agent: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to create agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to create agent');
       setError(error);
       throw error;
     } finally {
@@ -262,13 +325,13 @@ export function useUpdateAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to update agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_UPDATE_FAILED', errorData.error || `Failed to update agent: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to update agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to update agent');
       setError(error);
       throw error;
     } finally {
@@ -306,10 +369,10 @@ export function useDeleteAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to delete agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_DELETE_FAILED', errorData.error || `Failed to delete agent: ${response.status}`);
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to delete agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to delete agent');
       setError(error);
       throw error;
     } finally {
