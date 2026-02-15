@@ -179,7 +179,7 @@ export function useRealtimeMetrics(
       const { data: agentsData, error: agentsError } = await supabase
         .from('agents')
         .select('*')
-        .order('last_active_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (agentsError) throw new Error(`Failed to fetch agents: ${agentsError.message}`);
 
@@ -230,7 +230,7 @@ export function useRealtimeMetrics(
           currentLoad: agent.current_task_id ? Math.random() * 40 + 40 : Math.random() * 20, // Simulated load
           avgResponseTime: Math.random() * 500 + 100, // Simulated
           errorRate: successRate > 0 ? 100 - successRate : 0,
-          lastActivityAt: agent.last_active_at || agent.updated_at,
+          lastActivityAt: agent.updated_at,
           cpuUsage: Math.random() * 30 + 10,
           memoryUsage: Math.random() * 40 + 20,
         };
