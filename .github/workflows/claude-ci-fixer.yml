@@ -1,0 +1,65 @@
+name: Claude CI Auto-Fix
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    # Runs on all branches (PRs + main)
+
+jobs:
+  auto-fix:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write
+      actions: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Get CI failure details
+        id: failure
+        run: |
+          echo "branch=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          echo "commit=${{ github.event.workflow_run.head_sha }}" >> "$GITHUB_OUTPUT"
+          echo "run_url=${{ github.event.workflow_run.html_url }}" >> "$GITHUB_OUTPUT"
+
+      - name: Run Claude to fix CI
+        id: claude-fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          prompt: |
+            CI failed on branch ${{ steps.failure.outputs.branch }}.
+
+            Workflow run: ${{ steps.failure.outputs.run_url }}
+            Failed commit: ${{ steps.failure.outputs.commit }}
+
+            Please:
+            1. Check the CI logs to understand what failed
+            2. Fix the issue (lint errors, test failures, type errors, etc.)
+            3. Run the relevant commands locally to verify the fix
+            4. Commit the fix with a clear message
+            5. DO NOT push - just commit locally
+
+            Focus on fixing the root cause, not just symptoms.
+
+          # Allow Claude to run tests and linting
+          claude_args: '--allowed-tools "Bash(npm run lint),Bash(npm run test),Bash(npm run build),Bash(npm run type-check),Bash(git commit)"'
+
+      - name: Push fix if Claude made changes
+        run: |
+          if git diff --quiet HEAD; then
+            echo "No changes made by Claude"
+          else
+            git push origin ${{ steps.failure.outputs.branch }}
+            echo "✅ Claude pushed a fix to ${{ steps.failure.outputs.branch }}"
+          fi
