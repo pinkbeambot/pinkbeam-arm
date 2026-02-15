@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Bot, Sparkles, User, Wrench, Shield, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { cn, getInitials, getAvatarColor } from '@/lib/utils';
 import { SUPPORTED_MODELS } from '@/lib/constants/models';
@@ -35,6 +38,15 @@ interface AgentTemplate {
   defaultCapabilities: Capability[];
   suggestedModel: string;
 }
+
+const basicInfoSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+  role: z.enum(['ceo', 'manager', 'worker', 'specialist', 'system'] as const),
+  description: z.string().min(1, 'Description is required'),
+  model: z.string().min(1, 'Model is required'),
+});
+
+type BasicInfoFormData = z.infer<typeof basicInfoSchema>;
 
 const templates: AgentTemplate[] = [
   {
@@ -149,8 +161,15 @@ export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: Crea
     switch (step) {
       case 'template':
         return selectedTemplate !== null;
-      case 'basic':
-        return formData.name.trim().length > 0 && formData.description.trim().length > 0;
+      case 'basic': {
+        const result = basicInfoSchema.safeParse({
+          name: formData.name,
+          role: formData.role,
+          description: formData.description,
+          model: formData.model,
+        });
+        return result.success;
+      }
       case 'capabilities':
         return (formData.capabilities?.length || 0) > 0;
       case 'review':
@@ -273,6 +292,20 @@ function BasicInfoStep({
   formData: CreateAgentInput; 
   onChange: (data: CreateAgentInput) => void;
 }) {
+  const {
+    register,
+    formState: { errors },
+  } = useForm<BasicInfoFormData>({
+    resolver: zodResolver(basicInfoSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: formData.name,
+      role: formData.role,
+      description: formData.description,
+      model: formData.model,
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -280,9 +313,13 @@ function BasicInfoStep({
         <Input
           id="name"
           placeholder="e.g., Marketing Writer, Lead Qualifier"
-          value={formData.name}
-          onChange={(e) => onChange({ ...formData, name: e.target.value })}
+          {...register('name', {
+            onChange: (e) => onChange({ ...formData, name: e.target.value }),
+          })}
         />
+        {errors.name && (
+          <p className="text-sm text-destructive">{errors.name.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -295,12 +332,16 @@ function BasicInfoStep({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="ceo">CEO (executive oversight)</SelectItem>
             <SelectItem value="manager">Manager (can spawn agents)</SelectItem>
             <SelectItem value="worker">Worker (handles tasks)</SelectItem>
             <SelectItem value="specialist">Specialist (domain expert)</SelectItem>
             <SelectItem value="system">System (infrastructure)</SelectItem>
           </SelectContent>
         </Select>
+        {errors.role && (
+          <p className="text-sm text-destructive">{errors.role.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -308,10 +349,14 @@ function BasicInfoStep({
         <Textarea
           id="description"
           placeholder="Describe what this agent does and its responsibilities..."
-          value={formData.description}
-          onChange={(e) => onChange({ ...formData, description: e.target.value })}
           rows={4}
+          {...register('description', {
+            onChange: (e) => onChange({ ...formData, description: e.target.value }),
+          })}
         />
+        {errors.description && (
+          <p className="text-sm text-destructive">{errors.description.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -331,6 +376,9 @@ function BasicInfoStep({
             ))}
           </SelectContent>
         </Select>
+        {errors.model && (
+          <p className="text-sm text-destructive">{errors.model.message}</p>
+        )}
       </div>
     </div>
   );
