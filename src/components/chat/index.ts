@@ -5,3 +5,6 @@
 
 export { ChatPanel } from './ChatPanel';
 export { ChatInput } from './ChatInput';
+export { ChatHeader } from './ChatHeader';
+export { ChatSearch } from './ChatSearch';
+export { ChatMessageBubble } from './ChatMessageBubble';
