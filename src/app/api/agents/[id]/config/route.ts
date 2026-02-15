@@ -62,9 +62,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           },
         });
       }
-      console.error('Error fetching config:', configError);
+      console.error('Failed to fetch configuration:', configError);
       return NextResponse.json(
-        { error: 'Failed to fetch configuration', details: configError.message },
+        { error: 'Failed to fetch configuration' },
         { status: 500 }
       );
     }

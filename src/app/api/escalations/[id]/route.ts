@@ -68,7 +68,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       if (fetchError.code === 'PGRST116') {
         return NextResponse.json({ error: 'Escalation not found' }, { status: 404 });
       }
-      return NextResponse.json({ error: 'Failed to fetch escalation', details: fetchError.message }, { status: 500 });
+      console.error('Failed to fetch escalation:', fetchError);
+      return NextResponse.json({ error: 'Failed to fetch escalation' }, { status: 500 });
     }
 
     return NextResponse.json({ data: escalation });

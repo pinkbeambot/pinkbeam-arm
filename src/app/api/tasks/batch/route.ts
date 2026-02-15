@@ -52,8 +52,9 @@ export async function POST(request: NextRequest) {
 
     // Handle assignee validation
     if (assigneeResult.error) {
+      console.error('Failed to validate assignees:', assigneeResult.error);
       return NextResponse.json(
-        { error: 'Failed to validate assignees', details: assigneeResult.error.message },
+        { error: 'Failed to validate assignees' },
         { status: 500 }
       );
     }
@@ -72,8 +73,9 @@ export async function POST(request: NextRequest) {
 
     // Handle parent task validation
     if (parentResult.error) {
+      console.error('Failed to validate parent tasks:', parentResult.error);
       return NextResponse.json(
-        { error: 'Failed to validate parent tasks', details: parentResult.error.message },
+        { error: 'Failed to validate parent tasks' },
         { status: 500 }
       );
     }
@@ -168,8 +170,9 @@ export async function PATCH(request: NextRequest) {
       .eq('tenant_id', tenantId);
 
     if (fetchError) {
+      console.error('Failed to verify tasks:', fetchError);
       return NextResponse.json(
-        { error: 'Failed to verify tasks', details: fetchError.message },
+        { error: 'Failed to verify tasks' },
         { status: 500 }
       );
     }
@@ -198,8 +201,9 @@ export async function PATCH(request: NextRequest) {
         .eq('tenant_id', tenantId);
 
       if (assigneeError) {
+        console.error('Failed to validate assignees:', assigneeError);
         return NextResponse.json(
-          { error: 'Failed to validate assignees', details: assigneeError.message },
+          { error: 'Failed to validate assignees' },
           { status: 500 }
         );
       }
@@ -314,8 +318,9 @@ export async function DELETE(request: NextRequest) {
       .eq('tenant_id', tenantId);
 
     if (fetchError) {
+      console.error('Failed to verify tasks:', fetchError);
       return NextResponse.json(
-        { error: 'Failed to verify tasks', details: fetchError.message },
+        { error: 'Failed to verify tasks' },
         { status: 500 }
       );
     }

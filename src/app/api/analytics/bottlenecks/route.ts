@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
       .order('hour', { ascending: false });
 
     if (metricsError) {
-      console.error('Error fetching hourly metrics for bottlenecks:', metricsError);
+      console.error('Failed to fetch bottlenecks:', metricsError);
       return NextResponse.json(
-        { error: 'Failed to fetch bottlenecks', details: metricsError.message },
+        { error: 'Failed to fetch bottlenecks' },
         { status: 500 }
       );
     }

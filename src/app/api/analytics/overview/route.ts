@@ -70,9 +70,9 @@ export async function GET(request: NextRequest) {
       .lte('date', endDate.toISOString().split('T')[0]);
 
     if (currentError) {
-      console.error('Error fetching current metrics:', currentError);
+      console.error('Failed to fetch metrics:', currentError);
       return NextResponse.json(
-        { error: 'Failed to fetch metrics', details: currentError.message },
+        { error: 'Failed to fetch metrics' },
         { status: 500 }
       );
     }

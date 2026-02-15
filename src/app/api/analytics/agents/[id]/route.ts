@@ -81,9 +81,9 @@ export async function GET(
       .order('date', { ascending: true });
 
     if (metricsError) {
-      console.error('Error fetching agent metrics:', metricsError);
+      console.error('Failed to fetch agent analytics:', metricsError);
       return NextResponse.json(
-        { error: 'Failed to fetch agent analytics', details: metricsError.message },
+        { error: 'Failed to fetch agent analytics' },
         { status: 500 }
       );
     }

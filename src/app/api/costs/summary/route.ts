@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
     if (summaryError) {
       console.error('Error fetching cost summary:', summaryError);
       return NextResponse.json(
-        { error: 'Failed to fetch cost summary', details: summaryError.message },
+        { error: 'Failed to fetch cost summary' },
         { status: 500 }
       );
     }

@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
     );
 
     if (roiError) {
-      console.error('Error fetching ROI metrics:', roiError);
+      console.error('Failed to fetch ROI metrics:', roiError);
       return NextResponse.json(
-        { error: 'Failed to fetch ROI metrics', details: roiError.message },
+        { error: 'Failed to fetch ROI metrics' },
         { status: 500 }
       );
     }

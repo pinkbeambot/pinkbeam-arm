@@ -372,9 +372,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .limit(1);
 
     if (childrenError) {
-      console.error('Error checking agent children:', childrenError);
+      console.error('Failed to check agent dependencies:', childrenError);
       return NextResponse.json(
-        { error: 'Failed to check agent dependencies', details: childrenError.message },
+        { error: 'Failed to check agent dependencies' },
         { status: 500 }
       );
     }
@@ -399,9 +399,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .limit(1);
 
     if (tasksError) {
-      console.error('Error checking agent tasks:', tasksError);
+      console.error('Failed to check agent tasks:', tasksError);
       return NextResponse.json(
-        { error: 'Failed to check agent tasks', details: tasksError.message },
+        { error: 'Failed to check agent tasks' },
         { status: 500 }
       );
     }

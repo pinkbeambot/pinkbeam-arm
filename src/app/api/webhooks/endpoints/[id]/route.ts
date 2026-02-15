@@ -97,7 +97,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     .eq('tenant_id', tenantId);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Failed to delete endpoint:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
   return NextResponse.json({ success: true });

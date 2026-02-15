@@ -81,8 +81,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       if (fetchError.code === 'PGRST116') {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
+      console.error('Failed to fetch template:', fetchError);
       return NextResponse.json(
-        { error: 'Failed to fetch template', details: fetchError.message },
+        { error: 'Failed to fetch template' },
         { status: 500 }
       );
     }

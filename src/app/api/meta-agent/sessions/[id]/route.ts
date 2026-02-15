@@ -77,9 +77,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { data: commands, error: historyError } = await historyQuery;
 
     if (historyError) {
-      console.error('Error fetching command history:', historyError);
+      console.error('Failed to fetch command history:', historyError);
       return NextResponse.json(
-        { error: 'Failed to fetch command history', details: historyError.message },
+        { error: 'Failed to fetch command history' },
         { status: 500 }
       );
     }

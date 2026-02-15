@@ -105,9 +105,9 @@ export async function GET(request: NextRequest) {
       .lte('date', endDate.toISOString().split('T')[0]);
 
     if (dailyError) {
-      console.error('Error fetching daily metrics:', dailyError);
+      console.error('Failed to fetch leaderboard:', dailyError);
       return NextResponse.json(
-        { error: 'Failed to fetch leaderboard', details: dailyError.message },
+        { error: 'Failed to fetch leaderboard' },
         { status: 500 }
       );
     }

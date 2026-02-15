@@ -191,9 +191,9 @@ export async function DELETE(
       .eq('chat_id', chatId);
 
     if (deleteError) {
-      console.error('Error deleting message:', deleteError);
+      console.error('Failed to delete message:', deleteError);
       return NextResponse.json(
-        { error: 'Failed to delete message', details: deleteError.message },
+        { error: 'Failed to delete message' },
         { status: 500 }
       );
     }

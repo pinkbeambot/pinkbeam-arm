@@ -54,9 +54,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .eq('tenant_id', tenantId);
 
     if (depsError) {
-      console.error('Error fetching dependencies:', depsError);
+      console.error('Failed to fetch dependencies:', depsError);
       return NextResponse.json(
-        { error: 'Failed to fetch dependencies', details: depsError.message },
+        { error: 'Failed to fetch dependencies' },
         { status: 500 }
       );
     }
@@ -77,9 +77,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .eq('tenant_id', tenantId);
 
     if (dependentsError) {
-      console.error('Error fetching dependents:', dependentsError);
+      console.error('Failed to fetch dependents:', dependentsError);
       return NextResponse.json(
-        { error: 'Failed to fetch dependents', details: dependentsError.message },
+        { error: 'Failed to fetch dependents' },
         { status: 500 }
       );
     }

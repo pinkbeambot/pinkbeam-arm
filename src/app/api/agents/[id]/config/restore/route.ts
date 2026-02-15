@@ -99,9 +99,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .single();
 
     if (updateError) {
-      console.error('Error restoring config:', updateError);
+      console.error('Failed to restore configuration:', updateError);
       return NextResponse.json(
-        { error: 'Failed to restore configuration', details: updateError.message },
+        { error: 'Failed to restore configuration' },
         { status: 500 }
       );
     }

@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       }
       console.error('Error fetching root task:', rootError);
       return NextResponse.json(
-        { error: 'Failed to fetch root task', details: rootError.message },
+        { error: 'Failed to fetch root task' },
         { status: 500 }
       );
     }
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     if (tasksError) {
       console.error('Error fetching tasks:', tasksError);
       return NextResponse.json(
-        { error: 'Failed to fetch task tree', details: tasksError.message },
+        { error: 'Failed to fetch task tree' },
         { status: 500 }
       );
     }

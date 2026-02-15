@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     if (dailyError) {
       console.error('Error fetching daily costs:', dailyError);
       return NextResponse.json(
-        { error: 'Failed to fetch daily costs', details: dailyError.message },
+        { error: 'Failed to fetch daily costs' },
         { status: 500 }
       );
     }
