@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, ArrowRight } from "lucide-react";
+import { Menu } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { ThemeSwitcher } from "@/components/theme-switcher";
@@ -76,24 +76,15 @@ export function MarketingNav() {
           {/* Auth Actions */}
           <div className="flex items-center gap-2">
             <ThemeSwitcher />
-            {/* Desktop: Log In link + Get Started button */}
-            <Link
-              href="/auth"
-              className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
-            >
-              Log In
+            {/* Desktop: Enter Portal button */}
+            <Link href="/auth" className="hidden sm:block">
+              <Button 
+                size="sm"
+                className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30"
+              >
+                Enter Portal
+              </Button>
             </Link>
-            <Button 
-              asChild 
-              size="sm" 
-              variant="beam"
-              className="hidden sm:flex"
-            >
-              <Link href="/auth">
-                Get Started
-                <ArrowRight className="w-4 h-4 ml-1.5" />
-              </Link>
-            </Button>
 
             {/* Mobile Menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -129,23 +120,16 @@ export function MarketingNav() {
                     ))}
 
                     <hr className="my-4 border-border" />
-
-                    <Link
-                      href="/auth"
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="px-4 py-3 text-base text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      Log In
-                    </Link>
                   </nav>
 
-                  <div className="pt-4 border-t border-border space-y-3">
-                    <Button asChild className="w-full" variant="beam">
-                      <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>
-                        Get Started
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Link>
-                    </Button>
+                  <div className="pt-4 border-t border-border">
+                    <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="block w-full">
+                      <Button 
+                        className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30"
+                      >
+                        Enter Portal
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </SheetContent>
