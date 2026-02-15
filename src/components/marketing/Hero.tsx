@@ -70,15 +70,9 @@ export function Hero() {
             </p>
           </FadeInOnMount>
 
-          {/* VALIS Quote */}
-          <FadeInOnMount delay={0.25}>
-            <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5">
-              <p className="text-lg text-primary italic mb-3">
-                "Your AI team handles the routine, so your human team can focus on what they do best—
-                creative problem-solving, relationship building, and strategic thinking."
-              </p>
-              <p className="text-sm text-muted-foreground">
-                — VALIS
+          {/* VALIS Quote - REMOVED to streamline hero */}
+          
+          {/* CTA Buttons */}                — VALIS
               </p>
             </div>
           </FadeInOnMount>
