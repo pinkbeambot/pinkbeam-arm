@@ -1,4 +1,7 @@
 import type { NextConfig } from "next";
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true'
+});
 
 // SECURITY: Block production deployments with DEV_AUTH_BYPASS enabled
 // This check runs during Vercel/production builds to prevent auth bypass from leaking
@@ -49,4 +52,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+module.exports = withBundleAnalyzer(nextConfig);
