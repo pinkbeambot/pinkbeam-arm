@@ -78,7 +78,7 @@ export function Hero() {
           <FadeInOnMount delay={0.3}>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
               <Button size="lg" variant="beam" className="w-full sm:w-auto shadow-lg" asChild>
-                <Link href="/signup">
+                <Link href="/auth">
                   Get Started Free
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Link>

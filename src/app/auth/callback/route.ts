@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error exchanging code for session:', error.message);
-      // Redirect to login with error
-      return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
+      // Redirect to auth with error
+      return NextResponse.redirect(`${origin}/auth?error=auth_callback_failed`);
     }
 
     // Create user record and tenant for new users
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
       if (initResult.error) {
         console.error('Error initializing user and tenant:', initResult.error);
         // Redirect to error page - user needs tenant to use the app
-        const errorUrl = new URL('/login', origin);
+        const errorUrl = new URL('/auth', origin);
         errorUrl.searchParams.set('error', 'tenant_creation_failed');
         errorUrl.searchParams.set('message', encodeURIComponent(initResult.error));
         return NextResponse.redirect(errorUrl);
@@ -113,8 +113,8 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
-  // No code provided, redirect to login
-  return NextResponse.redirect(`${origin}/login?error=no_code`);
+  // No code provided, redirect to auth
+  return NextResponse.redirect(`${origin}/auth?error=no_code`);
 }
 
 interface InitResult {

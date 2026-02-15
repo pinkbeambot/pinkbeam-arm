@@ -78,7 +78,7 @@ export function MarketingNav() {
             <ThemeSwitcher />
             {/* Desktop: Log In link + Get Started button */}
             <Link
-              href="/login"
+              href="/auth"
               className="hidden sm:block text-sm text-muted-foreground hover:text-foreground transition-colors px-3 py-2"
             >
               Log In
@@ -89,7 +89,7 @@ export function MarketingNav() {
               variant="beam"
               className="hidden sm:flex"
             >
-              <Link href="/signup">
+              <Link href="/auth">
                 Get Started
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </Link>
@@ -131,7 +131,7 @@ export function MarketingNav() {
                     <hr className="my-4 border-border" />
 
                     <Link
-                      href="/login"
+                      href="/auth"
                       onClick={() => setMobileMenuOpen(false)}
                       className="px-4 py-3 text-base text-muted-foreground hover:text-foreground transition-colors"
                     >
@@ -141,7 +141,7 @@ export function MarketingNav() {
 
                   <div className="pt-4 border-t border-border space-y-3">
                     <Button asChild className="w-full" variant="beam">
-                      <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                      <Link href="/auth" onClick={() => setMobileMenuOpen(false)}>
                         Get Started
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </Link>
