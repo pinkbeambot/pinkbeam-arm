@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { 
   Brain, 
   Search, 
@@ -20,7 +20,10 @@ import {
   MoreHorizontal,
   Eye,
   Pencil,
-  History
+  History,
+  Save,
+  Trash2,
+  Bookmark
 } from 'lucide-react';
 import { cn, formatRelativeTime, formatDateTime, getInitials, getAvatarColor } from '@/lib/utils';
 import type { Decision, Agent, DecisionStatus } from '@/types';
@@ -52,9 +55,35 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 export type ConfidenceLevel = 'all' | 'high' | 'medium' | 'low';
 export type DecisionType = 'all' | 'proposed' | 'approved' | 'rejected' | 'overridden' | 'executed';
+
+export interface FilterPreset {
+  name: string;
+  filters: {
+    searchQuery: string;
+    agentFilter: string | 'all';
+    confidenceFilter: ConfidenceLevel;
+    typeFilter: DecisionType;
+    dateRange: 'all' | 'today' | 'week' | 'month';
+    sortField: 'created_at' | 'confidence' | 'title';
+    sortOrder: 'asc' | 'desc';
+  };
+  createdAt: string;
+}
+
+const PRESETS_STORAGE_KEY = 'decision-filter-presets';
 
 interface DecisionFiltersProps {
   agents: Agent[];
@@ -106,6 +135,46 @@ const SORT_OPTIONS: { value: 'created_at' | 'confidence' | 'title'; label: strin
   { value: 'title', label: 'Title' },
 ];
 
+// LocalStorage helper functions for presets
+export function savePreset(name: string, filters: FilterPreset['filters']): void {
+  if (typeof window === 'undefined') return;
+  
+  const presets = loadPresets();
+  const existingIndex = presets.findIndex(p => p.name === name);
+  
+  const newPreset: FilterPreset = {
+    name,
+    filters,
+    createdAt: new Date().toISOString(),
+  };
+  
+  if (existingIndex >= 0) {
+    presets[existingIndex] = newPreset;
+  } else {
+    presets.push(newPreset);
+  }
+  
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+export function loadPresets(): FilterPreset[] {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const stored = localStorage.getItem(PRESETS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function deletePreset(name: string): void {
+  if (typeof window === 'undefined') return;
+  
+  const presets = loadPresets().filter(p => p.name !== name);
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
 export function DecisionFilters({
   agents,
   searchQuery,
@@ -126,6 +195,54 @@ export function DecisionFilters({
   filteredCount,
   onExport,
 }: DecisionFiltersProps) {
+  // Preset state
+  const [presets, setPresets] = useState<FilterPreset[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  // Load presets on mount
+  useEffect(() => {
+    setPresets(loadPresets());
+  }, []);
+
+  // Save current filters as preset
+  const handleSavePreset = useCallback(() => {
+    if (!presetName.trim()) return;
+    
+    const filters: FilterPreset['filters'] = {
+      searchQuery,
+      agentFilter,
+      confidenceFilter,
+      typeFilter,
+      dateRange,
+      sortField,
+      sortOrder,
+    };
+    
+    savePreset(presetName.trim(), filters);
+    setPresets(loadPresets());
+    setSaveDialogOpen(false);
+    setPresetName('');
+  }, [presetName, searchQuery, agentFilter, confidenceFilter, typeFilter, dateRange, sortField, sortOrder]);
+
+  // Load a preset
+  const handleLoadPreset = useCallback((preset: FilterPreset) => {
+    onSearchChange(preset.filters.searchQuery);
+    onAgentFilterChange(preset.filters.agentFilter);
+    onConfidenceFilterChange(preset.filters.confidenceFilter);
+    onTypeFilterChange(preset.filters.typeFilter);
+    onDateRangeChange(preset.filters.dateRange);
+    onSortFieldChange(preset.filters.sortField);
+    onSortOrderChange(preset.filters.sortOrder);
+  }, [onSearchChange, onAgentFilterChange, onConfidenceFilterChange, onTypeFilterChange, onDateRangeChange, onSortFieldChange, onSortOrderChange]);
+
+  // Delete a preset
+  const handleDeletePreset = useCallback((name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deletePreset(name);
+    setPresets(loadPresets());
+  }, []);
+
   const activeFiltersCount = [
     agentFilter !== 'all',
     confidenceFilter !== 'all',
@@ -363,6 +480,81 @@ export function DecisionFilters({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Save Preset Button */}
+        <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Save className="h-4 w-4" />
+              <span>Save Preset</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Save Filter Preset</DialogTitle>
+              <DialogDescription>
+                Save your current filter configuration for quick access later.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="preset-name">Preset Name</Label>
+                <Input
+                  id="preset-name"
+                  placeholder="e.g., High Priority Review"
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSavePreset();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
+                Save Preset
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Load Preset Dropdown */}
+        {presets.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Bookmark className="h-4 w-4" />
+                <span>Load Preset</span>
+                <ChevronDown className="h-3 w-3 ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Saved Presets</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {presets.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.name}
+                  onClick={() => handleLoadPreset(preset)}
+                  className="flex items-center justify-between group"
+                >
+                  <span className="truncate flex-1">{preset.name}</span>
+                  <button
+                    onClick={(e) => handleDeletePreset(preset.name, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
+                    title="Delete preset"
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </button>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Clear Filters */}
         {hasActiveFilters && (
