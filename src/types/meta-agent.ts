@@ -166,6 +166,7 @@ export interface MetaAgentResponseMetadata {
   actions_taken?: string[];
   suggested_followups?: string[];
   processing_stage?: string;
+  used_llm?: boolean;
 }
 
 // ============================================================================

@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
     const canCreate = await canCreateAgent(supabase, tenantId);
     if (!canCreate) {
       const billing = await getTenantBilling(supabase, tenantId);
-      const tier = billing?.current_tier || 'starter';
+      const tier = billing?.currentTier || 'starter';
       const tierConfig = await getSubscriptionTier(supabase, tier);
       const agentLimit = tierConfig?.agentLimit ?? 3;
 

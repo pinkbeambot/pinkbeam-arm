@@ -70,34 +70,49 @@ export default function BillingSettingsPage() {
   const canceled = searchParams.get('canceled');
 
   const {
-    billing: billingData,
-    isLoading,
+    billing,
+    usage,
+    plans,
+    invoices,
+    loading: isLoading,
     error,
     refetch,
     createCheckoutSession,
     createPortalSession,
-    isCreatingCheckout,
-    isCreatingPortal,
   } = useBilling();
 
-  const { canCreate, currentCount, limit, percentUsed } = useAgentLimit();
+  const [isCreatingCheckout, setIsCreatingCheckout] = React.useState(false);
+  const [isCreatingPortal, setIsCreatingPortal] = React.useState(false);
+
+  const { agentCount: currentCount, agentLimit: limit, isAtLimit, percentUsed } = useAgentLimit();
+  const canCreate = !isAtLimit;
   const { isTrialing, daysRemaining } = useTrial();
 
   const [selectedTier, setSelectedTier] = React.useState<SubscriptionTier | null>(null);
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
     setSelectedTier(tier);
-    const url = await createCheckoutSession(tier);
-    if (url) {
-      window.location.href = url;
+    setIsCreatingCheckout(true);
+    try {
+      const url = await createCheckoutSession(tier);
+      if (url) {
+        window.location.href = url;
+      }
+    } finally {
+      setIsCreatingCheckout(false);
+      setSelectedTier(null);
     }
-    setSelectedTier(null);
   };
 
   const handleManageSubscription = async () => {
-    const url = await createPortalSession();
-    if (url) {
-      window.location.href = url;
+    setIsCreatingPortal(true);
+    try {
+      const url = await createPortalSession();
+      if (url) {
+        window.location.href = url;
+      }
+    } finally {
+      setIsCreatingPortal(false);
     }
   };
 
@@ -115,10 +130,6 @@ export default function BillingSettingsPage() {
     );
   }
 
-  const billing = billingData?.billing;
-  const usage = billingData?.usage;
-  const plans = billingData?.plans || [];
-  const invoices = billingData?.invoices || [];
   const currentTier = billing?.currentTier || 'starter';
   const statusInfo = statusLabels[billing?.subscriptionStatus || 'trialing'] || statusLabels.trialing;
 
@@ -295,16 +306,10 @@ export default function BillingSettingsPage() {
                   {plans.map((plan) => (
                     <PlanCard
                       key={plan.id}
-                      name={plan.name}
-                      description={plan.description}
-                      priceMonthly={plan.priceMonthly}
-                      agentLimit={plan.agentLimit}
-                      features={plan.features}
-                      isCurrent={plan.id === currentTier}
-                      isPopular={plan.id === 'pro'}
-                      onSelect={() => handleUpgrade(plan.id as SubscriptionTier)}
-                      isLoading={isCreatingCheckout && selectedTier === plan.id}
-                      disabled={isCreatingCheckout}
+                      plan={plan}
+                      currentTier={currentTier as SubscriptionTier}
+                      onSelect={handleUpgrade}
+                      loading={isCreatingCheckout && selectedTier === plan.id}
                     />
                   ))}
                 </div>

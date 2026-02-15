@@ -32,6 +32,9 @@ export { useEscalations } from './useEscalations';
 // Chat hooks
 export { useChat } from './useChat';
 
+// VALIS hooks
+export { useValis, type ValisMessage } from './useValis';
+
 // Notification hooks
 export { useNotifications } from './useNotifications';
 

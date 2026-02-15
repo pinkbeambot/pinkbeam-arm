@@ -124,9 +124,15 @@ const navGroups: NavGroup[] = [
   {
     label: 'Communication',
     items: [
-      { 
-        label: 'Chat', 
-        href: '/portal/chat', 
+      {
+        label: 'VALIS',
+        href: '/portal/valis',
+        icon: Sparkles,
+        description: 'AI command interface'
+      },
+      {
+        label: 'Chat',
+        href: '/portal/chat',
         icon: MessageSquare,
         description: 'Message your agents'
       },

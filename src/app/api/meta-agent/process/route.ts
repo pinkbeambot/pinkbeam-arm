@@ -6,8 +6,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { processCommand, extractIntent } from '@/lib/meta-agent/intent-processor';
-import type { ProcessMessageRequest, MetaAgentSessionContext } from '@/types/meta-agent';
+import {
+  extractIntent,
+  processCommandWithLLM,
+} from '@/lib/meta-agent/intent-processor';
+import type { ConversationMessage } from '@/lib/meta-agent/intent-processor';
+import type { MetaAgentSessionContext } from '@/types/meta-agent';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 
 const processMessageSchema = z.object({
@@ -67,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract intent first for logging
+    // Extract intent via regex for logging (fast, synchronous)
     const { intent, confidence, entities } = extractIntent(validatedData.message);
 
     // Create command record
@@ -101,8 +105,26 @@ export async function POST(request: NextRequest) {
     // Build session context
     const sessionContext: MetaAgentSessionContext = session.context || {};
 
-    // Process the command
-    const context = {
+    // Fetch conversation history from prior commands in this session
+    const { data: priorCommands } = await supabase
+      .from('meta_agent_commands')
+      .select('raw_message, response_message, status')
+      .eq('session_id', sessionId)
+      .eq('tenant_id', tenantId)
+      .neq('id', command.id)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: true })
+      .limit(20);
+
+    const conversationHistory: ConversationMessage[] = (priorCommands || []).flatMap(
+      (cmd: { raw_message: string; response_message: string }) => [
+        { role: 'user' as const, content: cmd.raw_message },
+        { role: 'assistant' as const, content: cmd.response_message },
+      ]
+    );
+
+    // Process through LLM (falls back to regex if LLM unavailable)
+    const handlerContext = {
       tenant_id: tenantId,
       user_id: userId,
       session_id: sessionId!,
@@ -110,7 +132,12 @@ export async function POST(request: NextRequest) {
       supabase,
     };
 
-    const result = await processCommand(validatedData.message, sessionContext, context);
+    const result = await processCommandWithLLM({
+      message: validatedData.message,
+      conversationHistory,
+      sessionContext,
+      handlerContext,
+    });
 
     // Update command with results
     const processingTime = Date.now() - startTime;
@@ -129,8 +156,10 @@ export async function POST(request: NextRequest) {
           ...result.metadata,
           suggested_followups: result.suggested_followups,
           processing_stage: 'completed',
+          used_llm: result.usedLLM,
         },
         processing_time_ms: processingTime,
+        tokens_used: result.llmResult?.tokensUsed,
         processed_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
       })
@@ -167,7 +196,7 @@ export async function POST(request: NextRequest) {
         ...session,
         context: updatedContext,
       },
-      suggested_actions: result.suggested_followups?.map((text, index) => ({
+      suggested_actions: result.suggested_followups?.map((text) => ({
         label: text,
         action: 'send_message',
         params: { message: text },
