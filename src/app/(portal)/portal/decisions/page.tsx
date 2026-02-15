@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { DecisionList } from '@/components/dashboard/decisions/DecisionList';
@@ -39,6 +40,7 @@ function getDateRange(range: 'all' | 'today' | 'week' | 'month'): { from?: strin
 }
 
 export default function DecisionsPage() {
+  const router = useRouter();
   const { toast } = useToast();
   const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
 
@@ -94,12 +96,12 @@ export default function DecisionsPage() {
   }, [decisions, exportDecisions, toast]);
 
   const handleViewTask = useCallback((taskId: string) => {
-    toast({ title: 'Navigate to Task', description: `Opening task ${taskId}...` });
-  }, [toast]);
+    router.push(`/portal/tasks?taskId=${taskId}`);
+  }, [router]);
 
-  const handleViewActivity = useCallback((decisionId: string) => {
-    toast({ title: 'View in Activity', description: 'Opening activity feed...' });
-  }, [toast]);
+  const handleViewActivity = useCallback((_decisionId: string) => {
+    router.push('/portal/activity');
+  }, [router]);
 
   const handlePageChange = useCallback((newPage: number) => { setPage(newPage); }, []);
 
