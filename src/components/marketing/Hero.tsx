@@ -2,7 +2,7 @@
 
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FadeIn, FadeInOnMount } from "@components/animations";
+import { FadeIn, FadeInOnMount } from "@/components/animations";
 import Link from "next/link";
 
 // Logo placeholder component
