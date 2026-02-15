@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Bot, Sparkles, User, Wrench, Shield, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { cn, getInitials, getAvatarColor } from '@/lib/utils';
+import { SUPPORTED_MODELS } from '@/lib/constants/models';
 import type { Agent, AgentRole, Capability, CreateAgentInput } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

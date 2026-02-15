@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import type { Task, TaskStatus, TaskPriority, RealtimeChangePayload } from '@/types';
 
 interface UseTasksOptions {
@@ -138,7 +139,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const channel = supabase
       .channel('tasks_changes')
       .on(
-        'postgres_changes' as const,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: '*',
           schema: 'public',
@@ -378,7 +379,7 @@ export function useTask(taskId: string | null) {
     const channel = supabase
       .channel(`task_${taskId}`)
       .on(
-        'postgres_changes' as const,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: 'UPDATE',
           schema: 'public',

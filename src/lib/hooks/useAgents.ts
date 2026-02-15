@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
 const API_BASE = '/api/agents';
@@ -70,7 +71,7 @@ export function useAgentsRealtime(tenantId: string | null) {
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: '*',
           schema: 'public',
@@ -158,7 +159,7 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
           event: '*',
           schema: 'public',

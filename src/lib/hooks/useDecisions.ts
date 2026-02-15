@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import type { Decision, DecisionStatus, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
@@ -105,7 +106,7 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
     const subscription = supabase
       .channel('decisions:changes')
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         { event: '*', schema: 'public', table: 'decisions' },
         (payload: RealtimeChangePayload<Decision>) => {
           const currentOpts = optionsRef.current;
