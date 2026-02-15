@@ -202,7 +202,6 @@ export default function DashboardPage() {
             <ActivityFeed
               maxHeight="600px"
               showFilters={false}
-              autoScroll={false}
             />
           </div>
 

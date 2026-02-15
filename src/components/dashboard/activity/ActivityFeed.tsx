@@ -155,8 +155,10 @@ export function ActivityFeed({
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
   const [newEventIds, setNewEventIds] = React.useState<Set<string>>(new Set());
   const [showScrollButton, setShowScrollButton] = React.useState(false);
+  const [missedEventCount, setMissedEventCount] = React.useState(0);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const isUserScrolling = React.useRef(false);
+  const isHovering = React.useRef(false);
   const scrollTimeout = React.useRef<NodeJS.Timeout | null>(null);
   
   const {
@@ -187,9 +189,11 @@ export function ActivityFeed({
         });
       }, 5000);
       
-      // Auto-scroll to newest if enabled and user is not manually scrolling
-      if (autoScroll && !isUserScrolling.current && scrollRef.current) {
+      // Auto-scroll to newest if enabled and user is not interacting
+      if (autoScroll && !isUserScrolling.current && !isHovering.current && scrollRef.current) {
         scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (autoScroll && (isUserScrolling.current || isHovering.current)) {
+        setMissedEventCount(prev => prev + 1);
       }
     },
   });
@@ -209,7 +213,17 @@ export function ActivityFeed({
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
       setShowScrollButton(false);
+      setMissedEventCount(0);
     }
+  }, []);
+
+  // Hover handlers to pause auto-scroll
+  const handleMouseEnter = React.useCallback(() => {
+    isHovering.current = true;
+  }, []);
+
+  const handleMouseLeave = React.useCallback(() => {
+    isHovering.current = false;
   }, []);
   
   // Handle scroll to detect user scrolling and show/hide scroll button
@@ -296,7 +310,7 @@ export function ActivityFeed({
       {/* Content */}
       <CardContent className="p-0 relative">
         {/* Scroll to newest button */}
-        {showScrollButton && (
+        {(showScrollButton || missedEventCount > 0) && (
           <Button
             variant="secondary"
             size="sm"
@@ -304,7 +318,7 @@ export function ActivityFeed({
             className="absolute top-4 left-1/2 -translate-x-1/2 z-10 shadow-lg animate-fade-in"
           >
             <ChevronDown className="w-4 h-4 mr-1 rotate-180" />
-            New activity
+            {missedEventCount > 0 ? `${missedEventCount} new event${missedEventCount > 1 ? 's' : ''}` : 'New activity'}
           </Button>
         )}
         
@@ -327,6 +341,8 @@ export function ActivityFeed({
           <div
             ref={scrollRef}
             onScroll={handleScroll}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             className="overflow-y-auto scrollbar-thin"
             style={{ maxHeight }}
           >
