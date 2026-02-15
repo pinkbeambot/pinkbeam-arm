@@ -8,6 +8,7 @@ import { EscalationList, EscalationFilters } from '@/components/dashboard/escala
 import { EscalationDetailPanel } from '@/components/dashboard/escalations/EscalationDetailPanel';
 import { EscalationStatsView } from '@/components/dashboard/escalations/EscalationStats';
 import { useEscalations, useEscalationStats } from '@/lib/hooks/useEscalations';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import type { Escalation, EscalationUrgency, EscalationType } from '@/types';
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic';
 
 export default function EscalationsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Filters state
   const [statusFilter, setStatusFilter] = useState<'open' | 'resolved' | 'all'>('open');
@@ -57,7 +59,7 @@ export default function EscalationsPage() {
 
   const handleResolve = useCallback(async (escalation: Escalation) => {
     try {
-      await resolveEscalation(escalation.id, 'Resolved from list view', 'user-001');
+      await resolveEscalation(escalation.id, 'Resolved from list view', user?.id ?? '');
       toast({
         title: 'Escalation Resolved',
         description: `${escalation.title} has been marked as resolved.`,
@@ -74,7 +76,7 @@ export default function EscalationsPage() {
 
   const handleResolveFromPanel = useCallback(async (id: string, resolution: string) => {
     try {
-      await resolveEscalation(id, resolution, 'user-001');
+      await resolveEscalation(id, resolution, user?.id ?? '');
       toast({
         title: 'Response Sent',
         description: 'Your response has been sent to the agent.',
