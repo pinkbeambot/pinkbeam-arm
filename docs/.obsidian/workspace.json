@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "visual/03-multi-tenancy.md",
+                "file": "future/07-multi-user-collaboration.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "03-multi-tenancy"
+              "title": "07-multi-user-collaboration"
             }
           }
         ]
@@ -185,13 +185,18 @@
   },
   "active": "ad878a5040ebfe9f",
   "lastOpenFiles": [
-    "visual/05-agent-lifecycle.md",
+    "future/00-index.md",
+    "future/02-multi-channel-access.md",
+    "future/01-valis-universal-interface.md",
+    "visual/09-escalation-workflow.md",
+    "visual/07-task-pipeline.md",
+    "00-Map-of-Content.md",
     "visual/03-multi-tenancy.md",
+    "visual/05-agent-lifecycle.md",
     "visual/14-deployment.md",
     "visual/13-valis-meta-agent.md",
     "visual/12-agent-protocol.md",
     "visual/10-event-system.md",
-    "visual/07-task-pipeline.md",
     "visual/02-auth-flow.md",
     "visual/08-decision-flow.md",
     "visual/06-data-model.md",
@@ -199,8 +204,6 @@
     "visual/01-system-overview.md",
     "visual/00-index.md",
     "visual/11-api-architecture.md",
-    "visual/09-escalation-workflow.md",
-    "00-Map-of-Content.md",
     "ENGINEERING.md",
     "CHAT-INTERFACE-SPEC.md",
     "ARCHITECTURE.md",

@@ -67,18 +67,18 @@ export async function GET(request: NextRequest) {
     // Decisions: search by title and description
     supabase
       .from('decisions')
-      .select('id, title, status, decision_type')
+      .select('id, title, status, category')
       .eq('tenant_id', tenantId)
       .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
       .order('created_at', { ascending: false })
       .limit(limit),
 
-    // Activities: search by description and event_type
+    // Activities: search by description and type
     supabase
       .from('activities')
-      .select('id, event_type, description, entity_type, entity_id, created_at')
+      .select('id, type, description, target_type, target_id, created_at')
       .eq('tenant_id', tenantId)
-      .or(`description.ilike.%${searchTerm}%,event_type.ilike.%${searchTerm}%`)
+      .or(`description.ilike.%${searchTerm}%,type.ilike.%${searchTerm}%`)
       .order('created_at', { ascending: false })
       .limit(limit),
   ]);
@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
     id: d.id,
     type: 'decision',
     title: d.title,
-    subtitle: `${d.decision_type || 'decision'} - ${d.status}`,
+    subtitle: `${d.category || 'decision'} - ${d.status}`,
     url: `/portal/decisions?highlight=${d.id}`,
     metadata: { status: d.status },
   }));
@@ -113,10 +113,10 @@ export async function GET(request: NextRequest) {
   const activities: SearchResult[] = (activitiesResult.data || []).map((a) => ({
     id: a.id,
     type: 'activity',
-    title: a.description || a.event_type,
-    subtitle: `${a.entity_type} activity`,
+    title: a.description || a.type,
+    subtitle: `${a.target_type} activity`,
     url: `/portal/activity`,
-    metadata: { event_type: a.event_type },
+    metadata: { type: a.type },
   }));
 
   const response: SearchResponse = {

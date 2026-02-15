@@ -23,13 +23,13 @@ function buildUnsubscribeUrl(tenantId: string, userId: string): string {
 async function getUsersWithEmailEnabled(
   tenantId: string,
   notificationType: string
-): Promise<Array<{ auth_id: string; full_name: string; email: string }>> {
+): Promise<Array<{ auth_id: string; name: string; email: string }>> {
   const supabase = createServiceRoleClient();
 
   // Get all users in the tenant
   const { data: users } = await supabase
     .from('users')
-    .select('auth_id, full_name, email')
+    .select('auth_id, name, email')
     .eq('tenant_id', tenantId);
 
   if (!users?.length) return [];
@@ -143,7 +143,7 @@ async function sendDailyDigests(tenantId: string): Promise<{ sent: number; error
   for (const user of users) {
     const result = await sendDailyDigestEmail({
       to: user.email,
-      userName: user.full_name || 'there',
+      userName: user.name || 'there',
       date: dateStr,
       totalTasksCompleted: completedTasks?.length || 0,
       totalTasksInProgress: inProgressTasks?.length || 0,
@@ -256,7 +256,7 @@ async function sendWeeklySummaries(tenantId: string): Promise<{ sent: number; er
   for (const user of users) {
     const result = await sendWeeklySummaryEmail({
       to: user.email,
-      userName: user.full_name || 'there',
+      userName: user.name || 'there',
       weekRange,
       tasksCompleted: thisWeekCount,
       tasksCompletedChange: change,

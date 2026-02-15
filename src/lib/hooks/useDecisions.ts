@@ -82,7 +82,7 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
       params.set('page', page.toString());
       params.set('limit', limit.toString());
 
-      const response = await fetch(`/api/decisions?${params.toString()}`, {
+      const response = await fetch(`/api/v1/decisions?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
 
@@ -146,7 +146,7 @@ export function useDecisionDetail(decisionId: string | null) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/decisions/${decisionId}`, {
+      const response = await fetch(`/api/v1/decisions/${decisionId}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
 
@@ -188,7 +188,7 @@ export function useOverrideDecision() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/decisions/${decisionId}`, {
+      const response = await fetch(`/api/v1/decisions/${decisionId}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -225,7 +225,7 @@ export function useUpdateDecision() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/decisions/${decisionId}`, {
+      const response = await fetch(`/api/v1/decisions/${decisionId}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),

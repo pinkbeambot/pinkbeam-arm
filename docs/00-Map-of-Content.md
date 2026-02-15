@@ -19,6 +19,7 @@ Central navigation hub for the Pink Beam ARM documentation vault.
 
 ### Leadership (CEO / CPO)
 - [[PRD]] — Product requirements, user personas, go-to-market
+- [[future/00-index|Future Features]] — Post-MVP roadmap: VALIS universal interface, multi-channel, mobile
 - [[MASTER-TASK-LIST]] — All tasks by phase with status tracking
 - [[STATUS]] — Current development snapshot
 - [[ENGINEERING]] — Engineering timeline and assignments
@@ -81,6 +82,7 @@ Central navigation hub for the Pink Beam ARM documentation vault.
 | Document | Description |
 |----------|-------------|
 | [[PRD]] | Full product requirements with user stories and wireframes |
+| [[future/00-index\|Future Features]] | Post-MVP roadmap — VALIS universal NL interface, multi-channel, mobile, integrations |
 | [[MASTER-TASK-LIST]] | 61 tasks across 8 phases with status tracking |
 | [[ENGINEERING]] | Engineering status, assignments, MVP timeline |
 | [[STATUS]] | Weekly development snapshot |
@@ -154,8 +156,9 @@ PRD (product vision)
 | `#testing` | [[TESTING-STANDARDS]], [[AGENT-ROLES]], [[E2E-TEST-PLAN]] |
 | `#process` | [[DEVELOPMENT-PROCESS]], [[REPORTING]], [[AGENT-ROLES]], [[TESTING-STANDARDS]] |
 | `#operations` | [[CICD]], [[DEPLOYMENT]], [[INCIDENT-RESPONSE]] |
-| `#planning` | [[MASTER-TASK-LIST]], [[ENGINEERING]], [[STATUS]], [[E2E-TEST-PLAN]] |
-| `#product` | [[PRD]] |
+| `#planning` | [[MASTER-TASK-LIST]], [[ENGINEERING]], [[STATUS]], [[E2E-TEST-PLAN]], [[future/00-index\|Future Features]] |
+| `#product` | [[PRD]], [[future/00-index\|Future Features]] |
+| `#future` | All 7 feature docs in `docs/future/` — see [[future/00-index\|Future Index]] |
 
 ### By Domain
 | Tag | Documents |

@@ -22,12 +22,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { tenantId, supabase } = auth;
 
     // Fetch template
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: template, error } = await supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('*')
       .eq('id', id)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
-      .single();
+      .single() as { data: any; error: any };
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -72,13 +73,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     // Fetch template to check if it's a system template
     const { data: template, error: fetchError } = await supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('is_system, tenant_id')
       .eq('id', id)
-      .single();
+      .single() as { data: { is_system: boolean; tenant_id: string } | null; error: { code?: string; message: string } | null };
 
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
+    if (fetchError || !template) {
+      if (fetchError?.code === 'PGRST116' || !template) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
       console.error('Failed to fetch template:', fetchError);
@@ -105,8 +106,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete template
-    const { error } = await supabase
-      .from('agent_templates')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase
+      .from('agent_templates' as never) as any)
       .delete()
       .eq('id', id)
       .eq('tenant_id', tenantId);

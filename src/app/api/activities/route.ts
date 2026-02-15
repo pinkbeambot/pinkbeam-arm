@@ -222,9 +222,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Determine pagination
-    const hasMore = activities && activities.length > limit;
-    const slicedActivities = hasMore ? activities.slice(0, limit) : (activities || []);
-    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allActivities: any[] = activities || [];
+    const hasMore = allActivities.length > limit;
+    const slicedActivities = hasMore ? allActivities.slice(0, limit) : allActivities;
+
     // Get the next cursor
     const nextCursor = hasMore && slicedActivities.length > 0
       ? String(slicedActivities[slicedActivities.length - 1].sequence_number)

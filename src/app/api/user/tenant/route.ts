@@ -79,10 +79,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get tenant details including onboarding status
+    // Get tenant details - use base columns that always exist
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, name, slug, onboarding_completed, onboarding_completed_at, onboarding_steps, created_at')
+      .select('id, name, slug, created_at')
       .eq('id', userProfile.tenant_id)
       .single();
 
@@ -94,9 +94,21 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Try to fetch onboarding columns (added in migration 028, may not exist yet)
+    let onboardingData: Record<string, unknown> = {};
+    const { data: onboarding, error: onboardingError } = await supabase
+      .from('tenants')
+      .select('onboarding_completed, onboarding_completed_at, onboarding_steps')
+      .eq('id', userProfile.tenant_id)
+      .single();
+
+    if (!onboardingError && onboarding) {
+      onboardingData = onboarding;
+    }
+
     return apiSuccess({
       tenant_id: userProfile.tenant_id,
-      tenant: tenant,
+      tenant: { ...tenant, ...onboardingData },
     });
   } catch (error) {
     console.error('Error in GET /api/user/tenant:', error);

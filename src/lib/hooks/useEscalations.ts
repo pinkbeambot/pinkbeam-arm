@@ -225,12 +225,10 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
     return result.data;
   }, []);
 
-  const resolveEscalation = useCallback(async (id: string, resolution: string, resolvedBy: string) => {
+  const resolveEscalation = useCallback(async (id: string, resolution: string, _resolvedBy: string) => {
     await updateEscalation(id, {
       status: 'resolved',
-      resolution,
-      resolved_by: resolvedBy,
-      resolved_at: new Date().toISOString(),
+      resolution_answer: resolution,
     });
   }, [updateEscalation]);
 

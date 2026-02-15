@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     // Build query
     let dbQuery = supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('*', { count: 'exact' })
       .eq('is_active', true)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
@@ -49,7 +49,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Execute query with pagination
-    const { data: templates, error, count } = await dbQuery.range(offset, offset + limit - 1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: templates, error, count } = await dbQuery.range(offset, offset + limit - 1) as { data: any[] | null; error: any; count: number | null };
 
     if (error) {
       console.error('Error fetching templates:', error);
@@ -60,12 +61,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique categories for filtering
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: categories } = await supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('category')
       .eq('is_active', true)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
-      .neq('category', '');
+      .neq('category', '') as { data: any[] | null };
 
     const uniqueCategories = [...new Set(categories?.map(c => c.category) || [])];
 
@@ -152,12 +154,13 @@ export async function POST(request: NextRequest) {
     const validatedData = templateSchema.parse(body);
 
     // Check if slug already exists for this tenant
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('id')
       .eq('slug', validatedData.slug)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
-      .single();
+      .single() as { data: any };
 
     if (existing) {
       return NextResponse.json(
@@ -167,8 +170,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Create template
-    const { data: template, error } = await supabase
-      .from('agent_templates')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: template, error } = await (supabase
+      .from('agent_templates' as never) as any)
       .insert({
         tenant_id: tenantId,
         name: validatedData.name,

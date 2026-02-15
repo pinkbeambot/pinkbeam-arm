@@ -88,8 +88,21 @@ export default async function TeamSettingsPage() {
   const isAdmin = currentUserData.role === 'admin' || isOwner;
 
   // Fetch team members
-  const { data: members, error } = await supabase
-    .rpc('get_tenant_members', { p_tenant_id: currentUserData.tenant_id });
+  const { data: rawMembers, error } = await supabase
+    .from('users')
+    .select('id, email, name, role, status, last_active_at, created_at')
+    .eq('tenant_id', currentUserData.tenant_id)
+    .order('created_at', { ascending: true });
+
+  const members = (rawMembers || []).map((u) => ({
+    user_id: u.id,
+    email: u.email,
+    name: u.name,
+    role: u.role as TeamMember['role'],
+    status: u.status as TeamMember['status'],
+    last_active_at: u.last_active_at,
+    created_at: u.created_at,
+  }));
 
   if (error) {
     console.error('Error fetching team members:', error);

@@ -14,8 +14,21 @@ export async function GET(request: NextRequest) {
     if (isErrorResponse(auth)) return auth;
     const { tenantId, supabase } = auth;
 
-    const { data: members, error } = await supabase
-      .rpc('get_tenant_members', { p_tenant_id: tenantId });
+    const { data: rawMembers, error } = await supabase
+      .from('users')
+      .select('id, auth_id, email, name, role, status, last_active_at, created_at')
+      .eq('tenant_id', tenantId)
+      .order('created_at', { ascending: true });
+
+    const members = (rawMembers || []).map((u) => ({
+      user_id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      status: u.status,
+      last_active_at: u.last_active_at,
+      created_at: u.created_at,
+    }));
 
     if (error) {
       console.error('Error fetching team members:', error);

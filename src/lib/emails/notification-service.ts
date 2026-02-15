@@ -36,7 +36,7 @@ async function getUserEmailInfo(
 
   const { data: user, error } = await supabase
     .from('users')
-    .select('auth_id, full_name, email')
+    .select('auth_id, name, email')
     .eq('tenant_id', tenantId)
     .eq('auth_id', userId)
     .single();
@@ -47,7 +47,7 @@ async function getUserEmailInfo(
   if (user.email) {
     return {
       email: user.email,
-      name: user.full_name || 'there',
+      name: user.name || 'there',
       userId,
     };
   }
@@ -58,7 +58,7 @@ async function getUserEmailInfo(
 
   return {
     email: authData.user.email,
-    name: user.full_name || 'there',
+    name: user.name || 'there',
     userId,
   };
 }
@@ -259,7 +259,7 @@ export async function sendTaskCompletionEmails(
   // Get all users in the tenant
   const { data: users } = await supabase
     .from('users')
-    .select('auth_id, full_name, email')
+    .select('auth_id, name, email')
     .eq('tenant_id', tenantId);
 
   if (!users?.length) {
@@ -280,7 +280,7 @@ export async function sendTaskCompletionEmails(
     const unsubscribeUrl = buildUnsubscribeUrl(tenantId, user.auth_id);
     const result = await sendTaskCompleteEmail({
       to: email,
-      userName: user.full_name || 'there',
+      userName: user.name || 'there',
       taskTitle,
       agentName,
       completedAt,

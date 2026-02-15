@@ -160,15 +160,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       description: source.description,
       avatar_url: source.avatar_url,
       capabilities: source.capabilities,
-      model: source.model,
-      configuration: source.configuration,
+      config: {
+        ...(typeof source.config === 'object' && source.config !== null ? source.config : {}),
+        _clone: {
+          cloned_from: source.id,
+          cloned_at: new Date().toISOString(),
+        },
+      },
       llm_config: source.llm_config,
       limits: source.limits,
-      metadata: {
-        ...(source.metadata || {}),
-        cloned_from: source.id,
-        cloned_at: new Date().toISOString(),
-      },
       parent_id: parentId,
       root_id: rootId,
       depth,

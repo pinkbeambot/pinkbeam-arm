@@ -135,9 +135,9 @@ describe('Cross-Tenant Data Isolation', () => {
   ];
 
   const activities = [
-    { id: 'act-1', tenant_id: TENANT_A.id, event_type: 'agent.created' },
-    { id: 'act-2', tenant_id: TENANT_A.id, event_type: 'task.completed' },
-    { id: 'act-3', tenant_id: TENANT_B.id, event_type: 'escalation.opened' },
+    { id: 'act-1', tenant_id: TENANT_A.id, type: 'agent.created' },
+    { id: 'act-2', tenant_id: TENANT_A.id, type: 'task.completed' },
+    { id: 'act-3', tenant_id: TENANT_B.id, type: 'escalation.opened' },
   ];
 
   const messages = [
