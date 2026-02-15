@@ -38,7 +38,15 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
           plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }}'
+          prompt: |
+            Review PR #${{ github.event.pull_request.number }} using /code-review:code-review.
+
+            After completing the review:
+            1. If the code looks good and follows best practices, approve it with: gh pr review ${{ github.event.pull_request.number }} --approve
+            2. If all CI checks are passing (green), merge with: gh pr merge ${{ github.event.pull_request.number }} --squash --auto
+            3. If there are issues, request changes with specific feedback
+
+            Auto-merge if the PR is clean and CI passes.
           # Allow Claude to review and merge PRs
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
