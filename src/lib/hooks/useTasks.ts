@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
-import { ApiError } from '@/lib/errors';
 import type { Task, TaskStatus, TaskPriority, RealtimeChangePayload } from '@/types';
 
 interface UseTasksOptions {
@@ -281,7 +280,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete task');
+        throw new ApiError(response.status, 'TASK_DELETE_FAILED', errorData.error || 'Failed to delete task');
       }
 
       // Remove from local state
@@ -324,7 +323,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new ApiError(response.status, 'TASK_ADD_DEPENDENCY_FAILED', errorData.error || 'Failed to add dependency');
+        throw new Error(errorData.error || 'Failed to add dependency');
       }
     } catch (err) {
       clearTimeout(timeout);
@@ -358,7 +357,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new ApiError(response.status, 'TASK_REMOVE_DEPENDENCY_FAILED', errorData.error || 'Failed to remove dependency');
+        throw new Error(errorData.error || 'Failed to remove dependency');
       }
     } catch (err) {
       clearTimeout(timeout);
@@ -411,13 +410,13 @@ export function useTask(taskId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new ApiError(response.status, 'TASK_FETCH_FAILED', errorData.error || 'Failed to fetch task');
+        throw new Error(errorData.error || 'Failed to fetch task');
       }
 
       const result = await response.json();
       setTask(result.data);
     } catch (err) {
-      setError(err instanceof ApiError ? err : new Error('Unknown error'));
+      setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
@@ -495,14 +494,14 @@ export function useTaskDependencies(taskId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new ApiError(response.status, 'TASK_FETCH_DEPENDENCIES_FAILED', errorData.error || 'Failed to fetch dependencies');
+        throw new Error(errorData.error || 'Failed to fetch dependencies');
       }
 
       const result = await response.json();
       setDependencies(result.data.dependencies);
       setDependents(result.data.dependents);
     } catch (err) {
-      setError(err instanceof ApiError ? err : new Error('Unknown error'));
+      setError(err instanceof Error ? err : new Error('Unknown error'));
     } finally {
       setIsLoading(false);
     }
