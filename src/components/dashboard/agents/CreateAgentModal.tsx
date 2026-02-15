@@ -162,9 +162,9 @@ export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: Crea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent aria-modal="true" aria-labelledby="create-agent-title" className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Agent</DialogTitle>
+          <DialogTitle id="create-agent-title">Create New Agent</DialogTitle>
           <DialogDescription>
             Set up a new AI agent to join your workforce.
           </DialogDescription>
