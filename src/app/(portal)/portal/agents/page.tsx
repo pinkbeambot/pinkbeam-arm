@@ -46,6 +46,42 @@ export default function AgentsPage() {
     setDetailOpen(true);
   }, []);
 
+  const handleToggleStatus = useCallback(async (agent: Agent) => {
+    const newStatus: AgentStatus = (agent.status === 'active' || agent.status === 'idle') ? 'paused' : 'active';
+    try {
+      await updateAgent(agent.id, { status: newStatus });
+      toast({ title: 'Status Updated', description: `${agent.name} is now ${newStatus}.` });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update agent status.', variant: 'destructive' });
+    }
+  }, [updateAgent, refetch, toast]);
+
+  const handleDeleteAgent = useCallback(async (agent: Agent) => {
+    if (!confirm(`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`)) return;
+    try {
+      await deleteAgent(agent.id);
+      toast({ title: 'Agent Deleted', description: `${agent.name} has been deleted.` });
+      if (selectedAgent?.id === agent.id) {
+        setDetailOpen(false);
+        setSelectedAgent(null);
+      }
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete agent.', variant: 'destructive' });
+    }
+  }, [deleteAgent, selectedAgent, refetch, toast]);
+
+  const handleEditAgent = useCallback((agent: Agent) => {
+    setSelectedAgent(agent);
+    setDetailOpen(true);
+  }, []);
+
+  const handleChat = useCallback((agent: Agent) => {
+    setChatAgentId(agent.id);
+    setChatOpen(true);
+  }, []);
+
   const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
     if (!tenantId) {
       toast({ title: 'Error', description: 'Tenant not available.', variant: 'destructive' });
@@ -120,9 +156,9 @@ export default function AgentsPage() {
             viewMode={viewMode}
             selectedAgentId={selectedAgent?.id}
             onSelectAgent={handleSelectAgent}
-            onEditAgent={() => {}}
-            onToggleStatus={() => {}}
-            onDeleteAgent={() => {}}
+            onEditAgent={handleEditAgent}
+            onToggleStatus={handleToggleStatus}
+            onDeleteAgent={handleDeleteAgent}
           />
         </div>
 
@@ -131,8 +167,8 @@ export default function AgentsPage() {
           loading={updateLoading || deleteLoading}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onChat={() => {}}
-          onToggleStatus={() => {}}
+          onChat={() => selectedAgent && handleChat(selectedAgent)}
+          onToggleStatus={() => selectedAgent && handleToggleStatus(selectedAgent)}
         />
 
         <CreateAgentModal
