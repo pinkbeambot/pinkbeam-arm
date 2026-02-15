@@ -80,6 +80,7 @@ const SORT_OPTIONS: { value: 'created_at' | 'confidence' | 'title'; label: strin
 
 interface DecisionFiltersProps {
   agents: Agent[];
+  decisions: Decision[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   agentFilter: string | 'all';
