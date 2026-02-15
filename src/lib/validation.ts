@@ -5,6 +5,23 @@ import { AgentRole, AgentStatus, TaskStatus, TaskPriority, DecisionCategory, Esc
 // Agent Validation
 // ============================================================================
 
+// Shared JSONB sub-schemas (matches DB CHECK constraints in migration 024)
+const llmConfigSchema = z.object({
+  provider: z.string().min(1),
+  model: z.string().min(1),
+  temperature: z.number().min(0).max(2).optional(),
+  max_tokens: z.number().int().positive().optional(),
+});
+
+const limitsSchema = z.object({
+  max_sub_agents: z.number().int().nonnegative().optional(),
+  max_concurrent_tasks: z.number().int().nonnegative().optional(),
+  escalation_threshold: z.number().min(0).max(1).optional(),
+  timeout_seconds: z.number().int().positive().optional(),
+  max_tokens_per_task: z.number().int().positive().optional(),
+  max_cost_per_task_usd: z.number().nonnegative().optional(),
+});
+
 export const createAgentSchema = z.object({
   name: z.string().min(1).max(255),
   slug: z.string().max(100).optional(),
@@ -12,19 +29,8 @@ export const createAgentSchema = z.object({
   description: z.string().optional(),
   parent_id: z.string().uuid().optional(),
   capabilities: z.array(z.string()).optional(),
-  llm_config: z.object({
-    provider: z.string().optional(),
-    model: z.string().optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    max_tokens: z.number().int().positive().optional(),
-  }).optional(),
-  limits: z.object({
-    max_sub_agents: z.number().int().positive().optional(),
-    escalation_threshold: z.number().min(0).max(1).optional(),
-    timeout_seconds: z.number().int().positive().optional(),
-    max_tokens_per_task: z.number().int().positive().optional(),
-    max_cost_per_task_usd: z.number().positive().optional(),
-  }).optional(),
+  llm_config: llmConfigSchema.optional(),
+  limits: limitsSchema.optional(),
 });
 
 export const updateAgentSchema = z.object({
@@ -32,19 +38,8 @@ export const updateAgentSchema = z.object({
   description: z.string().optional(),
   status: z.enum(['initializing', 'idle', 'active', 'paused', 'blocked', 'error', 'escaped', 'terminated']).optional(),
   capabilities: z.array(z.string()).optional(),
-  llm_config: z.object({
-    provider: z.string().optional(),
-    model: z.string().optional(),
-    temperature: z.number().min(0).max(2).optional(),
-    max_tokens: z.number().int().positive().optional(),
-  }).optional(),
-  limits: z.object({
-    max_sub_agents: z.number().int().positive().optional(),
-    escalation_threshold: z.number().min(0).max(1).optional(),
-    timeout_seconds: z.number().int().positive().optional(),
-    max_tokens_per_task: z.number().int().positive().optional(),
-    max_cost_per_task_usd: z.number().positive().optional(),
-  }).optional(),
+  llm_config: llmConfigSchema.partial().optional(),
+  limits: limitsSchema.optional(),
 });
 
 export const listAgentsQuerySchema = z.object({
