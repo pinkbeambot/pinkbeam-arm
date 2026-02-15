@@ -13,6 +13,7 @@ export interface AuthContextType {
   session: Session | null;
   isLoading: boolean;
   signInWithMagicLink: (email: string) => Promise<{ error: Error | null }>;
+  verifyOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<{ error: Error | null }>;
   refreshSession: () => Promise<void>;
 }
@@ -68,9 +69,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: {
-          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
-        },
+      });
+
+      return { error };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const verifyOtp = async (email: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'email',
       });
 
       return { error };
@@ -109,6 +121,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     isLoading,
     signInWithMagicLink,
+    verifyOtp,
     signOut,
     refreshSession,
   };
