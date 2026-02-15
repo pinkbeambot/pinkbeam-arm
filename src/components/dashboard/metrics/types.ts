@@ -24,11 +24,12 @@ export interface AgentLiveMetrics {
   tasksPerMinute: number;
   successRate: number; // 0-100
   currentLoad: number; // 0-100 (tasks in progress / max capacity)
-  avgResponseTime: number; // in ms
+  avgResponseTime: number; // in seconds (avg task duration)
   errorRate: number; // 0-100
   lastActivityAt: string;
-  cpuUsage?: number; // 0-100
-  memoryUsage?: number; // 0-100
+  tasksCompleted: number;
+  tasksFailed: number;
+  tasksInProgress: number;
 }
 
 export interface SystemHealthMetrics {
@@ -69,21 +70,22 @@ export interface SystemHealthMetrics {
     avgTaskWaitTime: number; // in seconds
   };
   
-  // Resource utilization
+  // Business metrics
   resources: {
-    cpu: {
-      usage: number; // 0-100
-      cores: number;
+    throughput: {
+      tasksPerHour: number;
+      capacity: number; // estimated based on active agents
+      utilization: number; // 0-100
     };
-    memory: {
-      used: number; // in MB
-      total: number; // in MB
-      usage: number; // 0-100
+    agentUtilization: {
+      active: number;
+      total: number;
+      utilization: number; // 0-100
     };
-    disk: {
-      used: number; // in GB
-      total: number; // in GB
-      usage: number; // 0-100
+    taskQueue: {
+      queued: number;
+      processing: number;
+      utilization: number; // 0-100 (processing / (processing + queued))
     };
   };
 }

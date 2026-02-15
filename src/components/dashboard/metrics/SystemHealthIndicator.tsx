@@ -9,9 +9,10 @@ import {
   Database,
   Wifi,
   Server,
-  HardDrive,
-  Cpu,
   Activity,
+  BarChart3,
+  Users,
+  ListTodo,
   CheckCircle2,
   AlertTriangle,
   XCircle,
@@ -107,9 +108,9 @@ export function SystemHealthIndicator({
     return `${mins}m`;
   };
 
-  const formatBytes = (mb: number) => {
-    if (mb >= 1024) return `${(mb / 1024).toFixed(1)} GB`;
-    return `${mb.toFixed(0)} MB`;
+  const formatRate = (value: number) => {
+    if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
+    return value.toFixed(0);
   };
 
   return (
@@ -186,22 +187,22 @@ export function SystemHealthIndicator({
         {/* Resources */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <Cpu className="w-4 h-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Resources</span>
+            <BarChart3 className="w-4 h-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Throughput</span>
           </div>
           <div className="flex items-center gap-2">
             <span className={cn(
               'text-sm font-medium',
-              health.resources.cpu.usage > 80 ? 'text-red-500' :
-              health.resources.cpu.usage > 60 ? 'text-amber-500' :
+              health.resources.throughput.utilization > 80 ? 'text-red-500' :
+              health.resources.throughput.utilization > 60 ? 'text-amber-500' :
               'text-green-500'
             )}>
-              {health.resources.cpu.usage.toFixed(0)}%
+              {health.resources.throughput.utilization.toFixed(0)}%
             </span>
-            <span className="text-xs text-muted-foreground">CPU</span>
+            <span className="text-xs text-muted-foreground">utilization</span>
           </div>
-          <Progress 
-            value={health.resources.cpu.usage} 
+          <Progress
+            value={health.resources.throughput.utilization}
             className="h-1"
           />
         </div>
@@ -317,43 +318,45 @@ export function SystemHealthIndicator({
               <div>
                 <h4 className="text-sm font-medium mb-3">Resources</h4>
                 <div className="space-y-3">
-                  {/* CPU */}
+                  {/* Throughput */}
                   <div className="flex items-center gap-4">
-                    <Cpu className="w-4 h-4 text-muted-foreground" />
+                    <BarChart3 className="w-4 h-4 text-muted-foreground" />
                     <div className="flex-1">
                       <div className="flex justify-between text-sm mb-1">
-                        <span>CPU ({health.resources.cpu.cores} cores)</span>
-                        <span>{health.resources.cpu.usage.toFixed(1)}%</span>
+                        <span>Throughput</span>
+                        <span>
+                          {formatRate(health.resources.throughput.tasksPerHour)} / {formatRate(health.resources.throughput.capacity)} tasks/hr
+                        </span>
                       </div>
-                      <Progress value={health.resources.cpu.usage} className="h-2" />
+                      <Progress value={health.resources.throughput.utilization} className="h-2" />
                     </div>
                   </div>
 
-                  {/* Memory */}
+                  {/* Agent Utilization */}
                   <div className="flex items-center gap-4">
-                    <Activity className="w-4 h-4 text-muted-foreground" />
+                    <Users className="w-4 h-4 text-muted-foreground" />
                     <div className="flex-1">
                       <div className="flex justify-between text-sm mb-1">
-                        <span>Memory</span>
+                        <span>Agent Utilization</span>
                         <span>
-                          {formatBytes(health.resources.memory.used)} / {formatBytes(health.resources.memory.total)}
+                          {health.resources.agentUtilization.active} / {health.resources.agentUtilization.total} agents
                         </span>
                       </div>
-                      <Progress value={health.resources.memory.usage} className="h-2" />
+                      <Progress value={health.resources.agentUtilization.utilization} className="h-2" />
                     </div>
                   </div>
 
-                  {/* Disk */}
+                  {/* Task Queue */}
                   <div className="flex items-center gap-4">
-                    <HardDrive className="w-4 h-4 text-muted-foreground" />
+                    <ListTodo className="w-4 h-4 text-muted-foreground" />
                     <div className="flex-1">
                       <div className="flex justify-between text-sm mb-1">
-                        <span>Disk</span>
+                        <span>Task Queue</span>
                         <span>
-                          {health.resources.disk.used.toFixed(1)} GB / {health.resources.disk.total} GB
+                          {health.resources.taskQueue.processing} processing, {health.resources.taskQueue.queued} queued
                         </span>
                       </div>
-                      <Progress value={health.resources.disk.usage} className="h-2" />
+                      <Progress value={health.resources.taskQueue.utilization} className="h-2" />
                     </div>
                   </div>
                 </div>
@@ -380,8 +383,8 @@ export function SystemHealthCompact({ health, className }: SystemHealthCompactPr
     health.database.status !== 'healthy' && 'Database',
     health.realtime.status !== 'healthy' && 'Realtime',
     health.agentRuntime.status !== 'healthy' && 'Runtime',
-    health.resources.cpu.usage > 80 && 'High CPU',
-    health.resources.memory.usage > 80 && 'High Memory',
+    health.resources.throughput.utilization > 80 && 'High Load',
+    health.resources.agentUtilization.utilization > 80 && 'Agent Overload',
   ].filter(Boolean);
 
   return (

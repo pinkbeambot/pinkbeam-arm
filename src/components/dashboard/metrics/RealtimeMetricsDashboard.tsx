@@ -402,8 +402,8 @@ export function RealtimeMetricsDashboard({
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Avg Response</p>
-                <p className="text-lg font-semibold">{selectedAgent.avgResponseTime.toFixed(0)}ms</p>
+                <p className="text-sm text-muted-foreground">Avg Duration</p>
+                <p className="text-lg font-semibold">{selectedAgent.avgResponseTime.toFixed(0)}s</p>
               </div>
             </div>
 

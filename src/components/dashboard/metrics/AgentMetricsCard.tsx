@@ -6,8 +6,6 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
-  Cpu, 
-  MemoryStick, 
   Activity, 
   Clock, 
   CheckCircle2, 
@@ -128,37 +126,31 @@ export function AgentMetricsCard({
           </div>
         </div>
 
-        {/* Response time */}
+        {/* Avg task duration */}
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Clock className="w-3.5 h-3.5" />
-            Avg Response
+            Avg Duration
           </div>
-          <p className="text-lg font-semibold">{agent.avgResponseTime.toFixed(0)}ms</p>
+          <p className="text-lg font-semibold">{agent.avgResponseTime.toFixed(0)}s</p>
         </div>
       </div>
 
-      {/* Resource usage */}
-      {(agent.cpuUsage !== undefined || agent.memoryUsage !== undefined) && (
-        <div className="flex items-center gap-4 pt-3 border-t border-border/50">
-          {agent.cpuUsage !== undefined && (
-            <div className="flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">CPU</span>
-              <Progress value={agent.cpuUsage} className="w-16 h-1.5" />
-              <span className="text-xs text-muted-foreground">{agent.cpuUsage.toFixed(0)}%</span>
-            </div>
-          )}
-          {agent.memoryUsage !== undefined && (
-            <div className="flex items-center gap-2">
-              <MemoryStick className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm">MEM</span>
-              <Progress value={agent.memoryUsage} className="w-16 h-1.5" />
-              <span className="text-xs text-muted-foreground">{agent.memoryUsage.toFixed(0)}%</span>
-            </div>
-          )}
+      {/* Task stats */}
+      <div className="flex items-center gap-4 pt-3 border-t border-border/50">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Completed:</span>
+          <span className="text-sm font-medium">{agent.tasksCompleted}</span>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Failed:</span>
+          <span className="text-sm font-medium">{agent.tasksFailed}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">In Progress:</span>
+          <span className="text-sm font-medium">{agent.tasksInProgress}</span>
+        </div>
+      </div>
 
       {/* Error rate warning */}
       {agent.errorRate > 5 && (
