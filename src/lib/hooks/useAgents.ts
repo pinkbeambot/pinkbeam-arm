@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
+import { ApiError } from '@/lib/errors';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
 const API_BASE = '/api/agents';
@@ -42,7 +43,7 @@ export function useAgentsRealtime(tenantId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch agents: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_FETCH_FAILED', errorData.error || `Failed to fetch agents: ${response.status}`);
       }
 
       const result = await response.json();
@@ -140,14 +141,14 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to fetch agent: ${response.status}`);
+          throw new ApiError(response.status, 'AGENT_FETCH_FAILED', errorData.error || `Failed to fetch agent: ${response.status}`);
         }
 
         const result = await response.json();
         setAgent(result.data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agent';
-        setError(new Error(errorMessage));
+        setError(err instanceof ApiError ? err : new Error(errorMessage));
       } finally {
         setLoading(false);
       }
@@ -217,13 +218,13 @@ export function useCreateAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to create agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_CREATE_FAILED', errorData.error || `Failed to create agent: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to create agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to create agent');
       setError(error);
       throw error;
     } finally {
@@ -262,13 +263,13 @@ export function useUpdateAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to update agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_UPDATE_FAILED', errorData.error || `Failed to update agent: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to update agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to update agent');
       setError(error);
       throw error;
     } finally {
@@ -306,10 +307,10 @@ export function useDeleteAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to delete agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_DELETE_FAILED', errorData.error || `Failed to delete agent: ${response.status}`);
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to delete agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to delete agent');
       setError(error);
       throw error;
     } finally {
