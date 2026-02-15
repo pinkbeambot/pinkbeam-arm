@@ -22,6 +22,7 @@ import {
   Loader2,
   Sparkles,
   Users,
+  LayoutGrid,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -71,6 +72,12 @@ const navGroups: NavGroup[] = [
         href: '/portal/agents', 
         icon: Bot,
         description: 'Manage your AI agents'
+      },
+      { 
+        label: 'Templates', 
+        href: '/portal/templates', 
+        icon: LayoutGrid,
+        description: 'Browse agent templates'
       },
       { 
         label: 'Task Pipeline', 

@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient as createServerClient } from '@supabase/supabase-js';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
+import type { UserRole } from '@/lib/rbac';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -16,6 +17,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export interface AuthContext {
   tenantId: string;
   userId: string;
+  userRole: UserRole;
   supabase: ReturnType<typeof createServiceRoleClient>;
 }
 
@@ -53,7 +55,7 @@ export async function authenticateRequest(
 
   const { data: userProfile, error: profileError } = await authClient
     .from('users')
-    .select('tenant_id')
+    .select('tenant_id, role')
     .eq('auth_id', user.id)
     .single();
 
@@ -64,6 +66,7 @@ export async function authenticateRequest(
   return {
     tenantId: userProfile.tenant_id,
     userId: user.id,
+    userRole: userProfile.role as UserRole,
     supabase: createServiceRoleClient(),
   };
 }

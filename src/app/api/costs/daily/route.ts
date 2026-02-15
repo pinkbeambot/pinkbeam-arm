@@ -51,6 +51,14 @@ import { dailyCostsQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 
+// Daily cost RPC response type
+interface DailyCostRow {
+  date: string;
+  request_count: number | string;
+  total_tokens: number | string;
+  total_cost_usd: number | string;
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Authenticate
@@ -83,7 +91,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format response
-    const formattedData = (dailyCosts || []).map((day: any) => ({
+    const formattedData = (dailyCosts as DailyCostRow[] || []).map((day) => ({
       date: day.date,
       request_count: Number(day.request_count || 0),
       total_tokens: Number(day.total_tokens || 0),

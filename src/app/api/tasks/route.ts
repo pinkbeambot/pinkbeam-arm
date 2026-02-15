@@ -5,6 +5,7 @@ import {
   listTasksQuerySchema,
   enhancedListTasksQuerySchema
 } from '@/lib/validation';
+import { requirePermission } from '@/lib/rbac';
 import { z } from 'zod';
 import { escapeIlike } from '@/lib/utils';
 

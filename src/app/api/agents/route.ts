@@ -3,6 +3,7 @@ import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { generateUniqueSlug } from '@/lib/api/slug';
 import { createAgentSchema, listAgentsQuerySchema } from '@/lib/validation';
 import { canCreateAgent, getTenantBilling, getSubscriptionTier } from '@/lib/billing/service';
+import { requirePermission } from '@/lib/rbac';
 import { z } from 'zod';
 import { escapeIlike } from '@/lib/utils';
 
@@ -236,7 +237,13 @@ export async function POST(request: NextRequest) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can create agents
+    const guard = requirePermission(userRole, 'agents:create');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Check billing limits before creating agent
     const canCreate = await canCreateAgent(supabase, tenantId);

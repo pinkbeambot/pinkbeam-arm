@@ -5,7 +5,15 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
-import { createAdminClient, generateUUID, nowISO, createLogger, logActivity, sendMessageRequestSchema } from '../_shared/utils.ts';
+import {
+  createAdminClient,
+  generateUUID,
+  nowISO,
+  createLogger,
+  logActivity,
+  sendMessageRequestSchema,
+  type SendMessageRequest,
+} from '../_shared/utils.ts';
 
 const logger = createLogger('agent-message');
 
@@ -37,7 +45,7 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleSend(auth: AuthContext, body: any): Promise<Response> {
+async function handleSend(auth: AuthContext, body: SendMessageRequest): Promise<Response> {
   const supabase = createAdminClient();
   const messageId = generateUUID();
   const now = nowISO();

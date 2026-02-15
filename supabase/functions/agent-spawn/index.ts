@@ -4,7 +4,18 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
-import { createAdminClient, generateUUID, nowISO, createLogger, logActivity, getDefaultAgentConfig, spawnRequestSchema, uuidSchema } from '../_shared/utils.ts';
+import {
+  createAdminClient,
+  generateUUID,
+  nowISO,
+  createLogger,
+  logActivity,
+  getDefaultAgentConfig,
+  spawnRequestSchema,
+  uuidSchema,
+  type SpawnRequest,
+  type AgentRow,
+} from '../_shared/utils.ts';
 
 const logger = createLogger('agent-spawn');
 
@@ -40,13 +51,13 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleSpawn(auth: AuthContext, body: any): Promise<Response> {
+async function handleSpawn(auth: AuthContext, body: SpawnRequest & { parent_agent_id?: string }): Promise<Response> {
   const supabase = createAdminClient();
-  
-  let parentAgent: any = null;
+
+  let parentAgent: Pick<AgentRow, 'id' | 'root_id' | 'depth' | 'capabilities'> | null = null;
   if (body.parent_agent_id) {
     const { data } = await supabase.from('agents').select('id, root_id, depth, capabilities').eq('id', body.parent_agent_id).eq('tenant_id', auth.tenantId).single();
-    if (data) parentAgent = data;
+    if (data) parentAgent = data as Pick<AgentRow, 'id' | 'root_id' | 'depth' | 'capabilities'>;
   }
 
   const defaultConfig = getDefaultAgentConfig(body.role);

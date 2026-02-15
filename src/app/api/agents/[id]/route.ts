@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { updateAgentSchema } from '@/lib/validation';
+import { requirePermission, requireAnyPermission } from '@/lib/rbac';
 import { z } from 'zod';
 
 interface RouteParams {
@@ -213,7 +214,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can update agents
+    const guard = requirePermission(userRole, 'agents:update');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Check if agent exists and belongs to tenant
     const { data: existingAgent, error: fetchError } = await supabase
@@ -336,7 +343,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can delete agents (owner only)
+    const guard = requirePermission(userRole, 'agents:delete');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Check if agent exists and get its status
     const { data: existingAgent, error: fetchError } = await supabase
