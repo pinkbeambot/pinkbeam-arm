@@ -73,14 +73,40 @@ vi.mock('@supabase/supabase-js', () => ({
   })),
 }));
 
-// Mock environment variables
-vi.mock('process', () => ({
-  env: {
-    NEXT_PUBLIC_SUPABASE_URL: 'https://test.supabase.co',
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: 'test-anon-key',
-    CLAUDE_API_KEY: 'test-claude-key',
-  },
+// Mock environment variables before importing service-role
+vi.mock('@/lib/supabase/service-role', () => ({
+  createServiceRoleClient: vi.fn(() => ({
+    from: vi.fn((table: string) => {
+      if (table === 'security_audit_log') {
+        return {
+          insert: vi.fn(() => ({ error: null })),
+        };
+      }
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            single: vi.fn(() => ({ data: { id: 'agent-123' }, error: null })),
+            order: vi.fn(() => ({
+              range: vi.fn(() => ({ data: [], error: null })),
+            })),
+          })),
+        })),
+        insert: vi.fn(() => ({ error: null })),
+        update: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            eq: vi.fn(() => ({ error: null })),
+          })),
+        })),
+      };
+    }),
+  })),
 }));
+
+// Mock process.env
+vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL', 'https://test.supabase.co');
+vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY', 'test-anon-key');
+vi.stubEnv('SUPABASE_SERVICE_ROLE_KEY', 'test-service-role-key');
+vi.stubEnv('CLAUDE_API_KEY', 'test-claude-key');
 
 describe('GET /api/agents/[id]/config/test', () => {
   const mockRequest = (agentId: string, queryString = '') => {

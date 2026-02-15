@@ -20,6 +20,13 @@ export {
   type TestAgentResponse 
 } from './useAgentTest';
 
+// Template hooks
+export {
+  useTemplates,
+  useCreateAgentFromTemplate,
+  getTemplateCategories
+} from './useTemplates';
+
 // Task hooks
 export { useTasks } from './useTasks';
 

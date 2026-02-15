@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Settings, Bell, CreditCard } from "lucide-react";
+import { User, Mail, Settings, Bell, CreditCard, Users } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -120,6 +120,26 @@ export default async function SettingsPage() {
               <Button variant="outline" asChild>
                 <Link href="/portal/settings/billing">
                   Manage Billing
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Team Management Link */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                Team Management
+              </CardTitle>
+              <CardDescription>
+                Invite and manage team members and their roles
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" asChild>
+                <Link href="/portal/settings/team">
+                  Manage Team
                 </Link>
               </Button>
             </CardContent>

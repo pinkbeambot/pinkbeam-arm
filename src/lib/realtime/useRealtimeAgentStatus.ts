@@ -100,8 +100,8 @@ export function useRealtimeAgentStatus(
   ) => {
     if (!newRecord) return;
 
-    const update = newRecord as AgentStatusUpdate;
-    const oldUpdate = oldRecord as AgentStatusUpdate | null;
+    const update = newRecord as unknown as AgentStatusUpdate;
+    const oldUpdate = oldRecord as unknown as AgentStatusUpdate | null;
 
     setAgents(prevAgents => {
       const index = prevAgents.findIndex(a => a.id === update.id);
@@ -129,7 +129,7 @@ export function useRealtimeAgentStatus(
     connectionState,
     error,
     isConnected,
-  } = useRealtime<AgentStatusUpdate>({
+  } = useRealtime({
     table: 'agents',
     filter: tenantId ? `tenant_id=eq.${tenantId}` : undefined,
     events: ['UPDATE'],

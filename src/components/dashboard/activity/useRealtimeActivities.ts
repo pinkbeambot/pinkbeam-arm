@@ -312,7 +312,7 @@ export function useRealtimeActivities(
     retryCount,
     isConnected,
     retry: retryConnection,
-  } = useRealtime<Activity>({
+  } = useRealtime({
     table: 'activities',
     filter: realtimeFilter,
     events: ['INSERT'],

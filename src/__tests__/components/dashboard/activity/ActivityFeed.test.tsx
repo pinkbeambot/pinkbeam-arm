@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActivityFeed } from '@/components/dashboard/activity/ActivityFeed';
 import { useRealtimeActivities } from '@/components/dashboard/activity/useRealtimeActivities';
+import type { ConnectionState } from '@/lib/realtime/useRealtime';
 
 // Mock the useRealtimeActivities hook
 vi.mock('@/components/dashboard/activity/useRealtimeActivities', () => ({
@@ -60,6 +61,9 @@ vi.mock('lucide-react', () => ({
   WifiOff: vi.fn(() => <svg data-testid="wifi-off-icon" />),
   AlertCircle: vi.fn(() => <svg data-testid="alert-icon" />),
   ChevronDown: vi.fn(() => <svg data-testid="chevron-down-icon" />),
+  Loader2: vi.fn(() => <svg data-testid="loader-icon" />),
+  WifiLow: vi.fn(() => <svg data-testid="wifi-low-icon" />),
+  Zap: vi.fn(() => <svg data-testid="zap-icon" />),
 }));
 
 describe('ActivityFeed Component', () => {
@@ -82,20 +86,34 @@ describe('ActivityFeed Component', () => {
     },
   ];
 
+  // Helper to create mock return value
+  const createMockReturn = (overrides: Partial<ReturnType<typeof useRealtimeActivities>> = {}) => ({
+    events: [],
+    isLoading: false,
+    isRealtime: false,
+    connectionState: 'disconnected' as ConnectionState,
+    connectionError: null,
+    retryCount: 0,
+    error: null,
+    hasMore: false,
+    loadMore: vi.fn(),
+    refetch: vi.fn(),
+    retryConnection: vi.fn(),
+    ...overrides,
+  });
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('should render loading state initially', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: [],
-      isLoading: true,
-      isRealtime: false,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: [],
+        isLoading: true,
+        connectionState: 'connecting',
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -105,15 +123,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should render events when loaded', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -122,15 +139,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should show empty state when no events', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: [],
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: [],
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -138,15 +154,15 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should show error state when there is an error', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: [],
-      isLoading: false,
-      isRealtime: false,
-      error: new Error('Failed to load activities'),
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: [],
+        isLoading: false,
+        isRealtime: false,
+        connectionState: 'error',
+        error: new Error('Failed to load activities'),
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -158,15 +174,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should show realtime indicator when connected', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -175,15 +190,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should show offline indicator when disconnected', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: false,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: false,
+        connectionState: 'disconnected',
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -193,15 +207,15 @@ describe('ActivityFeed Component', () => {
 
   it('should call refetch when refresh button is clicked', () => {
     const mockRefetch = vi.fn();
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: mockRefetch,
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+        refetch: mockRefetch,
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -214,15 +228,16 @@ describe('ActivityFeed Component', () => {
 
   it('should call loadMore when load more button is clicked', () => {
     const mockLoadMore = vi.fn();
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: true,
-      loadMore: mockLoadMore,
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+        hasMore: true,
+        loadMore: mockLoadMore,
+      })
+    );
 
     render(<ActivityFeed />);
 
@@ -233,15 +248,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should render filter bar when showFilters is true', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed showFilters={true} />);
 
@@ -249,15 +263,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should not render filter bar when showFilters is false', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed showFilters={false} />);
 
@@ -266,15 +279,14 @@ describe('ActivityFeed Component', () => {
 
   it('should call onEventClick when an event is clicked', () => {
     const mockOnEventClick = vi.fn();
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed onEventClick={mockOnEventClick} />);
 
@@ -285,15 +297,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should apply custom className', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: mockEvents,
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: mockEvents,
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     const { container } = render(<ActivityFeed className="custom-class" />);
 
@@ -301,15 +312,14 @@ describe('ActivityFeed Component', () => {
   });
 
   it('should show empty state with filter message when filters are active', () => {
-    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue({
-      events: [],
-      isLoading: false,
-      isRealtime: true,
-      error: null,
-      hasMore: false,
-      loadMore: vi.fn(),
-      refetch: vi.fn(),
-    });
+    (useRealtimeActivities as ReturnType<typeof vi.fn>).mockReturnValue(
+      createMockReturn({
+        events: [],
+        isLoading: false,
+        isRealtime: true,
+        connectionState: 'connected',
+      })
+    );
 
     render(<ActivityFeed initialFilter={{ type: 'tasks', search: 'test' }} />);
 
