@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
     // Get tenant details including onboarding status
     const { data: tenant, error: tenantError } = await supabase
       .from('tenants')
-      .select('id, name, slug, onboarding_completed, onboarding_completed_at, created_at')
+      .select('id, name, slug, onboarding_completed, onboarding_completed_at, onboarding_steps, created_at')
       .eq('id', userProfile.tenant_id)
       .single();
 

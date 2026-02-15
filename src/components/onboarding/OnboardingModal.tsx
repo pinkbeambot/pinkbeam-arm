@@ -172,7 +172,7 @@ function CreateAgentStep({ onNext, onNavigate }: { onNext: () => void; onNavigat
           Create Your First Agent
         </Button>
         <Button variant="ghost" onClick={onNext} className="text-muted-foreground">
-          I'll do this later
+          I&apos;ll do this later
         </Button>
       </div>
     </div>
@@ -246,7 +246,7 @@ function AssignTaskStep({ onNext, onNavigate }: { onNext: () => void; onNavigate
           Create a Task
         </Button>
         <Button variant="ghost" onClick={onNext} className="text-muted-foreground">
-          I'll do this later
+          I&apos;ll do this later
         </Button>
       </div>
     </div>
@@ -384,7 +384,7 @@ function CompleteStep({ onComplete }: { onComplete: () => void }) {
       
       <div className="space-y-2">
         <h2 className="text-2xl font-bold text-foreground">
-          You're All Set!
+          You&apos;re All Set!
         </h2>
         <p className="text-muted-foreground max-w-sm mx-auto">
           Your AI workforce is ready to go. Create agents, assign tasks, and watch your productivity soar.
@@ -409,10 +409,9 @@ function CompleteStep({ onComplete }: { onComplete: () => void }) {
 // Main Onboarding Modal Component
 // ============================================================================
 
-export function OnboardingModal({ isOpen, onClose, onComplete, onSkip }: OnboardingModalProps) {
+export function OnboardingModal({ isOpen, onComplete, onSkip }: OnboardingModalProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = React.useState(0);
-  const [isCompleting, setIsCompleting] = React.useState(false);
 
   const handleNext = React.useCallback(() => {
     if (currentStep < STEPS.length - 1) {
@@ -422,15 +421,12 @@ export function OnboardingModal({ isOpen, onClose, onComplete, onSkip }: Onboard
 
   const handleNavigate = React.useCallback((path: string) => {
     // Complete onboarding before navigating
-    setIsCompleting(true);
     onComplete();
     router.push(path);
   }, [onComplete, router]);
 
   const handleComplete = React.useCallback(async () => {
-    setIsCompleting(true);
     await onComplete();
-    setIsCompleting(false);
   }, [onComplete]);
 
   const handleSkip = React.useCallback(() => {

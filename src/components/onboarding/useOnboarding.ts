@@ -24,7 +24,6 @@ export function useOnboarding(): UseOnboardingReturn {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<Error | null>(null);
-  const [hasChecked, setHasChecked] = React.useState(false);
 
   // Check onboarding status when tenant data is loaded
   React.useEffect(() => {
@@ -41,7 +40,6 @@ export function useOnboarding(): UseOnboardingReturn {
     }
     
     setIsLoading(false);
-    setHasChecked(true);
   }, [tenant, tenantLoading]);
 
   const completeOnboarding = React.useCallback(async () => {
