@@ -14,11 +14,6 @@ const nextConfig: NextConfig = {
   // Enable React Strict Mode for better development experience
   reactStrictMode: true,
   
-  // Configure images for static export
-  images: {
-    unoptimized: true,
-  },
-  
   // Dist directory for builds
   distDir: '.next',
   
