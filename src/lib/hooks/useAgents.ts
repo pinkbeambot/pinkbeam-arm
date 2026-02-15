@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
 const API_BASE = '/api/agents';
