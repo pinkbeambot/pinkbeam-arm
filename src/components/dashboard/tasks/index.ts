@@ -2,3 +2,4 @@ export { KanbanBoard, TaskCard, KanbanColumn, KANBAN_COLUMNS } from './KanbanBoa
 export { TaskFilters } from './TaskFilters';
 export { TaskDetailModal } from './TaskDetailModal';
 export { CreateTaskModal } from './CreateTaskModal';
+export { DependencyGraph } from './DependencyGraph';
