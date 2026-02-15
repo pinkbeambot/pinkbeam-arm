@@ -154,7 +154,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
               if (
                 newTask &&
                 (!status || newTask.status === status) &&
-                (!assignee_id || newTask.assigned_agent_id === assignee_id) &&
+                (!assignee_id || (newTask as any).assignee_id === assignee_id) &&
                 (!priority || newTask.priority === priority)
               ) {
                 return [newTask, ...currentTasks];
