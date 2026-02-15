@@ -245,7 +245,7 @@ describe('Messages API Integration', () => {
       expect(error).toBeNull();
       expect(messages).toBeDefined();
       expect(messages!.length).toBeGreaterThan(0);
-      messages!.forEach((msg) => {
+      messages!.forEach((msg: { from_agent_id?: string }) => {
         expect(msg.from_agent_id).toBe(testAgent1Id);
       });
     });
@@ -261,7 +261,7 @@ describe('Messages API Integration', () => {
       expect(error).toBeNull();
       expect(messages).toBeDefined();
       expect(messages!.length).toBeGreaterThan(0);
-      messages!.forEach((msg) => {
+      messages!.forEach((msg: { to_agent_id?: string }) => {
         expect(msg.to_agent_id).toBe(testAgent2Id);
       });
     });
@@ -300,7 +300,7 @@ describe('Messages API Integration', () => {
       expect(error).toBeNull();
       expect(messages).toBeDefined();
       expect(messages!.length).toBeGreaterThanOrEqual(3);
-      messages!.forEach((msg) => {
+      messages!.forEach((msg: { thread_id?: string }) => {
         expect(msg.thread_id).toBe(testThreadId);
       });
     });
@@ -316,7 +316,7 @@ describe('Messages API Integration', () => {
 
       expect(error).toBeNull();
       expect(messages).toBeDefined();
-      messages!.forEach((msg) => {
+      messages!.forEach((msg: { requires_ack?: boolean; acked_at?: string | null }) => {
         expect(msg.requires_ack).toBe(true);
         expect(msg.acked_at).toBeNull();
       });
@@ -332,7 +332,7 @@ describe('Messages API Integration', () => {
 
       expect(error).toBeNull();
       expect(messages).toBeDefined();
-      messages!.forEach((msg) => {
+      messages!.forEach((msg: { message_type: string }) => {
         expect(msg.message_type).toBe('message.direct');
       });
     });
@@ -507,7 +507,7 @@ describe('Messages API Integration', () => {
         .select('*')
         .eq('tenant_id', testTenantId);
 
-      const crossTenantMessage = messages?.find((m) => m.id === otherMessage!.id);
+      const crossTenantMessage = messages?.find((m: { id: string }) => m.id === otherMessage!.id);
       expect(crossTenantMessage).toBeUndefined();
 
       // Cleanup
@@ -537,7 +537,7 @@ describe('Messages API Integration', () => {
 
       // Collect unique participants
       const participantIds = new Set<string>();
-      messages!.forEach((msg) => {
+      messages!.forEach((msg: { from_agent_id?: string; to_agent_id?: string }) => {
         if (msg.from_agent_id) participantIds.add(msg.from_agent_id);
         if (msg.to_agent_id) participantIds.add(msg.to_agent_id);
       });

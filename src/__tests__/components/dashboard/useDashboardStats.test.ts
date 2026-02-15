@@ -39,7 +39,7 @@ describe('useDashboardStats', () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     mockFetch = vi.fn();
-    globalThis.fetch = mockFetch;
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
 
     // Default: authenticated session
     mockUseAuth.mockReturnValue({

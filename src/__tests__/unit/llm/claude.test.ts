@@ -29,6 +29,7 @@ describe('ClaudeProvider', () => {
       const provider = new ClaudeProvider({
         apiKey: 'test-api-key',
         baseUrl: 'https://custom.anthropic.com',
+        defaultModel: 'claude-3-5-sonnet-20241022',
       });
       expect(provider).toBeInstanceOf(ClaudeProvider);
     });
@@ -36,7 +37,7 @@ describe('ClaudeProvider', () => {
 
   describe('getModels', () => {
     it('should return available models', () => {
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const models = provider.getModels();
       expect(models.length).toBeGreaterThan(0);
       expect(models[0].provider).toBe('anthropic');
@@ -58,7 +59,7 @@ describe('ClaudeProvider', () => {
         }),
       });
 
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const response = await provider.complete({
         messages: [{ role: 'user', content: 'Hi' }],
       });
@@ -88,7 +89,7 @@ describe('ClaudeProvider', () => {
         }),
       });
 
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const response = await provider.complete({
         messages: [{ role: 'user', content: 'What is the weather?' }],
         config: {
@@ -118,8 +119,8 @@ describe('ClaudeProvider', () => {
         json: async () => ({ error: { message: 'Invalid API key' } }),
       });
 
-      const provider = new ClaudeProvider({ apiKey: 'invalid' });
-      
+      const provider = new ClaudeProvider({ apiKey: 'invalid', defaultModel: 'claude-3-5-sonnet-20241022' });
+
       await expect(provider.complete({
         messages: [{ role: 'user', content: 'Hi' }],
       })).rejects.toThrow(LLMError);
@@ -139,7 +140,7 @@ describe('ClaudeProvider', () => {
         }),
       });
 
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const response = await provider.complete({
         messages: [{ role: 'user', content: 'Write a long story' }],
       });
@@ -163,7 +164,7 @@ describe('ClaudeProvider', () => {
         }),
       });
 
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const response = await provider.complete({
         messages: [{ role: 'user', content: 'Hi' }],
       });
@@ -180,7 +181,7 @@ describe('ClaudeProvider', () => {
         ok: true,
       });
 
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const health = await provider.healthCheck();
 
       expect(health.healthy).toBe(true);
@@ -190,7 +191,7 @@ describe('ClaudeProvider', () => {
     it('should return unhealthy when API fails', async () => {
       mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const health = await provider.healthCheck();
 
       expect(health.healthy).toBe(false);
@@ -199,13 +200,13 @@ describe('ClaudeProvider', () => {
 
   describe('estimateTokens', () => {
     it('should estimate tokens correctly', () => {
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const tokens = provider.estimateTokens('Hello world');
       expect(tokens).toBe(3); // 11 chars / 4 = 2.75, ceil = 3
     });
 
     it('should handle empty string', () => {
-      const provider = new ClaudeProvider({ apiKey: 'test' });
+      const provider = new ClaudeProvider({ apiKey: 'test', defaultModel: 'claude-3-5-sonnet-20241022' });
       const tokens = provider.estimateTokens('');
       expect(tokens).toBe(0);
     });
@@ -227,7 +228,7 @@ describe('createClaudeProvider', () => {
 
   it('should use provided config over environment', () => {
     process.env.ANTHROPIC_API_KEY = 'env-api-key';
-    const provider = createClaudeProvider({ apiKey: 'provided-key' });
+    const provider = createClaudeProvider({ apiKey: 'provided-key', defaultModel: 'claude-3-5-sonnet-20241022' });
     expect(provider).toBeInstanceOf(ClaudeProvider);
     delete process.env.ANTHROPIC_API_KEY;
   });

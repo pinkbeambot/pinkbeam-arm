@@ -15,7 +15,7 @@ vi.mock('@/lib/hooks/useChat', () => ({
 
 import { useChat } from '@/lib/hooks/useChat';
 
-const mockUseChat = useChat as jest.Mock;
+const mockUseChat = useChat as ReturnType<typeof vi.fn>;
 
 describe('ChatPanel', () => {
   const defaultProps = {
@@ -62,19 +62,21 @@ describe('ChatPanel', () => {
     },
   ];
 
+  const defaultMockReturn = {
+    chat: mockChat,
+    messages: mockMessages,
+    loading: false,
+    error: null,
+    hasMore: false,
+    sending: false,
+    sendMessage: vi.fn(),
+    loadMore: vi.fn(),
+    deleteMessage: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseChat.mockReturnValue({
-      chat: mockChat,
-      messages: mockMessages,
-      loading: false,
-      error: null,
-      hasMore: false,
-      sending: false,
-      sendMessage: vi.fn(),
-      loadMore: vi.fn(),
-      deleteMessage: vi.fn(),
-    });
+    mockUseChat.mockReturnValue(defaultMockReturn);
   });
 
   it('renders without crashing', () => {
@@ -89,7 +91,7 @@ describe('ChatPanel', () => {
 
   it('displays loading state when loading', () => {
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       loading: true,
       messages: [],
     });
@@ -99,7 +101,7 @@ describe('ChatPanel', () => {
 
   it('displays error state when there is an error', () => {
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       error: new Error('Failed to load'),
       messages: [],
     });
@@ -109,7 +111,7 @@ describe('ChatPanel', () => {
 
   it('displays empty state when no messages', () => {
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       messages: [],
     });
     render(<ChatPanel {...defaultProps} />);
@@ -125,7 +127,7 @@ describe('ChatPanel', () => {
   it('calls sendMessage when sending a message', async () => {
     const sendMessage = vi.fn();
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       sendMessage,
     });
     render(<ChatPanel {...defaultProps} />);
@@ -143,7 +145,7 @@ describe('ChatPanel', () => {
 
   it('disables input when sending', () => {
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       sending: true,
     });
     render(<ChatPanel {...defaultProps} />);
@@ -182,7 +184,7 @@ describe('ChatPanel', () => {
   it('handles load more when scrolling to top', async () => {
     const loadMore = vi.fn();
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       hasMore: true,
       loadMore,
     });
@@ -195,7 +197,7 @@ describe('ChatPanel', () => {
   it('allows deleting user messages', async () => {
     const deleteMessage = vi.fn();
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       deleteMessage,
     });
     render(<ChatPanel {...defaultProps} />);
@@ -241,7 +243,7 @@ describe('ChatPanel', () => {
 
   it('handles agent initialization state', () => {
     mockUseChat.mockReturnValue({
-      ...mockUseChat(),
+      ...defaultMockReturn,
       chat: {
         ...mockChat,
         agent: {
