@@ -4,7 +4,23 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 import { z } from 'https://esm.sh/zod@3.22.4';
-import { createAdminClient, generateUUID, nowISO, createLogger, logActivity, taskExecuteRequestSchema, taskCreateRequestSchema } from '../_shared/utils.ts';
+import {
+  createAdminClient,
+  generateUUID,
+  nowISO,
+  createLogger,
+  logActivity,
+  taskCreateRequestSchema,
+  taskClaimRequestSchema,
+  taskStartRequestSchema,
+  taskCompleteRequestSchema,
+  taskFailRequestSchema,
+  type TaskCreateRequest,
+  type TaskClaimRequest,
+  type TaskStartRequest,
+  type TaskCompleteRequest,
+  type TaskFailRequest,
+} from '../_shared/utils.ts';
 
 const logger = createLogger('task-executor');
 
@@ -36,7 +52,7 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleCreate(auth: AuthContext, body: any): Promise<Response> {
+async function handleCreate(auth: AuthContext, body: TaskCreateRequest): Promise<Response> {
   const supabase = createAdminClient();
   const taskId = generateUUID();
   const now = nowISO();
@@ -63,7 +79,7 @@ async function handleCreate(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: taskId, status: 'queued' } }, 201);
 }
 
-async function handleClaim(auth: AuthContext, body: any): Promise<Response> {
+async function handleClaim(auth: AuthContext, body: TaskClaimRequest): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -75,7 +91,7 @@ async function handleClaim(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: body.task_id, agent_id: body.agent_id } });
 }
 
-async function handleStart(auth: AuthContext, body: any): Promise<Response> {
+async function handleStart(auth: AuthContext, body: TaskStartRequest): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -87,7 +103,7 @@ async function handleStart(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: body.task_id, status: 'in_progress' } });
 }
 
-async function handleComplete(auth: AuthContext, body: any): Promise<Response> {
+async function handleComplete(auth: AuthContext, body: TaskCompleteRequest): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -101,7 +117,7 @@ async function handleComplete(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: body.task_id, status: 'completed' } });
 }
 
-async function handleFail(auth: AuthContext, body: any): Promise<Response> {
+async function handleFail(auth: AuthContext, body: TaskFailRequest): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -134,10 +150,10 @@ export default async function handler(req: Request): Promise<Response> {
 
     switch (path) {
       case 'create': return handleCreate(auth, taskCreateRequestSchema.parse(body));
-      case 'claim': return handleClaim(auth, body);
-      case 'start': return handleStart(auth, body);
-      case 'complete': return handleComplete(auth, taskExecuteRequestSchema.parse(body));
-      case 'fail': return handleFail(auth, taskExecuteRequestSchema.parse(body));
+      case 'claim': return handleClaim(auth, taskClaimRequestSchema.parse(body));
+      case 'start': return handleStart(auth, taskStartRequestSchema.parse(body));
+      case 'complete': return handleComplete(auth, taskCompleteRequestSchema.parse(body));
+      case 'fail': return handleFail(auth, taskFailRequestSchema.parse(body));
       default: return errorResponse('NOT_FOUND', `Unknown: ${path}`, 404, false);
     }
   } catch (err) {

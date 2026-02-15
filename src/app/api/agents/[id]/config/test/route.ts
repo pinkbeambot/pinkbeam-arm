@@ -1,13 +1,55 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse, type AuthContext } from '@/lib/api/auth';
+import { rateLimitService } from '@/lib/rate-limit';
 import { testAgentConfigSchema, type AgentConfig } from '@/lib/validation';
 import { generateConfigDiff, type ConfigDiffResult } from '@/lib/config-utils';
 import { z } from 'zod';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 
-// LLM API configuration
+// LLM API configuration - SECURE: Only accessed server-side
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY;
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 const CLAUDE_MODEL = 'claude-3-5-sonnet-20241022';
+
+// Security constants
+const RATE_LIMIT_REQUESTS = 5; // Stricter limit for config testing
+const RATE_LIMIT_WINDOW_MINUTES = 1;
+const MAX_TEST_INPUT_LENGTH = 5000;
+const MAX_CONFIG_SIZE = 100000; // 100KB max config size
+
+// SSRF protection: Blocked patterns
+const SSRF_BLOCKED_PATTERNS = [
+  // Private IP ranges
+  /^127\./,
+  /^10\./,
+  /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+  /^192\.168\./,
+  /^169\.254\./, // Link-local
+  /^0\./,
+  /^::1$/,
+  /^fc00:/,
+  /^fe80:/,
+  // Localhost variants
+  /localhost/i,
+  /\.local$/i,
+  // Cloud metadata endpoints
+  /169\.254\.169\.254/, // AWS, GCP, Azure metadata
+  /metadata\.google\.internal/,
+  /metadata\.azure\.internal/,
+  // Internal hostnames
+  /\.internal$/i,
+  /\.private$/i,
+  /\.corp$/i,
+];
+
+// Suspicious config patterns that might indicate SSRF attempts
+const SSRF_CONFIG_PATTERNS = [
+  /url\s*:\s*["']?https?:/i,
+  /endpoint\s*:\s*["']?https?:/i,
+  /api_url\s*:\s*["']?https?:/i,
+  /webhook\s*:\s*["']?https?:/i,
+  /callback\s*:\s*["']?https?:/i,
+];
 
 interface RouteParams {
   params: Promise<{
@@ -26,6 +68,210 @@ interface TestResult {
   error_details?: unknown;
 }
 
+interface AuditLogEntry {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  user_id: string;
+  action: 'config_test';
+  ip_address: string;
+  user_agent: string;
+  test_input_preview: string;
+  success: boolean;
+  config_hash: string;
+  metadata: {
+    response_time_ms?: number;
+    tokens_used?: number;
+    cost_usd?: number;
+    model_used?: string;
+    error_message?: string;
+    rate_limited?: boolean;
+    ssrf_detected?: boolean;
+    validation_failed?: boolean;
+  };
+  created_at: string;
+}
+
+/**
+ * Hash a string for audit logging (prevents storing full configs)
+ */
+function hashConfig(config: unknown): string {
+  try {
+    const str = JSON.stringify(config);
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash;
+    }
+    return hash.toString(16);
+  } catch {
+    return 'invalid';
+  }
+}
+
+/**
+ * Get client IP address from request
+ */
+function getClientIP(request: NextRequest): string {
+  // Check various headers for the real client IP
+  const headers = [
+    'x-forwarded-for',
+    'x-real-ip',
+    'x-client-ip',
+    'cf-connecting-ip',
+    'x-forwarded',
+    'forwarded-for',
+  ];
+
+  for (const header of headers) {
+    const value = request.headers.get(header);
+    if (value) {
+      // Take the first IP if multiple are present
+      const ip = value.split(',')[0].trim();
+      if (ip && !ip.startsWith('127.') && ip !== '::1') {
+        return ip;
+      }
+    }
+  }
+
+  // Fallback to a hash of the request headers
+  return 'unknown';
+}
+
+/**
+ * Validate config for SSRF attack patterns
+ */
+function validateConfigForSSRF(config: AgentConfig): { valid: boolean; reason?: string } {
+  try {
+    const configStr = JSON.stringify(config);
+
+    // Check config size
+    if (configStr.length > MAX_CONFIG_SIZE) {
+      return { valid: false, reason: 'Config size exceeds maximum allowed' };
+    }
+
+    // Check for suspicious patterns in config
+    for (const pattern of SSRF_CONFIG_PATTERNS) {
+      if (pattern.test(configStr)) {
+        // Extract potential URLs and validate them
+        const urlMatches = configStr.match(/https?:\/\/[^"'\s]+/gi);
+        if (urlMatches) {
+          for (const url of urlMatches) {
+            if (isUrlBlocked(url)) {
+              return { valid: false, reason: 'Config contains blocked URL patterns' };
+            }
+          }
+        }
+      }
+    }
+
+    // Validate system prompt for injection attempts
+    if (config.instructions?.system_prompt) {
+      const prompt = config.instructions.system_prompt.toLowerCase();
+      
+      // Check for attempts to override system behavior
+      const dangerousPatterns = [
+        'ignore previous instructions',
+        'ignore all previous',
+        'disregard all',
+        'system override',
+        'admin mode',
+        'developer mode',
+        'ignore your instructions',
+        'new instructions:',
+        'override protocol',
+      ];
+
+      for (const pattern of dangerousPatterns) {
+        if (prompt.includes(pattern)) {
+          return { valid: false, reason: 'System prompt contains potentially malicious patterns' };
+        }
+      }
+    }
+
+    return { valid: true };
+  } catch (error) {
+    return { valid: false, reason: 'Failed to validate config' };
+  }
+}
+
+/**
+ * Check if a URL is in the blocked list
+ */
+function isUrlBlocked(url: string): boolean {
+  try {
+    const lowerUrl = url.toLowerCase();
+    
+    for (const pattern of SSRF_BLOCKED_PATTERNS) {
+      if (pattern.test(lowerUrl)) {
+        return true;
+      }
+    }
+    
+    return false;
+  } catch {
+    return true; // Block on error
+  }
+}
+
+/**
+ * Log audit event for config test
+ */
+async function logAuditEvent(
+  supabase: ReturnType<typeof createServiceRoleClient>,
+  entry: Omit<AuditLogEntry, 'id' | 'created_at'>
+): Promise<void> {
+  try {
+    await supabase.from('security_audit_log').insert({
+      tenant_id: entry.tenant_id,
+      user_id: entry.user_id,
+      action: entry.action,
+      resource_type: 'agent_config_test',
+      resource_id: entry.agent_id,
+      ip_address: entry.ip_address,
+      user_agent: entry.user_agent,
+      details: {
+        test_input_preview: entry.test_input_preview,
+        config_hash: entry.config_hash,
+        success: entry.success,
+        ...entry.metadata,
+      },
+    });
+  } catch (e) {
+    // Fail silently - don't block the request due to logging failure
+    console.error('[SecurityAudit] Failed to log audit event:', e);
+  }
+}
+
+/**
+ * Apply stricter rate limiting for config test endpoint
+ */
+async function checkStrictRateLimit(
+  tenantId: string,
+  userId: string,
+  ipAddress: string
+): Promise<{ allowed: boolean; retryAfter?: number }> {
+  // Create composite key for stricter limiting
+  const compositeKey = `${tenantId}:${userId}:${ipAddress}`;
+  
+  // Use a stricter limit for config testing
+  const result = await rateLimitService.checkLimit(
+    `config-test:${compositeKey}`,
+    'free',
+    RATE_LIMIT_REQUESTS
+  );
+
+  if (!result.allowed) {
+    return {
+      allowed: false,
+      retryAfter: result.retryAfter || RATE_LIMIT_WINDOW_MINUTES * 60,
+    };
+  }
+
+  return { allowed: true };
+}
+
 /**
  * Test a configuration with LLM
  */
@@ -37,6 +283,11 @@ async function testConfigWithLLM(
   const startTime = Date.now();
 
   try {
+    // Validate API key is configured
+    if (!CLAUDE_API_KEY) {
+      throw new Error('LLM API not configured');
+    }
+
     // Build system prompt from config
     const systemPrompt = buildSystemPrompt(config);
 
@@ -45,7 +296,7 @@ async function testConfigWithLLM(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY || '',
+        'x-api-key': CLAUDE_API_KEY,
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
@@ -65,14 +316,26 @@ async function testConfigWithLLM(
     const responseTime = Date.now() - startTime;
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
+      // SECURE: Don't expose API key or internal details in error
+      const errorStatus = response.status;
+      let errorMessage = 'LLM API request failed';
+      
+      // Only expose safe error information
+      if (errorStatus === 429) {
+        errorMessage = 'Rate limit exceeded by LLM provider';
+      } else if (errorStatus === 401 || errorStatus === 403) {
+        errorMessage = 'LLM API authentication failed';
+      } else if (errorStatus >= 500) {
+        errorMessage = 'LLM provider error';
+      }
+
       return {
         success: false,
         output: '',
         response_time_ms: responseTime,
         model_used: model,
-        error_message: errorData.error?.message || `API error: ${response.status}`,
-        error_details: errorData,
+        error_message: errorMessage,
+        error_details: { status: errorStatus },
       };
     }
 
@@ -82,7 +345,7 @@ async function testConfigWithLLM(
     const inputTokens = data.usage?.input_tokens || 0;
     const outputTokens = data.usage?.output_tokens || 0;
     const totalTokens = inputTokens + outputTokens;
-    const costUsd = (inputTokens * 0.000003) + (outputTokens * 0.000015); // $3/MTok input, $15/MTok output
+    const costUsd = (inputTokens * 0.000003) + (outputTokens * 0.000015);
 
     return {
       success: true,
@@ -93,13 +356,18 @@ async function testConfigWithLLM(
       model_used: model,
     };
   } catch (error) {
+    // SECURE: Don't expose internal error details
+    const isConfigError = error instanceof Error && error.message === 'LLM API not configured';
+    
     return {
       success: false,
       output: '',
       response_time_ms: Date.now() - startTime,
       model_used: model,
-      error_message: error instanceof Error ? error.message : 'Unknown error',
-      error_details: error,
+      error_message: isConfigError 
+        ? 'LLM API not configured' 
+        : 'Failed to process test request',
+      error_details: null,
     };
   }
 }
@@ -153,8 +421,11 @@ function buildSystemPrompt(config: AgentConfig): string {
  * Get test history for an agent
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  const clientIP = getClientIP(request);
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+
   try {
-    const { id } = await params;
     const { searchParams } = new URL(request.url);
 
     // Parse query parameters
@@ -163,7 +434,38 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, userId, supabase } = auth;
+
+    // Apply strict rate limiting
+    const rateLimit = await checkStrictRateLimit(tenantId, userId, clientIP);
+    if (!rateLimit.allowed) {
+      // Log rate limit event
+      await logAuditEvent(createServiceRoleClient(), {
+        tenant_id: tenantId,
+        agent_id: id,
+        user_id: userId,
+        action: 'config_test',
+        ip_address: clientIP,
+        user_agent: userAgent,
+        test_input_preview: '[GET request - rate limited]',
+        success: false,
+        config_hash: 'n/a',
+        metadata: { rate_limited: true },
+      });
+
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded',
+          message: `Too many requests. Try again in ${Math.ceil((rateLimit.retryAfter || 60) / 60)} minutes.`
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfter || 60),
+          }
+        }
+      );
+    }
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -230,16 +532,84 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Test an agent's configuration with a dry run
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params;
+  const clientIP = getClientIP(request);
+  const userAgent = request.headers.get('user-agent') || 'unknown';
+  let requestBody: unknown = null;
+
   try {
-    const { id } = await params;
+    // Parse request body early for audit logging
+    try {
+      requestBody = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, userId, supabase } = auth;
 
-    // Parse and validate request body
-    const body = await request.json();
-    const validatedData = testAgentConfigSchema.parse(body);
+    // Apply strict rate limiting (per tenant + user + IP)
+    const rateLimit = await checkStrictRateLimit(tenantId, userId, clientIP);
+    if (!rateLimit.allowed) {
+      // Log rate limit event
+      await logAuditEvent(createServiceRoleClient(), {
+        tenant_id: tenantId,
+        agent_id: id,
+        user_id: userId,
+        action: 'config_test',
+        ip_address: clientIP,
+        user_agent: userAgent,
+        test_input_preview: '[POST request - rate limited]',
+        success: false,
+        config_hash: 'n/a',
+        metadata: { rate_limited: true },
+      });
+
+      return NextResponse.json(
+        { 
+          error: 'Rate limit exceeded',
+          message: `Too many config test requests. Try again in ${Math.ceil((rateLimit.retryAfter || 60) / 60)} minutes.`
+        },
+        { 
+          status: 429,
+          headers: {
+            'Retry-After': String(rateLimit.retryAfter || 60),
+          }
+        }
+      );
+    }
+
+    // Validate request body
+    let validatedData;
+    try {
+      validatedData = testAgentConfigSchema.parse(requestBody);
+    } catch (validationError) {
+      // Log validation failure
+      await logAuditEvent(createServiceRoleClient(), {
+        tenant_id: tenantId,
+        agent_id: id,
+        user_id: userId,
+        action: 'config_test',
+        ip_address: clientIP,
+        user_agent: userAgent,
+        test_input_preview: String((requestBody as { test_input?: string } | null)?.test_input || '').slice(0, 100),
+        success: false,
+        config_hash: 'n/a',
+        metadata: { validation_failed: true },
+      });
+
+      if (validationError instanceof z.ZodError) {
+        return NextResponse.json(
+          { error: 'Validation error', details: validationError.issues },
+          { status: 400 }
+        );
+      }
+      throw validationError;
+    }
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -257,13 +627,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     let configToTest: AgentConfig;
 
     if (validatedData.use_current && !validatedData.config) {
-      // Use current config from agent
       configToTest = (agent.config as AgentConfig) || {};
     } else if (validatedData.config) {
-      // Use provided config
       configToTest = validatedData.config;
     } else {
-      // Get current config from agent_configs table
       const { data: currentConfig } = await supabase
         .from('agent_configs')
         .select('config')
@@ -273,6 +640,33 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
       configToTest = (currentConfig?.config as AgentConfig) || {};
     }
+
+    // SECURITY: Validate config for SSRF attacks
+    const ssrfCheck = validateConfigForSSRF(configToTest);
+    if (!ssrfCheck.valid) {
+      // Log security event
+      await logAuditEvent(createServiceRoleClient(), {
+        tenant_id: tenantId,
+        agent_id: id,
+        user_id: userId,
+        action: 'config_test',
+        ip_address: clientIP,
+        user_agent: userAgent,
+        test_input_preview: validatedData.test_input.slice(0, 100),
+        success: false,
+        config_hash: hashConfig(configToTest),
+        metadata: { ssrf_detected: true },
+      });
+
+      return NextResponse.json(
+        { error: 'Security validation failed', message: ssrfCheck.reason },
+        { status: 400 }
+      );
+    }
+
+    // Generate config hash for audit logging
+    const configHash = hashConfig(configToTest);
+    const testInputPreview = validatedData.test_input.slice(0, 100);
 
     // Check if we have LLM API access
     if (!CLAUDE_API_KEY) {
@@ -298,6 +692,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         cost_usd: simulatedResult.cost_usd,
         model_used: simulatedResult.model_used,
         error_message: simulatedResult.error_message,
+      });
+
+      // Log successful audit event
+      await logAuditEvent(createServiceRoleClient(), {
+        tenant_id: tenantId,
+        agent_id: id,
+        user_id: userId,
+        action: 'config_test',
+        ip_address: clientIP,
+        user_agent: userAgent,
+        test_input_preview: testInputPreview,
+        success: true,
+        config_hash: configHash,
+        metadata: {
+          response_time_ms: simulatedResult.response_time_ms,
+          tokens_used: simulatedResult.tokens_used,
+          cost_usd: simulatedResult.cost_usd,
+          model_used: simulatedResult.model_used,
+        },
       });
 
       return NextResponse.json({
@@ -350,6 +763,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .eq('agent_id', id)
       .eq('tenant_id', tenantId);
 
+    // Log audit event
+    await logAuditEvent(createServiceRoleClient(), {
+      tenant_id: tenantId,
+      agent_id: id,
+      user_id: userId,
+      action: 'config_test',
+      ip_address: clientIP,
+      user_agent: userAgent,
+      test_input_preview: testInputPreview,
+      success: testResult.success,
+      config_hash: configHash,
+      metadata: {
+        response_time_ms: testResult.response_time_ms,
+        tokens_used: testResult.tokens_used,
+        cost_usd: testResult.cost_usd,
+        model_used: testResult.model_used,
+        error_message: testResult.error_message,
+      },
+    });
+
     return NextResponse.json({
       data: {
         test_input: validatedData.test_input,
@@ -369,7 +802,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 400 }
       );
     }
+
+    // Log unexpected error
     console.error('Unexpected error in POST /api/agents/:id/config/test:', error);
+
+    // SECURE: Don't expose internal error details to client
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -411,6 +848,7 @@ async function storeTestResult(
       error_details: result.error_details,
     });
   } catch (e) {
+    // Fail silently - don't block the response due to storage failure
     console.error('Failed to store test result:', e);
   }
 }

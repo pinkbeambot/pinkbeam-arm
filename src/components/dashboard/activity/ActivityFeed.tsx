@@ -1,14 +1,92 @@
 'use client';
 
 import * as React from 'react';
-import { RefreshCw, Wifi, WifiOff, AlertCircle, ChevronDown } from 'lucide-react';
+import { RefreshCw, Wifi, WifiOff, AlertCircle, ChevronDown, Zap, WifiLow, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ActivityItem, ActivityItemSkeleton } from './ActivityItem';
 import { ActivityFilterBar } from './ActivityFilter';
 import { useRealtimeActivities } from './useRealtimeActivities';
+import type { ConnectionState } from '@/lib/realtime/useRealtime';
 import type { ActivityEvent, ActivityFilter, ActivityFeedProps } from './types';
+
+// ============================================================================
+// Connection Status Indicator Component
+// ============================================================================
+
+interface ConnectionStatusProps {
+  state: ConnectionState;
+  retryCount: number;
+  onRetry?: () => void;
+}
+
+function ConnectionStatus({ state, retryCount, onRetry }: ConnectionStatusProps) {
+  const config: Record<ConnectionState, { 
+    icon: React.ReactNode; 
+    label: string; 
+    variant: 'default' | 'secondary' | 'destructive' | 'outline';
+    tooltip: string;
+  }> = {
+    connected: {
+      icon: <Wifi className="w-3 h-3" />,
+      label: 'Live',
+      variant: 'default',
+      tooltip: 'Real-time updates are active',
+    },
+    connecting: {
+      icon: <Loader2 className="w-3 h-3 animate-spin" />,
+      label: 'Connecting...',
+      variant: 'outline',
+      tooltip: 'Establishing real-time connection...',
+    },
+    reconnecting: {
+      icon: <WifiLow className="w-3 h-3" />,
+      label: 'Reconnecting...',
+      variant: 'secondary',
+      tooltip: `Attempting to reconnect (attempt ${retryCount})...`,
+    },
+    disconnected: {
+      icon: <WifiOff className="w-3 h-3" />,
+      label: 'Offline',
+      variant: 'outline',
+      tooltip: 'Real-time updates are paused. Click to reconnect.',
+    },
+    error: {
+      icon: <AlertCircle className="w-3 h-3" />,
+      label: 'Error',
+      variant: 'destructive',
+      tooltip: 'Connection error. Click to retry.',
+    },
+  };
+
+  const { icon, label, variant, tooltip } = config[state];
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge 
+            variant={variant}
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-0.5 cursor-pointer transition-all',
+              (state === 'error' || state === 'disconnected') && 'hover:opacity-80'
+            )}
+            onClick={(state === 'error' || state === 'disconnected') ? onRetry : undefined}
+          >
+            {icon}
+            <span className="text-xs">{label}</span>
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
 
 // ============================================================================
 // Empty State Component
@@ -28,6 +106,34 @@ function EmptyState({ filter }: { filter: ActivityFilter }) {
           ? 'Try adjusting your filters to see more activities.'
           : 'Activities will appear here when agents start working.'}
       </p>
+    </div>
+  );
+}
+
+// ============================================================================
+// Connection Error Banner
+// ============================================================================
+
+function ConnectionErrorBanner({ 
+  error, 
+  onRetry 
+}: { 
+  error: Error | null; 
+  onRetry: () => void;
+}) {
+  if (!error) return null;
+
+  return (
+    <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 mb-4 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <WifiOff className="w-4 h-4 text-amber-600" />
+        <span className="text-sm text-amber-700">
+          Real-time updates unavailable
+        </span>
+      </div>
+      <Button variant="ghost" size="sm" onClick={onRetry} className="h-7 text-xs">
+        Retry
+      </Button>
     </div>
   );
 }
@@ -57,12 +163,16 @@ export function ActivityFeed({
     events,
     isLoading,
     isRealtime,
+    connectionState,
+    connectionError,
+    retryCount,
     error,
     hasMore,
     loadMore,
     refetch,
+    retryConnection,
   } = useRealtimeActivities({
-    enabled: true,
+    enabled: realtime,
     filter,
     onNewActivity: (activity) => {
       // Mark as new for animation
@@ -142,27 +252,14 @@ export function ActivityFeed({
           <div className="flex items-center gap-3">
             <CardTitle className="text-lg font-semibold">Activity Feed</CardTitle>
             
-            {/* Realtime indicator */}
-            <div
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
-                isRealtime
-                  ? 'bg-green-500/10 text-green-600'
-                  : 'bg-amber-500/10 text-amber-600'
-              )}
-            >
-              {isRealtime ? (
-                <>
-                  <Wifi className="w-3 h-3" />
-                  <span>Live</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-3 h-3" />
-                  <span>Offline</span>
-                </>
-              )}
-            </div>
+            {/* Realtime connection status */}
+            {realtime && (
+              <ConnectionStatus 
+                state={connectionState} 
+                retryCount={retryCount}
+                onRetry={retryConnection}
+              />
+            )}
           </div>
           
           {/* Actions */}
@@ -173,11 +270,17 @@ export function ActivityFeed({
               onClick={refetch}
               disabled={isLoading}
               className="h-8 w-8"
+              title="Refresh"
             >
               <RefreshCw className={cn('w-4 h-4', isLoading && 'animate-spin')} />
             </Button>
           </div>
         </div>
+        
+        {/* Connection error banner */}
+        {realtime && connectionError && (
+          <ConnectionErrorBanner error={connectionError} onRetry={retryConnection} />
+        )}
         
         {/* Filters */}
         {showFilters && (

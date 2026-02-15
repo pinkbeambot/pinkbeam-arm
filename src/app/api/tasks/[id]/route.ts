@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { updateTaskSchema } from '@/lib/validation';
+import { requirePermission } from '@/lib/rbac';
 import { z } from 'zod';
 
 interface RouteParams {
@@ -205,7 +206,13 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can update tasks
+    const guard = requirePermission(userRole, 'tasks:update');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Check if task exists and belongs to tenant
     const { data: existingTask, error: fetchError } = await supabase
@@ -335,7 +342,13 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     const auth = await authenticateRequest(request);
     if (isErrorResponse(auth)) return auth;
-    const { tenantId, supabase } = auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can delete tasks (admin and owner only)
+    const guard = requirePermission(userRole, 'tasks:delete');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
+    }
 
     // Check if task exists and get its status
     const { data: existingTask, error: fetchError } = await supabase

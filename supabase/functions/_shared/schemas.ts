@@ -132,6 +132,45 @@ export const taskCreateRequestSchema = z.object({
 
 export type TaskCreateRequest = z.infer<typeof taskCreateRequestSchema>;
 
+// Task claim request schema
+export const taskClaimRequestSchema = z.object({
+  task_id: uuidSchema,
+  agent_id: uuidSchema,
+  tenant_id: uuidSchema.optional(),
+});
+
+export type TaskClaimRequest = z.infer<typeof taskClaimRequestSchema>;
+
+// Task start request schema
+export const taskStartRequestSchema = z.object({
+  task_id: uuidSchema,
+  tenant_id: uuidSchema.optional(),
+});
+
+export type TaskStartRequest = z.infer<typeof taskStartRequestSchema>;
+
+// Task complete request schema
+export const taskCompleteRequestSchema = z.object({
+  task_id: uuidSchema,
+  tenant_id: uuidSchema.optional(),
+  payload: z.object({
+    outputs: z.record(z.unknown()).optional(),
+  }).optional(),
+});
+
+export type TaskCompleteRequest = z.infer<typeof taskCompleteRequestSchema>;
+
+// Task fail request schema
+export const taskFailRequestSchema = z.object({
+  task_id: uuidSchema,
+  tenant_id: uuidSchema.optional(),
+  payload: z.object({
+    error_message: z.string().optional(),
+  }).optional(),
+});
+
+export type TaskFailRequest = z.infer<typeof taskFailRequestSchema>;
+
 // ============================================================================
 // Message Schemas
 // ============================================================================
@@ -279,3 +318,97 @@ export const apiRequestSchema = z.object({
 });
 
 export type ApiRequest = z.infer<typeof apiRequestSchema>;
+
+// ============================================================================
+// Database Row Types (for Supabase queries)
+// ============================================================================
+
+export interface AgentRow {
+  id: string;
+  tenant_id: string;
+  parent_id: string | null;
+  root_id: string;
+  depth: number;
+  name: string;
+  role: string;
+  status: string;
+  capabilities: string[];
+  description?: string;
+  config?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TaskRow {
+  id: string;
+  tenant_id: string;
+  title: string;
+  description?: string;
+  status: string;
+  priority: string;
+  assignee_id?: string;
+  assigner_id?: string;
+  parent_task_id?: string;
+  created_at: string;
+  updated_at: string;
+  started_at?: string;
+  completed_at?: string;
+  progress_percent?: number;
+  outputs?: Record<string, unknown>;
+}
+
+export interface MessageRow {
+  id: string;
+  tenant_id: string;
+  protocol_version: string;
+  message_type: string;
+  from_agent_id?: string;
+  to_agent_id?: string | null;
+  to_broadcast: boolean;
+  thread_id?: string;
+  correlation_id?: string;
+  payload: Record<string, unknown>;
+  priority: string;
+  requires_ack: boolean;
+  created_at: string;
+}
+
+export interface DecisionRow {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  task_id?: string;
+  category: string;
+  title: string;
+  description: string;
+  proposed_action: Record<string, unknown>;
+  reasoning?: Record<string, unknown>;
+  self_authorized: boolean;
+  status: string;
+  proposed_at: string;
+  executed_at?: string | null;
+}
+
+export interface EscalationRow {
+  id: string;
+  tenant_id: string;
+  agent_id: string;
+  task_id?: string;
+  type: string;
+  urgency: string;
+  status: string;
+  title: string;
+  description: string;
+  question?: Record<string, unknown>;
+  agent_analysis?: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+// Daily cost RPC response type
+export interface DailyCostRow {
+  date: string;
+  request_count: number | string;
+  total_tokens: number | string;
+  total_cost_usd: number | string;
+}
