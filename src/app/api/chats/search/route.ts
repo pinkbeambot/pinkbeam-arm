@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { escapeIlike } from '@/lib/utils';
 
 const searchQuerySchema = z.object({
-  q: z.string().min(1).max(500),
+  q: z.string().min(1).max(200),
   agent_id: z.string().uuid().optional(),
   date_from: z.string().datetime().optional(),
   date_to: z.string().datetime().optional(),
