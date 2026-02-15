@@ -61,17 +61,13 @@ export function Hero() {
             </h1>
           </FadeInOnMount>
           
-          {/* VALIS Quotes */}
+          {/* VALIS Quote - Random */}
           <FadeInOnMount delay={0.2}>
-            <div className="mx-auto max-w-3xl mb-10 space-y-4">
-              {valisQuotes.map((quote, index) => (
-                <div key={index} className="p-4 rounded-xl border border-primary/20 bg-primary/5">
-                  <p className="text-base text-primary italic">
-                    "{quote}"
-                  </p>
-                </div>
-              ))}
-              <p className="text-sm text-muted-foreground text-center">
+            <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5">
+              <p className="text-lg text-primary italic mb-3">
+                "{valisQuotes[Math.floor(Math.random() * valisQuotes.length)]}"
+              </p>
+              <p className="text-sm text-muted-foreground">
                 — VALIS, Pink Beam CEO
               </p>
             </div>
