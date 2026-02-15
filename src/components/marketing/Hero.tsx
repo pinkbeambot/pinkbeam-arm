@@ -28,14 +28,14 @@ export function Hero() {
       {/* Animated Grid Background */}
       <div className="absolute inset-0 bg-[linear-gradient(rgba(var(--primary),0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(var(--primary),0.03)_1px,transparent_1px)] bg-[size:60px_60px] pointer-events-none" />
       
-      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-24 md:py-32">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="text-center max-w-4xl mx-auto">
           {/* Badge */}
           <FadeInOnMount delay={0}>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-8">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               <span className="text-sm font-medium text-primary">
-                Now hiring AI employees
+                Now Hiring AI Agents
               </span>
             </div>
           </FadeInOnMount>
@@ -55,7 +55,7 @@ export function Hero() {
           {/* Subheadline */}
           <FadeInOnMount delay={0.15}>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              Build a workforce that scales with your ambition. AI agents handle the details while your team focuses on the big picture.
+              Build a workforce that scales with your ambition. AI agents handle the details while you focus on the big picture.
             </p>
           </FadeInOnMount>
           
