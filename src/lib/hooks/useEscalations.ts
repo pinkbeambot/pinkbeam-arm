@@ -135,7 +135,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
       const subscription = supabase
         .channel(`escalations:${tenantId}`)
         .on(
-          'postgres_changes' as any,
+          'postgres_changes',
           {
             event: '*',
             schema: 'public',
@@ -396,6 +396,7 @@ export function useEscalationStats(days: number = 30) {
 
 export function useCreateEscalation() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const createEscalation = useCallback(async (data: {
     agent_id: string;
@@ -409,6 +410,7 @@ export function useCreateEscalation() {
     agent_analysis?: { what_i_know?: string; what_i_dont_know?: string; what_i_tried?: string[]; suggested_resolution?: string };
   }) => {
     setLoading(true);
+    setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -431,10 +433,14 @@ export function useCreateEscalation() {
 
       const result = await response.json();
       return result.data as Escalation;
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Failed to create escalation');
+      setError(e);
+      throw e;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { createEscalation, loading };
+  return { createEscalation, loading, error };
 }
