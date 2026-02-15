@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { User, Mail, Settings, Bell } from "lucide-react";
+import { User, Mail, Settings, Bell, CreditCard } from "lucide-react";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
@@ -105,6 +105,26 @@ export default async function SettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Billing Settings Link */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-primary" />
+                Billing & Subscription
+              </CardTitle>
+              <CardDescription>
+                Manage your plan, usage, and payment methods
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" asChild>
+                <Link href="/portal/settings/billing">
+                  Manage Billing
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Coming Soon Sections */}
           <Card className="border-dashed">
             <CardHeader>
@@ -119,7 +139,6 @@ export default async function SettingsPage() {
             <CardContent>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• Workspace settings</li>
-                <li>• Billing & subscription management</li>
                 <li>• API keys & integrations</li>
                 <li>• Data export & privacy controls</li>
               </ul>

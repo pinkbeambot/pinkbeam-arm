@@ -35,6 +35,9 @@ export { useChat } from './useChat';
 // Notification hooks
 export { useNotifications } from './useNotifications';
 
+// Billing hooks
+export { useBilling, useAgentLimit, useTrial } from './useBilling';
+
 // Analytics hooks
 export { 
   usePerformanceData,

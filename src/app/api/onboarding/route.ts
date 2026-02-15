@@ -93,7 +93,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Auto-complete onboarding when all steps are done
-    const allComplete = VALID_STEPS.every((s) => updatedSteps[s] === true);
+    const allComplete = VALID_STEPS.every((s) => (updatedSteps as Record<string, boolean>)[s] === true);
     if (allComplete) {
       await auth.supabase
         .from('tenants')

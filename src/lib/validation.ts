@@ -470,6 +470,23 @@ export type CostSummaryQuery = z.infer<typeof costSummaryQuerySchema>;
 export type DailyCostsQuery = z.infer<typeof dailyCostsQuerySchema>;
 
 // ============================================================================
+// Billing Validation
+// ============================================================================
+
+export const createCheckoutSchema = z.object({
+  tier: z.enum(['starter', 'pro', 'business', 'scale']),
+  successUrl: z.string().url().optional(),
+  cancelUrl: z.string().url().optional(),
+});
+
+export const createPortalSchema = z.object({
+  returnUrl: z.string().url().optional(),
+});
+
+export type CreateCheckoutInput = z.infer<typeof createCheckoutSchema>;
+export type CreatePortalInput = z.infer<typeof createPortalSchema>;
+
+// ============================================================================
 // Re-export Auth Validation
 // ============================================================================
 
