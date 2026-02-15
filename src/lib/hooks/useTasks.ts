@@ -107,7 +107,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/tasks?${params}`, {
+      const response = await fetch(`/api/v1/tasks?${params}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -201,7 +201,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetch('/api/tasks', {
+      const response = await fetch('/api/v1/tasks', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -240,7 +240,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/v1/tasks/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -276,7 +276,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetch(`/api/tasks/${id}`, {
+      const response = await fetch(`/api/v1/tasks/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -314,7 +314,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}/dependencies`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -351,7 +351,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
     try {
       const response = await fetch(
-        `/api/tasks/${taskId}/dependencies?dependency_id=${dependencyId}`,
+        `/api/v1/tasks/${taskId}/dependencies?dependency_id=${dependencyId}`,
         {
           method: 'DELETE',
           headers: {
@@ -410,7 +410,7 @@ export function useTask(taskId: string | null) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -502,7 +502,7 @@ export function useTaskDependencies(taskId: string | null) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}/dependencies`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },

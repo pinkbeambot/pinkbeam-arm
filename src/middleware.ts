@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-limit';
 import { csrfMiddleware } from '@/lib/middleware/csrf';
+import { API_VERSION, isNonVersionedRoute } from '@/lib/api/versioning';
 
 // Dev auth bypass - SERVER SIDE ONLY, development only
 // NEVER set DEV_AUTH_BYPASS in production - build will fail
@@ -70,6 +71,12 @@ function isPublicPageRoute(pathname: string): boolean {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Normalize versioned API paths for route matching.
+  // /api/v1/agents → /api/agents for PUBLIC_ROUTES, rate-limit checks, etc.
+  const normalizedPathname = pathname.startsWith('/api/v1/')
+    ? pathname.replace('/api/v1/', '/api/')
+    : pathname;
+
   // Skip middleware for static files and Next.js internals
   if (
     pathname.startsWith('/_next/') ||
@@ -88,7 +95,7 @@ export async function middleware(request: NextRequest) {
   if (DEV_AUTH_BYPASS) {
     // For API routes, inject a mock tenant context
     if (pathname.startsWith('/api/')) {
-      const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+      const isPublicRoute = PUBLIC_ROUTES.some(route => normalizedPathname.startsWith(route));
       if (isPublicRoute) return NextResponse.next();
 
       const response = NextResponse.next({ request: { headers: request.headers } });
@@ -159,10 +166,10 @@ export async function middleware(request: NextRequest) {
     console.error('Session error:', sessionError.message);
   }
 
-  // Handle API routes
+  // Handle API routes (match both /api/ and /api/v1/)
   if (pathname.startsWith('/api/')) {
-    // Check if this is a public API route
-    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+    // Check if this is a public API route (using normalized path)
+    const isPublicRoute = PUBLIC_ROUTES.some(route => normalizedPathname.startsWith(route));
     if (isPublicRoute) {
       return NextResponse.next();
     }
@@ -201,8 +208,8 @@ export async function middleware(request: NextRequest) {
     request.headers.set('x-tenant-id', tenantId);
     request.headers.set('x-user-id', user.id);
 
-    // Apply rate limiting (unless excluded)
-    if (!isRateLimitExcluded(pathname)) {
+    // Apply rate limiting (unless excluded, using normalized path)
+    if (!isRateLimitExcluded(normalizedPathname)) {
       const rateLimitResponse = await rateLimitMiddleware(request, tenantId);
 
       if (rateLimitResponse) {
@@ -210,6 +217,12 @@ export async function middleware(request: NextRequest) {
       }
 
       response = await addRateLimitHeaders(response, tenantId);
+    }
+
+    // API version headers
+    response.headers.set('X-API-Version', API_VERSION);
+    if (!pathname.startsWith(`/api/${API_VERSION}/`) && !isNonVersionedRoute(normalizedPathname)) {
+      response.headers.set('X-Deprecated', 'Use /api/v1/ prefix. Unversioned paths will be removed in a future release.');
     }
 
     // Attach CSRF cookie to the response

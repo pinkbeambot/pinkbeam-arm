@@ -342,7 +342,7 @@ describe('useAgentTest', () => {
     });
 
     expect(global.fetch).toHaveBeenCalledWith(
-      '/api/agents/agent-123/config/test',
+      '/api/v1/agents/agent-123/config/test',
       expect.objectContaining({
         method: 'POST',
         body: expect.stringContaining('Test with custom config'),

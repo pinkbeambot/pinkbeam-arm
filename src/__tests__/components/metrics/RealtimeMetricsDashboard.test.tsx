@@ -50,10 +50,10 @@ function errorResponse(status: number, statusText: string, body?: Record<string,
 // Default mock: both endpoints succeed with empty data
 function mockSuccessResponses(mockFetch: ReturnType<typeof vi.fn>) {
   mockFetch.mockImplementation((url: string) => {
-    if (url.startsWith('/api/agents')) {
+    if (url.startsWith('/api/v1/agents')) {
       return Promise.resolve(okResponse({ data: [] }));
     }
-    if (url.startsWith('/api/activities')) {
+    if (url.startsWith('/api/v1/activities')) {
       return Promise.resolve(okResponse({ activities: [] }));
     }
     return Promise.resolve(okResponse({}));
@@ -63,10 +63,10 @@ function mockSuccessResponses(mockFetch: ReturnType<typeof vi.fn>) {
 // Mock: agents endpoint fails
 function mockAgentsError(mockFetch: ReturnType<typeof vi.fn>, message = 'Database error') {
   mockFetch.mockImplementation((url: string) => {
-    if (url.startsWith('/api/agents')) {
+    if (url.startsWith('/api/v1/agents')) {
       return Promise.resolve(errorResponse(500, 'Internal Server Error', { error: message }));
     }
-    if (url.startsWith('/api/activities')) {
+    if (url.startsWith('/api/v1/activities')) {
       return Promise.resolve(okResponse({ activities: [] }));
     }
     return Promise.resolve(okResponse({}));

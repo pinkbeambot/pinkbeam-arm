@@ -79,7 +79,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
         params.set('limit', String(currentOptions.limit));
       }
 
-      const response = await fetch(`/api/escalations?${params.toString()}`, {
+      const response = await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -201,7 +201,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/escalations/${id}`, {
+    const response = await fetch(`/api/v1/escalations/${id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
@@ -305,7 +305,7 @@ export function useEscalationStats(days: number = 30) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/escalations/stats?days=${days}`, {
+      const response = await fetch(`/api/v1/escalations/stats?days=${days}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -419,7 +419,7 @@ export function useCreateEscalation() {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

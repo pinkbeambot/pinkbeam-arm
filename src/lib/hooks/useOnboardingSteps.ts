@@ -48,7 +48,7 @@ export function useOnboardingSteps(): UseOnboardingStepsReturn {
     pendingRef.current.add(step);
 
     try {
-      const response = await fetch('/api/onboarding', {
+      const response = await fetch('/api/v1/onboarding', {
         method: 'PATCH',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

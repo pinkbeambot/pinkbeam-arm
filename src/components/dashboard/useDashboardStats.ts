@@ -58,7 +58,7 @@ export function useDashboardStats(): UseDashboardStatsReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/dashboard/stats', {
+      const response = await fetch('/api/v1/dashboard/stats', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',

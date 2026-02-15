@@ -59,7 +59,7 @@ export function useTenant(): UseTenantReturn {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/user/tenant', {
+      const response = await fetch('/api/v1/user/tenant', {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',

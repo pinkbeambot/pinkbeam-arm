@@ -14,8 +14,8 @@ export const getApiDocs = async () => {
       },
       servers: [
         {
-          url: '/api',
-          description: 'ARM API Server',
+          url: '/api/v1',
+          description: 'ARM API Server (v1)',
         },
       ],
       tags: [

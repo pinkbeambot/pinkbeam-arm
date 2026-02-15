@@ -65,6 +65,17 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
 
+  // API versioning: route /api/v1/* to physical /api/* route files
+  async rewrites() {
+    return {
+      beforeFiles: [
+        { source: '/api/v1/:path*', destination: '/api/:path*' },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
+  },
+
   // Security headers
   async headers() {
     return [

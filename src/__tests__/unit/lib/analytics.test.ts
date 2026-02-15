@@ -51,7 +51,7 @@ describe('analyticsService', () => {
       const result = await analyticsService.fetchOverviewMetrics('30d' as DateRange, TEST_TOKEN);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/analytics/overview?days=30',
+        '/api/v1/analytics/overview?days=30',
         expect.objectContaining({
           headers: expect.objectContaining({
             'Authorization': `Bearer ${TEST_TOKEN}`,
@@ -109,7 +109,7 @@ describe('analyticsService', () => {
       const result = await analyticsService.fetchLeaderboard('30d' as DateRange, 'tasksCompleted', 20, TEST_TOKEN);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/analytics/leaderboard?days=30&sortBy=tasksCompleted&limit=20',
+        '/api/v1/analytics/leaderboard?days=30&sortBy=tasksCompleted&limit=20',
         expect.any(Object)
       );
       expect(result.leaderboard[0].name).toBe('Test Agent');
@@ -165,7 +165,7 @@ describe('analyticsService', () => {
       const result = await analyticsService.fetchBottlenecks(24, TEST_TOKEN);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/analytics/bottlenecks?hours=24',
+        '/api/v1/analytics/bottlenecks?hours=24',
         expect.any(Object)
       );
       expect(result.bottlenecks[0].severity).toBe('high');
@@ -222,7 +222,7 @@ describe('analyticsService', () => {
       const result = await analyticsService.fetchROIMetrics('30d' as DateRange, 50, TEST_TOKEN);
 
       expect(mockFetch).toHaveBeenCalledWith(
-        '/api/analytics/roi?days=30&hourlyRate=50',
+        '/api/v1/analytics/roi?days=30&hourlyRate=50',
         expect.any(Object)
       );
       expect(result.summary.roiPercentage).toBe(2400);

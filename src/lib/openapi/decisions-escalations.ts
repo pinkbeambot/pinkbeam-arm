@@ -14,7 +14,7 @@
 // ---------------------------------------------------------------------------
 
 export const decisionPaths = {
-  '/api/decisions': {
+  '/decisions': {
     get: {
       operationId: 'listDecisions',
       summary: 'List decisions',
@@ -202,7 +202,7 @@ export const decisionPaths = {
     },
   },
 
-  '/api/decisions/{id}': {
+  '/decisions/{id}': {
     get: {
       operationId: 'getDecision',
       summary: 'Get decision with history',
@@ -338,7 +338,7 @@ export const decisionPaths = {
     },
   },
 
-  '/api/decisions/{id}/context': {
+  '/decisions/{id}/context': {
     get: {
       operationId: 'getDecisionContext',
       summary: 'Get decision context',
@@ -420,7 +420,7 @@ export const decisionPaths = {
     },
   },
 
-  '/api/decisions/stats': {
+  '/decisions/stats': {
     get: {
       operationId: 'getDecisionStats',
       summary: 'Get decision statistics',
@@ -534,7 +534,7 @@ export const decisionPaths = {
 // ---------------------------------------------------------------------------
 
 export const escalationPaths = {
-  '/api/escalations': {
+  '/escalations': {
     get: {
       operationId: 'listEscalations',
       summary: 'List escalations',
@@ -711,7 +711,7 @@ export const escalationPaths = {
     },
   },
 
-  '/api/escalations/{id}': {
+  '/escalations/{id}': {
     get: {
       operationId: 'getEscalation',
       summary: 'Get escalation details',
@@ -842,7 +842,7 @@ export const escalationPaths = {
     },
   },
 
-  '/api/escalations/{id}/resolve': {
+  '/escalations/{id}/resolve': {
     post: {
       operationId: 'resolveEscalation',
       summary: 'Resolve escalation',
@@ -917,7 +917,7 @@ export const escalationPaths = {
     },
   },
 
-  '/api/escalations/stats': {
+  '/escalations/stats': {
     get: {
       operationId: 'getEscalationStats',
       summary: 'Get escalation statistics',

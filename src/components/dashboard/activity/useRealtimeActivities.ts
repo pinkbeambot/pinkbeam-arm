@@ -234,7 +234,7 @@ export function useRealtimeActivities(
       params.append('limit', '50');
 
       // Fetch from API with auth header
-      const response = await fetch(`/api/activities?${params.toString()}`, {
+      const response = await fetch(`/api/v1/activities?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',

@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest';
 // Unit tests for hook logic (no Supabase dependency)
 describe('useAgents Hook Logic', () => {
   it('should construct correct API URL with filters', () => {
-    const baseUrl = '/api/agents';
+    const baseUrl = '/api/v1/agents';
     const filters = {
       status: 'active',
       role: 'worker',

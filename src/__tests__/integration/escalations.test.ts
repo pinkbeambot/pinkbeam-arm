@@ -57,11 +57,11 @@ describe('Escalations API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/escalations', {
+      expect(fetch).toHaveBeenCalledWith('/api/v1/escalations', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -83,12 +83,12 @@ describe('Escalations API', () => {
       });
 
       const params = new URLSearchParams({ status: 'open' });
-      await fetch(`/api/escalations?${params.toString()}`, {
+      await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/escalations?status=open',
+        '/api/v1/escalations?status=open',
         expect.any(Object)
       );
     });
@@ -105,12 +105,12 @@ describe('Escalations API', () => {
       });
 
       const params = new URLSearchParams({ urgency: 'critical' });
-      await fetch(`/api/escalations?${params.toString()}`, {
+      await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/escalations?urgency=critical',
+        '/api/v1/escalations?urgency=critical',
         expect.any(Object)
       );
     });
@@ -127,12 +127,12 @@ describe('Escalations API', () => {
       });
 
       const params = new URLSearchParams({ type: 'clarification' });
-      await fetch(`/api/escalations?${params.toString()}`, {
+      await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/escalations?type=clarification',
+        '/api/v1/escalations?type=clarification',
         expect.any(Object)
       );
     });
@@ -149,12 +149,12 @@ describe('Escalations API', () => {
       });
 
       const params = new URLSearchParams({ search: 'discount' });
-      await fetch(`/api/escalations?${params.toString()}`, {
+      await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/escalations?search=discount',
+        '/api/v1/escalations?search=discount',
         expect.any(Object)
       );
     });
@@ -171,12 +171,12 @@ describe('Escalations API', () => {
       });
 
       const params = new URLSearchParams({ page: '2', limit: '10' });
-      await fetch(`/api/escalations?${params.toString()}`, {
+      await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/escalations?page=2&limit=10',
+        '/api/v1/escalations?page=2&limit=10',
         expect.any(Object)
       );
     });
@@ -197,7 +197,7 @@ describe('Escalations API', () => {
         urgency: 'high',
         type: 'approval',
       });
-      await fetch(`/api/escalations?${params.toString()}`, {
+      await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -214,7 +214,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         headers: { Authorization: 'Bearer invalid-token' },
       });
 
@@ -230,7 +230,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Validation error', details: [{ message: 'Invalid status' }] }),
       });
 
-      const response = await fetch('/api/escalations?status=invalid', {
+      const response = await fetch('/api/v1/escalations?status=invalid', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -244,7 +244,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Internal server error' }),
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -269,7 +269,7 @@ describe('Escalations API', () => {
         json: async () => ({ data: { ...mockEscalation, ...createData } }),
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -297,7 +297,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Validation error', details: [{ path: ['type'], message: 'Invalid enum value' }] }),
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -323,7 +323,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Agent not found' }),
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -352,7 +352,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Task not found' }),
       });
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -374,7 +374,7 @@ describe('Escalations API', () => {
         json: async () => ({ data: mockEscalation }),
       });
 
-      const response = await fetch('/api/escalations/esc-001', {
+      const response = await fetch('/api/v1/escalations/esc-001', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -391,7 +391,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Escalation not found' }),
       });
 
-      const response = await fetch('/api/escalations/non-existent', {
+      const response = await fetch('/api/v1/escalations/non-existent', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -408,7 +408,7 @@ describe('Escalations API', () => {
         json: async () => ({ data: { ...mockEscalation, status: 'in_progress' } }),
       });
 
-      const response = await fetch('/api/escalations/esc-001', {
+      const response = await fetch('/api/v1/escalations/esc-001', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -440,7 +440,7 @@ describe('Escalations API', () => {
         }),
       });
 
-      const response = await fetch('/api/escalations/esc-001', {
+      const response = await fetch('/api/v1/escalations/esc-001', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -468,7 +468,7 @@ describe('Escalations API', () => {
         }),
       });
 
-      const response = await fetch('/api/escalations/esc-001', {
+      const response = await fetch('/api/v1/escalations/esc-001', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -490,7 +490,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Validation error' }),
       });
 
-      const response = await fetch('/api/escalations/esc-001', {
+      const response = await fetch('/api/v1/escalations/esc-001', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -509,7 +509,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Escalation not found' }),
       });
 
-      const response = await fetch('/api/escalations/non-existent', {
+      const response = await fetch('/api/v1/escalations/non-existent', {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${mockToken}`,
@@ -544,7 +544,7 @@ describe('Escalations API', () => {
         json: async () => mockStats,
       });
 
-      const response = await fetch('/api/escalations/stats?days=30', {
+      const response = await fetch('/api/v1/escalations/stats?days=30', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -564,12 +564,12 @@ describe('Escalations API', () => {
         }),
       });
 
-      await fetch('/api/escalations/stats?days=7', {
+      await fetch('/api/v1/escalations/stats?days=7', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/escalations/stats?days=7',
+        '/api/v1/escalations/stats?days=7',
         expect.any(Object)
       );
     });
@@ -581,7 +581,7 @@ describe('Escalations API', () => {
         json: async () => ({ error: 'Validation error', details: [{ path: ['days'], message: 'Invalid' }] }),
       });
 
-      const response = await fetch('/api/escalations/stats?days=invalid', {
+      const response = await fetch('/api/v1/escalations/stats?days=invalid', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -597,7 +597,7 @@ describe('Escalations API', () => {
         }),
       });
 
-      const response = await fetch('/api/escalations/stats', {
+      const response = await fetch('/api/v1/escalations/stats', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -611,7 +611,7 @@ describe('Escalations API', () => {
 
 describe('useEscalations Hook Logic', () => {
   it('should construct correct API URL with all filters', () => {
-    const baseUrl = '/api/escalations';
+    const baseUrl = '/api/v1/escalations';
     const filters = {
       status: 'open',
       urgency: 'high',
@@ -639,7 +639,7 @@ describe('useEscalations Hook Logic', () => {
   });
 
   it('should handle empty/undefined filters', () => {
-    const baseUrl = '/api/escalations';
+    const baseUrl = '/api/v1/escalations';
     const filters = {
       status: 'all',
       urgency: undefined,

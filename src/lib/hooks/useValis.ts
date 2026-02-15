@@ -67,7 +67,7 @@ export function useValis(options: UseValisOptions = {}): UseValisReturn {
     setSessionsLoading(true);
     try {
       const token = await getToken();
-      const res = await fetch('/api/meta-agent/sessions', {
+      const res = await fetch('/api/v1/meta-agent/sessions', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) {
@@ -96,7 +96,7 @@ export function useValis(options: UseValisOptions = {}): UseValisReturn {
       try {
         const token = await getToken();
         const res = await fetch(
-          `/api/meta-agent/sessions/${sessionId}/history?limit=50`,
+          `/api/v1/meta-agent/sessions/${sessionId}/history?limit=50`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -164,7 +164,7 @@ export function useValis(options: UseValisOptions = {}): UseValisReturn {
       const token = await getToken();
       // Send a dummy message to create a session, then clear it
       // Or, use the process endpoint which auto-creates sessions
-      const res = await fetch('/api/meta-agent/process', {
+      const res = await fetch('/api/v1/meta-agent/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -244,7 +244,7 @@ export function useValis(options: UseValisOptions = {}): UseValisReturn {
 
       try {
         const token = await getToken();
-        const res = await fetch('/api/meta-agent/process', {
+        const res = await fetch('/api/v1/meta-agent/process', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

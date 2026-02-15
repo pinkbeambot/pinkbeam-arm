@@ -132,8 +132,13 @@ export function csrfMiddleware(request: NextRequest): CsrfResult {
   const { pathname } = request.nextUrl;
   const method = request.method.toUpperCase();
 
+  // Normalize versioned paths: /api/v1/auth → /api/auth for exempt checks
+  const normalizedPath = pathname.startsWith('/api/v1/')
+    ? pathname.replace('/api/v1/', '/api/')
+    : pathname;
+
   // ── Exempt routes bypass all CSRF logic ─────────────────────────────────
-  const isExempt = CSRF_EXEMPT_ROUTES.some((route) => pathname.startsWith(route));
+  const isExempt = CSRF_EXEMPT_ROUTES.some((route) => normalizedPath.startsWith(route));
 
   if (isExempt) {
     return {

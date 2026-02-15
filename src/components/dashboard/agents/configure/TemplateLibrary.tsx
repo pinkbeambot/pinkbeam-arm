@@ -165,7 +165,7 @@ export function TemplateLibrary({
       setError(null);
       
       try {
-        const response = await fetch('/api/agent-templates');
+        const response = await fetch('/api/v1/agent-templates');
         
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));

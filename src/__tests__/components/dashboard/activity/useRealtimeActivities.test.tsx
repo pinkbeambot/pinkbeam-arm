@@ -67,7 +67,7 @@ describe('useRealtimeActivities', () => {
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
     const [url, options] = mockFetch.mock.calls[0];
-    expect(url).toContain('/api/activities');
+    expect(url).toContain('/api/v1/activities');
     expect(options).toBeDefined();
     expect((options as RequestInit).headers).toEqual(
       expect.objectContaining({

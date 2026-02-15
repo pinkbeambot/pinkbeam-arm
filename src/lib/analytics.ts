@@ -227,7 +227,7 @@ function convertToTimeSeries(data: Array<{ date: string; value?: number; [key: s
  */
 export async function fetchOverviewMetrics(dateRange: DateRange, token: string): Promise<OverviewResponse['data']> {
   const days = dateRangeToDays(dateRange);
-  const response = await fetchWithAuth(`/api/analytics/overview?days=${days}`, token);
+  const response = await fetchWithAuth(`/api/v1/analytics/overview?days=${days}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -243,7 +243,7 @@ export async function fetchOverviewMetrics(dateRange: DateRange, token: string):
  */
 export async function fetchLeaderboard(dateRange: DateRange, sortBy: string = 'tasksCompleted', limit: number = 20, token: string = ''): Promise<LeaderboardResponse['data']> {
   const days = dateRangeToDays(dateRange);
-  const response = await fetchWithAuth(`/api/analytics/leaderboard?days=${days}&sortBy=${sortBy}&limit=${limit}`, token);
+  const response = await fetchWithAuth(`/api/v1/analytics/leaderboard?days=${days}&sortBy=${sortBy}&limit=${limit}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -258,7 +258,7 @@ export async function fetchLeaderboard(dateRange: DateRange, sortBy: string = 't
  * Fetch bottleneck data
  */
 export async function fetchBottlenecks(hours: number = 24, token: string = ''): Promise<BottleneckResponse['data']> {
-  const response = await fetchWithAuth(`/api/analytics/bottlenecks?hours=${hours}`, token);
+  const response = await fetchWithAuth(`/api/v1/analytics/bottlenecks?hours=${hours}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -274,7 +274,7 @@ export async function fetchBottlenecks(hours: number = 24, token: string = ''): 
  */
 export async function fetchROIMetrics(dateRange: DateRange, hourlyRate: number = 50, token: string = ''): Promise<ROIResponse['data']> {
   const days = dateRangeToDays(dateRange);
-  const response = await fetchWithAuth(`/api/analytics/roi?days=${days}&hourlyRate=${hourlyRate}`, token);
+  const response = await fetchWithAuth(`/api/v1/analytics/roi?days=${days}&hourlyRate=${hourlyRate}`, token);
   
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));

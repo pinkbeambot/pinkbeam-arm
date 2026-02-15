@@ -249,7 +249,7 @@ export function DependencyGraph({ tasks, onTaskClick }: DependencyGraphProps) {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const res = await fetch('/api/tasks/dependencies', {
+        const res = await fetch('/api/v1/tasks/dependencies', {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
 

@@ -68,7 +68,7 @@ export function useAgentTest({ agentId, autoLoadHistory = true }: UseAgentTestOp
       setIsLoadingHistory(true);
       setError(null);
 
-      const response = await fetch(`/api/agents/${agentId}/config/test`, {
+      const response = await fetch(`/api/v1/agents/${agentId}/config/test`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -122,7 +122,7 @@ export function useAgentTest({ agentId, autoLoadHistory = true }: UseAgentTestOp
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/agents/${agentId}/config/test`, {
+      const response = await fetch(`/api/v1/agents/${agentId}/config/test`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,

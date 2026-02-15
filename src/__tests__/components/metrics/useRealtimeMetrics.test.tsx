@@ -54,10 +54,10 @@ function mockSuccessResponses(
   activities: unknown[] = []
 ) {
   mockFetch.mockImplementation((url: string) => {
-    if (url.startsWith('/api/agents')) {
+    if (url.startsWith('/api/v1/agents')) {
       return Promise.resolve(okResponse({ data: agents }));
     }
-    if (url.startsWith('/api/activities')) {
+    if (url.startsWith('/api/v1/activities')) {
       return Promise.resolve(okResponse({ activities }));
     }
     return Promise.resolve(okResponse({}));
@@ -174,7 +174,7 @@ describe('useRealtimeMetrics', () => {
   describe('error handling', () => {
     it('should set error state when agents fetch fails', async () => {
       mockFetch.mockImplementation((url: string) => {
-        if (url.startsWith('/api/agents')) {
+        if (url.startsWith('/api/v1/agents')) {
           return Promise.resolve(errorResponse(500, 'Internal Server Error', { error: 'Database error' }));
         }
         return Promise.resolve(okResponse({ activities: [] }));
@@ -192,10 +192,10 @@ describe('useRealtimeMetrics', () => {
 
     it('should set error state when activities fetch fails', async () => {
       mockFetch.mockImplementation((url: string) => {
-        if (url.startsWith('/api/agents')) {
+        if (url.startsWith('/api/v1/agents')) {
           return Promise.resolve(okResponse({ data: [] }));
         }
-        if (url.startsWith('/api/activities')) {
+        if (url.startsWith('/api/v1/activities')) {
           return Promise.resolve(errorResponse(500, 'Internal Server Error', { error: 'Activities error' }));
         }
         return Promise.resolve(okResponse({}));
@@ -215,11 +215,11 @@ describe('useRealtimeMetrics', () => {
 
       mockFetch.mockImplementation((url: string) => {
         if (shouldFail) {
-          if (url.startsWith('/api/agents')) {
+          if (url.startsWith('/api/v1/agents')) {
             return Promise.resolve(errorResponse(500, 'Internal Server Error'));
           }
         }
-        if (url.startsWith('/api/agents')) {
+        if (url.startsWith('/api/v1/agents')) {
           return Promise.resolve(okResponse({ data: [] }));
         }
         return Promise.resolve(okResponse({ activities: [] }));

@@ -16,8 +16,17 @@ API endpoints for the Agent Relationship Management (ARM) platform.
 ## Base URL
 
 ```
-https://api.pinkbeam.ai/api
+https://api.pinkbeam.ai/api/v1
 ```
+
+## API Versioning
+
+All API endpoints are versioned under `/api/v1/`. See [[API_VERSIONING]] for the full versioning strategy.
+
+- **Versioned paths** (canonical): `/api/v1/agents`, `/api/v1/tasks`, etc.
+- **Unversioned paths** (deprecated): `/api/agents` still works but returns an `X-Deprecated` header
+- **Non-versioned routes**: `/api/auth/*`, `/api/health`, `/api/billing/webhook`, `/api/docs/*` remain unversioned
+- **Response headers**: All API responses include `X-API-Version: v1`
 
 ## Authentication
 
@@ -165,7 +174,7 @@ Default rate limit for new tenants: **100 requests/minute**
 Check your current rate limit status:
 
 ```
-GET /api/rate-limit/status
+GET /api/v1/rate-limit/status
 ```
 
 **Response:**
@@ -318,7 +327,7 @@ These headers are consumed by the auth utilities and should not be set manually 
 ### List Agents
 
 ```
-GET /api/agents
+GET /api/v1/agents
 ```
 
 **Query Parameters:**
@@ -364,7 +373,7 @@ GET /api/agents
 ### Create Agent
 
 ```
-POST /api/agents
+POST /api/v1/agents
 ```
 
 **Request Body:**
@@ -407,7 +416,7 @@ POST /api/agents
 ### Get Single Agent
 
 ```
-GET /api/agents/:id
+GET /api/v1/agents/:id
 ```
 
 **Response:**
@@ -432,7 +441,7 @@ GET /api/agents/:id
 ### Update Agent
 
 ```
-PATCH /api/agents/:id
+PATCH /api/v1/agents/:id
 ```
 
 **Request Body:**
@@ -448,7 +457,7 @@ PATCH /api/agents/:id
 ### Delete Agent
 
 ```
-DELETE /api/agents/:id
+DELETE /api/v1/agents/:id
 ```
 
 **Response:** 204 No Content
@@ -458,7 +467,7 @@ DELETE /api/agents/:id
 ### List Tasks
 
 ```
-GET /api/tasks
+GET /api/v1/tasks
 ```
 
 **Query Parameters:**
@@ -474,7 +483,7 @@ GET /api/tasks
 ### Create Task
 
 ```
-POST /api/tasks
+POST /api/v1/tasks
 ```
 
 **Request Body:**
@@ -504,7 +513,7 @@ The decisions API provides access to the decision audit trail — all choices ma
 ### List Decisions
 
 ```
-GET /api/decisions
+GET /api/v1/decisions
 ```
 
 **Query Parameters:**
@@ -553,7 +562,7 @@ GET /api/decisions
 ### Create Decision
 
 ```
-POST /api/decisions
+POST /api/v1/decisions
 ```
 
 **Request Body:**
@@ -606,7 +615,7 @@ POST /api/decisions
 ### Get Single Decision
 
 ```
-GET /api/decisions/:id
+GET /api/v1/decisions/:id
 ```
 
 **Response:**
@@ -627,7 +636,7 @@ GET /api/decisions/:id
 ### Update Decision
 
 ```
-PATCH /api/decisions/:id
+PATCH /api/v1/decisions/:id
 ```
 
 **Request Body (Status Update):**
@@ -670,7 +679,7 @@ PATCH /api/decisions/:id
 ### List Escalations
 
 ```
-GET /api/escalations
+GET /api/v1/escalations
 ```
 
 **Query Parameters:**
@@ -685,7 +694,7 @@ GET /api/escalations
 ### Create Escalation
 
 ```
-POST /api/escalations
+POST /api/v1/escalations
 ```
 
 **Request Body:**
@@ -709,7 +718,7 @@ POST /api/escalations
 ### Resolve Escalation
 
 ```
-POST /api/escalations/:id/resolve
+POST /api/v1/escalations/:id/resolve
 ```
 
 **Request Body:**
@@ -729,7 +738,7 @@ POST /api/escalations/:id/resolve
 ### List Messages
 
 ```
-GET /api/messages
+GET /api/v1/messages
 ```
 
 **Query Parameters:**
@@ -745,7 +754,7 @@ GET /api/messages
 ### Send Message
 
 ```
-POST /api/messages
+POST /api/v1/messages
 ```
 
 **Request Body:**
@@ -770,7 +779,7 @@ POST /api/messages
 ### Mark as Read
 
 ```
-PATCH /api/messages/:id/read
+PATCH /api/v1/messages/:id/read
 ```
 
 ## Activities API
@@ -778,7 +787,7 @@ PATCH /api/messages/:id/read
 ### List Activities
 
 ```
-GET /api/activities
+GET /api/v1/activities
 ```
 
 **Query Parameters:**
@@ -797,7 +806,7 @@ GET /api/activities
 ### Overview
 
 ```
-GET /api/analytics/overview
+GET /api/v1/analytics/overview
 ```
 
 **Query Parameters:**
@@ -824,7 +833,7 @@ GET /api/analytics/overview
 ### Agent Leaderboard
 
 ```
-GET /api/analytics/leaderboard
+GET /api/v1/analytics/leaderboard
 ```
 
 **Query Parameters:**
@@ -838,7 +847,7 @@ GET /api/analytics/leaderboard
 ### ROI Analysis
 
 ```
-GET /api/analytics/roi
+GET /api/v1/analytics/roi
 ```
 
 **Query Parameters:**
@@ -917,6 +926,7 @@ All request bodies and query parameters are validated using Zod schemas. Validat
 
 ## Related Documentation
 
+- [[API_VERSIONING]] — API versioning strategy and migration guide
 - [[ARCHITECTURE]] — System architecture underlying the API
 - [[AUTH_IMPLEMENTATION]] — Authentication middleware details
 - [[AGENT-PROTOCOL]] — Agent protocol implemented by agent endpoints

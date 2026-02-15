@@ -89,7 +89,7 @@ export function RBACProvider({ children, authToken }: RBACProviderProps) {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/user/profile', {
+      const response = await fetch('/api/v1/user/profile', {
         headers: {
           'Authorization': `Bearer ${authToken}`,
           'Content-Type': 'application/json',

@@ -175,7 +175,7 @@ describe('useAgentAnalytics', () => {
 
     await waitFor(() => {
       expect(global.fetch).toHaveBeenCalledWith(
-        '/api/analytics/agents/agent-123?days=7',
+        '/api/v1/analytics/agents/agent-123?days=7',
         expect.objectContaining({
           headers: {
             'Authorization': 'Bearer test-token',

@@ -23,6 +23,7 @@
  */
 
 import { createBrowserClient } from '@supabase/ssr';
+import { versionedPath } from '@/lib/api/versioning';
 
 // ── Cookie reader ───────────────────────────────────────────────────────────
 
@@ -112,8 +113,11 @@ export async function apiFetch(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+  // Auto-version the path (e.g. /api/tasks → /api/v1/tasks)
+  const resolvedPath = versionedPath(path);
+
   try {
-    return await fetch(path, {
+    return await fetch(resolvedPath, {
       ...fetchOpts,
       headers,
       signal: fetchOpts.signal || controller.signal,

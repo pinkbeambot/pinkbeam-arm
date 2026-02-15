@@ -64,11 +64,11 @@ describe('Costs API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/costs', {
+      const response = await fetch('/api/v1/costs', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/costs', {
+      expect(fetch).toHaveBeenCalledWith('/api/v1/costs', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -90,12 +90,12 @@ describe('Costs API', () => {
       });
 
       const params = new URLSearchParams({ model: 'claude-3-5-sonnet' });
-      await fetch(`/api/costs?${params.toString()}`, {
+      await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/costs?model=claude-3-5-sonnet',
+        '/api/v1/costs?model=claude-3-5-sonnet',
         expect.any(Object)
       );
     });
@@ -112,12 +112,12 @@ describe('Costs API', () => {
       });
 
       const params = new URLSearchParams({ provider: 'openai' });
-      await fetch(`/api/costs?${params.toString()}`, {
+      await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/costs?provider=openai',
+        '/api/v1/costs?provider=openai',
         expect.any(Object)
       );
     });
@@ -134,12 +134,12 @@ describe('Costs API', () => {
       });
 
       const params = new URLSearchParams({ status: 'error' });
-      await fetch(`/api/costs?${params.toString()}`, {
+      await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/costs?status=error',
+        '/api/v1/costs?status=error',
         expect.any(Object)
       );
     });
@@ -156,12 +156,12 @@ describe('Costs API', () => {
       });
 
       const params = new URLSearchParams({ agent_id: 'agent-001' });
-      await fetch(`/api/costs?${params.toString()}`, {
+      await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/costs?agent_id=agent-001',
+        '/api/v1/costs?agent_id=agent-001',
         expect.any(Object)
       );
     });
@@ -181,7 +181,7 @@ describe('Costs API', () => {
         date_from: '2026-02-01T00:00:00Z',
         date_to: '2026-02-14T23:59:59Z',
       });
-      await fetch(`/api/costs?${params.toString()}`, {
+      await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -203,7 +203,7 @@ describe('Costs API', () => {
       });
 
       const params = new URLSearchParams({ page: '2', limit: '10' });
-      const response = await fetch(`/api/costs?${params.toString()}`, {
+      const response = await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -220,7 +220,7 @@ describe('Costs API', () => {
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/costs');
+      const response = await fetch('/api/v1/costs');
 
       expect(response.status).toBe(401);
     });
@@ -232,7 +232,7 @@ describe('Costs API', () => {
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/costs', {
+      const response = await fetch('/api/v1/costs', {
         headers: { Authorization: 'Bearer invalid-token' },
       });
 
@@ -247,7 +247,7 @@ describe('Costs API', () => {
       });
 
       const params = new URLSearchParams({ page: 'invalid' });
-      const response = await fetch(`/api/costs?${params.toString()}`, {
+      const response = await fetch(`/api/v1/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -265,7 +265,7 @@ describe('Costs API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/costs', {
+      const response = await fetch('/api/v1/costs', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -299,11 +299,11 @@ describe('Costs API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/costs/summary', {
+      const response = await fetch('/api/v1/costs/summary', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/costs/summary', {
+      expect(fetch).toHaveBeenCalledWith('/api/v1/costs/summary', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -355,7 +355,7 @@ describe('Costs API', () => {
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/costs/summary');
+      const response = await fetch('/api/v1/costs/summary');
 
       expect(response.status).toBe(401);
     });
@@ -378,7 +378,7 @@ describe('Costs API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/costs/summary', {
+      const response = await fetch('/api/v1/costs/summary', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -404,11 +404,11 @@ describe('Costs API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/costs/daily', {
+      const response = await fetch('/api/v1/costs/daily', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/costs/daily', {
+      expect(fetch).toHaveBeenCalledWith('/api/v1/costs/daily', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -447,7 +447,7 @@ describe('Costs API', () => {
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/costs/daily');
+      const response = await fetch('/api/v1/costs/daily');
 
       expect(response.status).toBe(401);
     });
@@ -493,7 +493,7 @@ describe('Costs API', () => {
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/costs/daily', {
+      const response = await fetch('/api/v1/costs/daily', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 

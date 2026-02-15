@@ -125,7 +125,7 @@ export function useAgentAnalytics(
       }
 
       const response = await fetch(
-        `/api/analytics/agents/${agentId}?days=${days}`,
+        `/api/v1/analytics/agents/${agentId}?days=${days}`,
         {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,

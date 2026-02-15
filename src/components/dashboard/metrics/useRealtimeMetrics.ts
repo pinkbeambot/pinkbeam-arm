@@ -191,9 +191,9 @@ export function useRealtimeMetrics(
       const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
 
       const [agentsRes, activitiesRes, realtimeRes] = await Promise.all([
-        fetch('/api/agents?limit=100', { headers }),
-        fetch(`/api/activities?date_from=${fiveMinutesAgo}&limit=100`, { headers }),
-        fetch('/api/analytics/realtime', { headers }),
+        fetch('/api/v1/agents?limit=100', { headers }),
+        fetch(`/api/v1/activities?date_from=${fiveMinutesAgo}&limit=100`, { headers }),
+        fetch('/api/v1/analytics/realtime', { headers }),
       ]);
 
       if (!agentsRes.ok) {

@@ -10,7 +10,7 @@ import { createAgentSchema, updateAgentSchema } from '@/lib/validation';
 import { useTenant } from '@/lib/hooks/useTenant';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
-const API_BASE = '/api/agents';
+const API_BASE = '/api/v1/agents';
 const REALTIME_DEBOUNCE_MS = 100;
 
 type PendingChange<T> = {

@@ -48,7 +48,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   // Fetch messages for a chat - defined first to avoid dependency issues
   const fetchMessages = useCallback(async (id: string, before?: string) => {
     try {
-      const url = new URL(`/api/chats/${id}/messages`, window.location.origin);
+      const url = new URL(`/api/v1/chats/${id}/messages`, window.location.origin);
       url.searchParams.set('limit', '50');
       if (before) url.searchParams.set('before', before);
 
@@ -87,13 +87,13 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
 
       if (chatId) {
         // Fetch existing chat
-        const response = await fetch(`/api/chats`);
+        const response = await fetch(`/api/v1/chats`);
         if (!response.ok) throw new Error('Failed to fetch chats');
         const { data: chats } = await response.json();
         chatData = chats.find((c: Chat) => c.id === chatId) || null;
       } else if (agentId) {
         // Create new chat with agent
-        const response = await fetch('/api/chats', {
+        const response = await fetch('/api/v1/chats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ agent_id: agentId }),
@@ -136,7 +136,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
       };
       setMessages(prev => [...prev, optimisticMessage]);
 
-      const response = await fetch(`/api/chats/${chat.id}/messages`, {
+      const response = await fetch(`/api/v1/chats/${chat.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content.trim() }),
@@ -202,7 +202,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
 
     try {
       const response = await fetch(
-        `/api/chats/${chat.id}/messages/${messageId}`,
+        `/api/v1/chats/${chat.id}/messages/${messageId}`,
         { method: 'DELETE' }
       );
 
@@ -312,7 +312,7 @@ export function useChats() {
   const fetchChats = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/chats');
+      const response = await fetch('/api/v1/chats');
       if (!response.ok) throw new Error('Failed to fetch chats');
       const { data: fetchedChats } = await response.json();
       setChats(fetchedChats);

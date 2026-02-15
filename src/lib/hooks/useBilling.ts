@@ -42,7 +42,7 @@ export function useBilling(): UseBillingReturn {
     setError(null);
 
     try {
-      const res = await fetch('/api/billing', {
+      const res = await fetch('/api/v1/billing', {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
@@ -68,7 +68,7 @@ export function useBilling(): UseBillingReturn {
       if (!session?.access_token) return null;
 
       try {
-        const res = await fetch('/api/billing/checkout', {
+        const res = await fetch('/api/v1/billing/checkout', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export function useBilling(): UseBillingReturn {
     if (!session?.access_token) return null;
 
     try {
-      const res = await fetch('/api/billing/portal', {
+      const res = await fetch('/api/v1/billing/portal', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
