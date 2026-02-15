@@ -54,7 +54,7 @@ type RBACHandler = (
  * Get user role from the database
  */
 export async function getUserRole(
-  supabase: ReturnType<typeof createClient>,
+  supabase: ReturnType<typeof createServiceRoleClient>,
   userId: string
 ): Promise<UserWithRole | null> {
   const { data, error } = await supabase
@@ -68,12 +68,14 @@ export async function getUserRole(
     return null;
   }
 
+  const userData = data as unknown as UserRoleData;
+
   return {
-    id: data.id,
-    email: data.email,
-    role: data.role as UserRole,
-    tenantId: data.tenant_id,
-    name: data.name,
+    id: userData.id,
+    email: userData.email,
+    role: userData.role as UserRole,
+    tenantId: userData.tenant_id,
+    name: userData.name || undefined,
   };
 }
 

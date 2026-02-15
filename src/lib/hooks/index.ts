@@ -1,6 +1,13 @@
 // Tenant hook
 export { useTenant } from './useTenant';
 
+// Team hook
+export { useTeam } from './useTeam';
+export type { TeamMember, TeamInvitation } from './useTeam';
+
+// RBAC hook
+export { useRBAC, RBACProvider, PermissionGuard, RoleGuard } from '@/lib/rbac/client';
+
 // Agent hooks
 export {
   useAgentsRealtime,

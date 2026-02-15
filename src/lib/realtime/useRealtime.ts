@@ -415,7 +415,7 @@ export interface UseRealtimeTasksOptions {
   tenantId?: string;
   agentId?: string;
   enabled?: boolean;
-  onChange?: (event: { eventType: RealtimeEventType; new: Record<string, unknown> | null; old: Record<string, unknown> | null }) => void;
+  onChange?: (event: { eventType: RealtimeEventType; new: object | null; old: object | null }) => void;
 }
 
 export function useRealtimeTasks(options: UseRealtimeTasksOptions) {
@@ -425,7 +425,7 @@ export function useRealtimeTasks(options: UseRealtimeTasksOptions) {
   if (tenantId) filters.push(`tenant_id=eq.${tenantId}`);
   if (agentId) filters.push(`assignee_id=eq.${agentId}`);
 
-  return useRealtime<Record<string, unknown>>({
+  return useRealtime({
     table: 'tasks',
     filter: filters.length > 0 ? filters.join(',') : undefined,
     events: ['INSERT', 'UPDATE'],
@@ -439,7 +439,7 @@ export interface UseRealtimeDecisionsOptions {
   tenantId?: string;
   agentId?: string;
   enabled?: boolean;
-  onChange?: (event: { eventType: RealtimeEventType; new: Record<string, unknown> | null; old: Record<string, unknown> | null }) => void;
+  onChange?: (event: { eventType: RealtimeEventType; new: object | null; old: object | null }) => void;
 }
 
 export function useRealtimeDecisions(options: UseRealtimeDecisionsOptions) {
@@ -449,7 +449,7 @@ export function useRealtimeDecisions(options: UseRealtimeDecisionsOptions) {
   if (tenantId) filters.push(`tenant_id=eq.${tenantId}`);
   if (agentId) filters.push(`agent_id=eq.${agentId}`);
 
-  return useRealtime<Record<string, unknown>>({
+  return useRealtime({
     table: 'decisions',
     filter: filters.length > 0 ? filters.join(',') : undefined,
     events: ['INSERT', 'UPDATE'],
@@ -463,7 +463,7 @@ export interface UseRealtimeEscalationsOptions {
   tenantId?: string;
   agentId?: string;
   enabled?: boolean;
-  onChange?: (event: { eventType: RealtimeEventType; new: Record<string, unknown> | null; old: Record<string, unknown> | null }) => void;
+  onChange?: (event: { eventType: RealtimeEventType; new: object | null; old: object | null }) => void;
 }
 
 export function useRealtimeEscalations(options: UseRealtimeEscalationsOptions) {
@@ -473,7 +473,7 @@ export function useRealtimeEscalations(options: UseRealtimeEscalationsOptions) {
   if (tenantId) filters.push(`tenant_id=eq.${tenantId}`);
   if (agentId) filters.push(`agent_id=eq.${agentId}`);
 
-  return useRealtime<Record<string, unknown>>({
+  return useRealtime({
     table: 'escalations',
     filter: filters.length > 0 ? filters.join(',') : undefined,
     events: ['INSERT', 'UPDATE'],
