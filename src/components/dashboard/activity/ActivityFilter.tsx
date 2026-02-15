@@ -49,7 +49,7 @@ export function ActivityFilterBar({
   const [showFilters, setShowFilters] = React.useState(false);
   
   // Debounce search — normalize empty string to undefined so the comparison
-  // doesn't treat '' and undefined as different (which would cause an
+  // doesn&apos;t treat '' and undefined as different (which would cause an
   // infinite re-render loop).
   React.useEffect(() => {
     const timer = setTimeout(() => {
@@ -202,7 +202,7 @@ export function ActivityFilterBar({
           <span className="text-sm text-muted-foreground">Active filters:</span>
           
           {filter.type && filter.type !== 'all' && (
-            <ActivityCategoryBadge category={filter.type as any} />
+            <ActivityCategoryBadge category={filter.type as 'agents' | 'tasks' | 'decisions' | 'escalations' | 'system'} />
           )}
           
           {filter.agentId && (

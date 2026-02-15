@@ -33,8 +33,10 @@ export function ThemeProvider({
   useEffect(() => {
     const stored = localStorage.getItem(storageKey) as Theme | null;
     if (stored) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeState(stored);
     }
+     
     setMounted(true);
   }, [storageKey]);
 
@@ -46,7 +48,7 @@ export function ThemeProvider({
     root.classList.remove('light', 'dark');
 
     let resolved: 'light' | 'dark';
-    
+
     if (theme === 'system') {
       resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     } else {
@@ -54,6 +56,7 @@ export function ThemeProvider({
     }
 
     root.classList.add(resolved);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setResolvedTheme(resolved);
   }, [theme, mounted]);
 

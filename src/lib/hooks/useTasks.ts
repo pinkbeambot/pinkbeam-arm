@@ -139,7 +139,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const channel = supabase
       .channel('tasks_changes')
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -434,7 +434,7 @@ export function useTask(taskId: string | null) {
     const channel = supabase
       .channel(`task_${taskId}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
@@ -467,8 +467,8 @@ export function useTask(taskId: string | null) {
  * Hook for task dependencies
  */
 export function useTaskDependencies(taskId: string | null) {
-  const [dependencies, setDependencies] = useState<any[]>([]);
-  const [dependents, setDependents] = useState<any[]>([]);
+  const [dependencies, setDependencies] = useState<Task[]>([]);
+  const [dependents, setDependents] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 

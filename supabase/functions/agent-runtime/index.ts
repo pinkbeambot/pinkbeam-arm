@@ -66,7 +66,7 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
 }
 
 // Handler implementations
-async function handleSpawn(auth: AuthContext, body: any): Promise<Response> {
+async function handleSpawn(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const agentId = generateUUID();
   const now = nowISO();
@@ -92,7 +92,7 @@ async function handleSpawn(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { agent: { id: agentId, name: body.name, role: body.role, status: 'idle' } } }, 201);
 }
 
-async function handleLifecycle(auth: AuthContext, body: any): Promise<Response> {
+async function handleLifecycle(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const result = await updateAgentStatus(supabase, body.agent_id, 
     body.action === 'pause' ? 'paused' : body.action === 'resume' ? 'idle' : body.action === 'terminate' ? 'terminated' : body.action === 'error' ? 'error' : 'idle',
@@ -104,7 +104,7 @@ async function handleLifecycle(auth: AuthContext, body: any): Promise<Response> 
   return jsonResponse({ success: true, data: { agent_id: body.agent_id, new_state: body.action } });
 }
 
-async function handleMessage(auth: AuthContext, body: any): Promise<Response> {
+async function handleMessage(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const messageId = generateUUID();
   const now = nowISO();
@@ -127,7 +127,7 @@ async function handleMessage(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { message_id: messageId } }, 201);
 }
 
-async function handleDecide(auth: AuthContext, body: any): Promise<Response> {
+async function handleDecide(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const decisionId = generateUUID();
   const now = nowISO();
@@ -152,7 +152,7 @@ async function handleDecide(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { decision_id: decisionId } }, 201);
 }
 
-async function handleEscalate(auth: AuthContext, body: any): Promise<Response> {
+async function handleEscalate(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const escalationId = generateUUID();
   const now = nowISO();

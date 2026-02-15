@@ -3,7 +3,7 @@
  * Unit tests for the analytics service
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { analyticsService, fetchPerformanceData } from '@/lib/analytics';
 import type { DateRange } from '@/components/dashboard/performance/types';
 

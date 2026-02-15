@@ -53,7 +53,7 @@ export function ExportButton({ dateRange, className, disabled }: ExportButtonPro
     
     const exportData: ExportOptions = {
       format,
-      sections: Array.from(selectedSections) as any,
+      sections: Array.from(selectedSections) as ('metrics' | 'leaderboard' | 'roi' | 'bottlenecks')[ ],
       dateRange,
     };
 

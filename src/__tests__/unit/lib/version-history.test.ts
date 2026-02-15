@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { generateConfigDiff, formatDiffForDisplay, getChangeSummary, getChangedSections } from '@/lib/config-utils';
 import { validateAgentConfig } from '@/lib/validation';
 import type { AgentConfig } from '@/lib/validation/agent-config';

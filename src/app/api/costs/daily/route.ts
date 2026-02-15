@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Format response
-    const formattedData = (dailyCosts || []).map((day: any) => ({
+    const formattedData = (dailyCosts || []).map((day: Record<string, unknown>) => ({
       date: day.date,
       request_count: Number(day.request_count || 0),
       total_tokens: Number(day.total_tokens || 0),

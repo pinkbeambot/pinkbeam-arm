@@ -68,7 +68,7 @@ export function Testimonials() {
               <CardContent className="pt-6 flex flex-col h-full">
                 <Quote className="w-8 h-8 text-primary/20 mb-4" />
                 <p className="text-muted-foreground flex-1 mb-6">
-                  "{testimonial.quote}"
+                  &quot;{testimonial.quote}&quot;
                 </p>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">

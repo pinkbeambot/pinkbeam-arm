@@ -122,7 +122,7 @@ export function BottleneckVisualization({
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-medium text-foreground">{bottleneck.name}</h4>
                       <Badge 
-                        variant={config.badge as any}
+                        variant={config.badge as 'default' | 'destructive' | 'outline' | 'secondary'}
                         className="text-xs capitalize"
                       >
                         {bottleneck.severity}

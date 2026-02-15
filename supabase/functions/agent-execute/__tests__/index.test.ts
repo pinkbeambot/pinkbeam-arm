@@ -155,7 +155,7 @@ Deno.test('agentReasoningSchema validates correct reasoning', () => {
 Deno.test('CostTracker calculates costs correctly', async () => {
   const { CostTracker } = await import('../cost-tracker.ts');
   
-  const tracker = new CostTracker(mockSupabase as any);
+  const tracker = new CostTracker(mockSupabase as unknown);
   
   // Test cost recording (mock)
   const costId = await tracker.recordCost({
@@ -175,7 +175,7 @@ Deno.test('CostTracker calculates costs correctly', async () => {
 Deno.test('CostTracker checks budget correctly', async () => {
   const { CostTracker } = await import('../cost-tracker.ts');
   
-  const tracker = new CostTracker(mockSupabase as any);
+  const tracker = new CostTracker(mockSupabase as unknown);
   
   const budgetCheck = await tracker.checkBudget(
     testAgentId,
@@ -193,7 +193,7 @@ Deno.test('CostTracker checks budget correctly', async () => {
 Deno.test('EscalationManager calculates SLA deadline correctly', async () => {
   const { EscalationManager } = await import('../escalation.ts');
   
-  const manager = new EscalationManager(mockSupabase as any);
+  const manager = new EscalationManager(mockSupabase as unknown);
   
   // Test escalation creation (mock)
   const result = await manager.createEscalation({
@@ -223,9 +223,9 @@ Deno.test('TaskExecutor handles task not found', async () => {
   const { CostTracker } = await import('../cost-tracker.ts');
   const { EscalationManager } = await import('../escalation.ts');
   
-  const costTracker = new CostTracker(mockSupabase as any);
-  const escalationManager = new EscalationManager(mockSupabase as any);
-  const executor = new TaskExecutor(mockSupabase as any, costTracker, escalationManager);
+  const costTracker = new CostTracker(mockSupabase as unknown);
+  const escalationManager = new EscalationManager(mockSupabase as unknown);
+  const executor = new TaskExecutor(mockSupabase as unknown, costTracker, escalationManager);
   
   const result = await executor.startTask(testAgentId, testTaskId, testTenantId);
   
@@ -239,12 +239,12 @@ Deno.test('TaskExecutor buildExecutionPrompt generates correct prompt', async ()
   const { CostTracker } = await import('../cost-tracker.ts');
   const { EscalationManager } = await import('../escalation.ts');
   
-  const costTracker = new CostTracker(mockSupabase as any);
-  const escalationManager = new EscalationManager(mockSupabase as any);
-  const executor = new TaskExecutor(mockSupabase as any, costTracker, escalationManager);
+  const costTracker = new CostTracker(mockSupabase as unknown);
+  const escalationManager = new EscalationManager(mockSupabase as unknown);
+  const executor = new TaskExecutor(mockSupabase as unknown, costTracker, escalationManager);
   
   // Access private method through any type
-  const buildPrompt = (executor as any).buildExecutionPrompt.bind(executor);
+  const buildPrompt = (executor as unknown).buildExecutionPrompt.bind(executor);
   
   const prompt = buildPrompt(mockTask, mockAgent, { progress_percent: 50 });
   

@@ -20,7 +20,7 @@ export function HelpWidget() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
-        // Don't trigger if user is typing in an input
+        // Don&apos;t trigger if user is typing in an input
         const target = e.target as HTMLElement
         if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
           return
@@ -42,9 +42,12 @@ export function HelpWidget() {
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       const results = searchArticles(searchQuery)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSearchResults(results.slice(0, 5)) // Top 5 results
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowResults(true)
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setShowResults(false)
     }
   }, [searchQuery])

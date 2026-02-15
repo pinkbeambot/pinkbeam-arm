@@ -186,7 +186,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     if (!chat?.id) return;
 
     const channel = (supabase
-      .channel(`chat:${chat.id}`) as any)
+      .channel(`chat:${chat.id}`) as unknown)
       .on(
         'postgres_changes',
         {
@@ -276,7 +276,7 @@ export function useChats() {
   // Subscribe to chat updates
   useEffect(() => {
     const channel = (supabase
-      .channel(`user_chats:${DEMO_TENANT_ID}`) as any)
+      .channel(`user_chats:${DEMO_TENANT_ID}`) as unknown)
       .on(
         'postgres_changes',
         {

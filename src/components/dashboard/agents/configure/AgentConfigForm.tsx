@@ -130,6 +130,7 @@ export function AgentConfigForm({ agent, onSave, onCancel, isLoading }: AgentCon
   // Track changes
   useEffect(() => {
     const changed = JSON.stringify(formState) !== JSON.stringify(originalState);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasChanges(changed);
   }, [formState, originalState]);
 

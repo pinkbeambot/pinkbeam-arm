@@ -103,7 +103,7 @@ export default function DecisionsPage() {
 
   const handlePageChange = useCallback((newPage: number) => { setPage(newPage); }, []);
 
-  const handleFilterChange = useCallback((setter: (value: any) => void) => (value: any) => {
+  const handleFilterChange = useCallback(<T,>(setter: (value: T) => void) => (value: T) => {
     setter(value);
     setPage(1);
   }, []);

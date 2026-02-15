@@ -3,7 +3,7 @@
  * Issue: #48 - Chat Interface
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ChatPanel } from '@/components/chat/ChatPanel';
@@ -262,7 +262,7 @@ describe('ChatPanel', () => {
 
     // Check that interactive elements are focusable
     const closeButton = screen.getByRole('button', { name: /close/i });
-    // Native buttons are inherently focusable; verify it's not excluded from tab order
+    // Native buttons are inherently focusable; verify it&apos;s not excluded from tab order
     expect(closeButton).not.toHaveAttribute('tabIndex', '-1');
   });
 });

@@ -4,7 +4,7 @@
  * Tests for the ActivityTab component showing agent activity feed.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActivityTab } from '@/components/dashboard/agents/ActivityTab';
 import type { ActivityEvent } from '@/components/dashboard/activity/types';

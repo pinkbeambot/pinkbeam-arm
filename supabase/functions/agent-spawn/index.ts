@@ -40,10 +40,10 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleSpawn(auth: AuthContext, body: any): Promise<Response> {
+async function handleSpawn(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   
-  let parentAgent: any = null;
+  let parentAgent: Record<string, unknown> | null = null;
   if (body.parent_agent_id) {
     const { data } = await supabase.from('agents').select('id, root_id, depth, capabilities').eq('id', body.parent_agent_id).eq('tenant_id', auth.tenantId).single();
     if (data) parentAgent = data;

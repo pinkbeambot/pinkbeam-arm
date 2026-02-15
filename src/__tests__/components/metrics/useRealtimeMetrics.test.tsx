@@ -3,7 +3,7 @@
  * Issue: #64 - Fix metrics error handling
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import * as React from 'react';
 

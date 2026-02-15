@@ -51,17 +51,11 @@ export function EscalationDetailPanel({
   open,
   onOpenChange,
   onResolve,
-  onTakeOver,
+  onTakeOver: _onTakeOver,
 }: EscalationDetailPanelProps) {
   const [responseType, setResponseType] = useState<'approve' | 'reject' | 'request_info' | 'take_over' | null>(null);
   const [responseText, setResponseText] = useState('');
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-
-  if (!escalation) return null;
-
-  const urgencyConfig = getUrgencyConfig(escalation.urgency);
-  const typeConfig = getTypeConfig(escalation.type);
-  const waitingTime = getWaitingTime(escalation.created_at);
 
   const handleResponse = useCallback((type: 'approve' | 'reject' | 'request_info' | 'take_over') => {
     setResponseType(type);
@@ -87,12 +81,20 @@ export function EscalationDetailPanel({
         break;
     }
 
-    onResolve(escalation.id, resolution);
-    setConfirmDialogOpen(false);
-    setResponseText('');
-    setResponseType(null);
-    onOpenChange(false);
+    if (escalation) {
+      onResolve(escalation.id, resolution);
+      setConfirmDialogOpen(false);
+      setResponseText('');
+      setResponseType(null);
+      onOpenChange(false);
+    }
   }, [responseType, escalation, responseText, onResolve, onOpenChange]);
+
+  if (!escalation) return null;
+
+  const urgencyConfig = getUrgencyConfig(escalation.urgency);
+  const typeConfig = getTypeConfig(escalation.type);
+  const waitingTime = getWaitingTime(escalation.created_at);
 
   return (
     <>

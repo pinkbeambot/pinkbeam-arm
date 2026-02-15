@@ -289,7 +289,7 @@ export function DecisionDetailPanel({
                     <Label htmlFor="override-reason">Reason for Override</Label>
                     <Textarea
                       id="override-reason"
-                      placeholder="Explain why you're overriding this decision..."
+                      placeholder="Explain why you&apos;re overriding this decision..."
                       value={overrideForm.reason}
                       onChange={(e) => setOverrideForm({ ...overrideForm, reason: e.target.value })}
                       className="min-h-[80px]"

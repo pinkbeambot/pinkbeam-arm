@@ -36,7 +36,7 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleCreate(auth: AuthContext, body: any): Promise<Response> {
+async function handleCreate(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const taskId = generateUUID();
   const now = nowISO();
@@ -63,7 +63,7 @@ async function handleCreate(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: taskId, status: 'queued' } }, 201);
 }
 
-async function handleClaim(auth: AuthContext, body: any): Promise<Response> {
+async function handleClaim(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -75,7 +75,7 @@ async function handleClaim(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: body.task_id, agent_id: body.agent_id } });
 }
 
-async function handleStart(auth: AuthContext, body: any): Promise<Response> {
+async function handleStart(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -87,7 +87,7 @@ async function handleStart(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: body.task_id, status: 'in_progress' } });
 }
 
-async function handleComplete(auth: AuthContext, body: any): Promise<Response> {
+async function handleComplete(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 
@@ -101,7 +101,7 @@ async function handleComplete(auth: AuthContext, body: any): Promise<Response> {
   return jsonResponse({ success: true, data: { task_id: body.task_id, status: 'completed' } });
 }
 
-async function handleFail(auth: AuthContext, body: any): Promise<Response> {
+async function handleFail(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const now = nowISO();
 

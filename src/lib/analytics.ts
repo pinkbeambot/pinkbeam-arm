@@ -326,8 +326,8 @@ export async function fetchPerformanceData(dateRange: DateRange, token: string):
       tenant_id: '', // Will be filled by parent context
       name: entry.name,
       slug: entry.name.toLowerCase().replace(/\s+/g, '-'),
-      role: entry.role as any,
-      status: entry.status as any,
+      role: entry.role as 'ceo' | 'manager' | 'worker' | 'specialist' | 'system',
+      status: entry.status as 'initializing' | 'idle' | 'active' | 'paused' | 'blocked' | 'error' | 'escaped' | 'terminated',
       avatar_url: entry.avatarUrl,
       description: '',
       capabilities: [],

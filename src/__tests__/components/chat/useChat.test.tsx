@@ -3,7 +3,7 @@
  * Issue: #48 - Chat Interface
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
 // Mock Supabase
@@ -28,7 +28,7 @@ describe('useChat', () => {
         ok: true,
         json: () => Promise.resolve({ chats: [], messages: [], has_more: false }),
       })
-    ) as any;
+    ) as unknown as typeof fetch;
   });
 
   it('initializes with correct default state', () => {
@@ -71,7 +71,7 @@ describe('useChats', () => {
         ok: true,
         json: () => Promise.resolve({ chats: [] }),
       })
-    ) as any;
+    ) as unknown as typeof fetch;
   });
 
   it('initializes with correct default state', () => {

@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Mock @/lib/api/auth BEFORE importing the route (prevents service-role.ts from throwing)
 vi.mock('@/lib/api/auth', () => ({
-  authenticateRequest: vi.fn(async (request: any) => {
+  authenticateRequest: vi.fn(async (request: NextRequest) => {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -34,7 +34,7 @@ vi.mock('@/lib/api/auth', () => ({
       },
     };
   }),
-  isErrorResponse: vi.fn((result: any) => result instanceof NextResponse),
+  isErrorResponse: vi.fn((result: unknown) => result instanceof NextResponse),
 }));
 
 import { GET, POST } from '@/app/api/agents/[id]/config/test/route';
@@ -117,22 +117,6 @@ describe('GET /api/agents/[id]/config/test', () => {
   });
 
   it('should return test history for an agent', async () => {
-    const mockTestResults = [
-      {
-        id: 'test-1',
-        tenant_id: 'tenant-123',
-        agent_id: 'agent-123',
-        test_input: 'Hello',
-        test_output: 'Hi there!',
-        success: true,
-        response_time_ms: 1000,
-        tokens_used: 250,
-        cost_usd: 0.005,
-        model_used: 'claude-3-5-sonnet',
-        created_at: '2026-02-14T10:00:00Z',
-      },
-    ];
-
     // This test would need more setup to work properly with the mocked Supabase client
     // For now, we verify the route structure exists
     expect(GET).toBeDefined();
@@ -150,7 +134,7 @@ describe('GET /api/agents/[id]/config/test', () => {
 });
 
 describe('POST /api/agents/[id]/config/test', () => {
-  const mockRequest = (agentId: string, body: object) => {
+  const _mockRequest = (agentId: string, body: object) => {
     return new NextRequest(
       `http://localhost:3000/api/agents/${agentId}/config/test`,
       {
@@ -219,11 +203,6 @@ describe('POST /api/agents/[id]/config/test', () => {
       }),
     } as Response);
 
-    const requestBody = {
-      test_input: 'Test prompt',
-      use_current: true,
-    };
-
     expect(POST).toBeDefined();
     expect(typeof POST).toBe('function');
   });
@@ -240,11 +219,6 @@ describe('POST /api/agents/[id]/config/test', () => {
         },
       }),
     } as Response);
-
-    const requestBody = {
-      test_input: 'Test prompt',
-      use_current: true,
-    };
 
     expect(POST).toBeDefined();
     expect(typeof POST).toBe('function');
@@ -264,7 +238,7 @@ describe('POST /api/agents/[id]/config/test', () => {
   });
 
   it('should build system prompt from config', async () => {
-    const config = {
+    const _config = {
       basic_info: {
         role: 'sales assistant',
       },

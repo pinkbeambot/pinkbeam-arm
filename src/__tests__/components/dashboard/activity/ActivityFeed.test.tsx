@@ -2,7 +2,7 @@
  * ActivityFeed Component Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActivityFeed } from '@/components/dashboard/activity/ActivityFeed';
 import { useRealtimeActivities } from '@/components/dashboard/activity/useRealtimeActivities';

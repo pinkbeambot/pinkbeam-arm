@@ -5,7 +5,7 @@
  * Tests middleware behavior, header handling, and error cases.
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { NextRequest, NextResponse } from 'next/server';
 import { 
   rateLimitMiddleware, 

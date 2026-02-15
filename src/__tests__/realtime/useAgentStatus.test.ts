@@ -4,7 +4,7 @@
  * Simplified tests using only vitest
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 describe('useAgentStatus Configuration', () => {
   const defaultOptions = {
@@ -126,7 +126,7 @@ describe('Reconnection Logic', () => {
 
   it('should respect max reconnect attempts', () => {
     const maxReconnectAttempts = 5;
-    let reconnectAttempts = 5;
+    const reconnectAttempts = 5;
 
     const shouldReconnect = reconnectAttempts < maxReconnectAttempts;
     expect(shouldReconnect).toBe(false);

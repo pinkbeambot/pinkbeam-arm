@@ -2,7 +2,7 @@
  * Unit tests for Claude Provider
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ClaudeProvider, createClaudeProvider } from '@/lib/llm/claude';
 import { LLMError } from '@/lib/llm/types';
 

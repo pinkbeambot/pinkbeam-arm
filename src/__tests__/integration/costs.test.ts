@@ -7,7 +7,7 @@
  * - GET /api/costs/daily - Get daily cost aggregation
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 // Mock fetch for API testing
 global.fetch = vi.fn();
@@ -59,7 +59,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -84,7 +84,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -106,7 +106,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -128,7 +128,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -150,7 +150,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -172,7 +172,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -197,7 +197,7 @@ describe('Costs API', () => {
         pagination: { page: 2, limit: 10, total: 25, totalPages: 3 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -214,7 +214,7 @@ describe('Costs API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -226,7 +226,7 @@ describe('Costs API', () => {
     });
 
     it('should return 401 with invalid token', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -240,7 +240,7 @@ describe('Costs API', () => {
     });
 
     it('should return 400 for invalid query parameters', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [] }),
@@ -260,7 +260,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -294,7 +294,7 @@ describe('Costs API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -330,7 +330,7 @@ describe('Costs API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -349,7 +349,7 @@ describe('Costs API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -373,7 +373,7 @@ describe('Costs API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -399,7 +399,7 @@ describe('Costs API', () => {
         meta: { days: 30, tenant_id: 'tenant-001' },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -426,7 +426,7 @@ describe('Costs API', () => {
         meta: { days: 7, tenant_id: 'tenant-001' },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -441,7 +441,7 @@ describe('Costs API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -453,7 +453,7 @@ describe('Costs API', () => {
     });
 
     it('should return 400 for invalid days parameter', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [] }),
@@ -468,7 +468,7 @@ describe('Costs API', () => {
     });
 
     it('should enforce maximum days limit', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [{ message: 'Number must be less than or equal to 90' }] }),
@@ -488,7 +488,7 @@ describe('Costs API', () => {
         meta: { days: 30, tenant_id: 'tenant-001' },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as unknown as jest.Mock).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });

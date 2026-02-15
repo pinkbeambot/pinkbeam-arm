@@ -2,7 +2,7 @@
  * Activity Feed Page Tests
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import ActivityFeedPage from '@/app/(portal)/portal/activity/page';
 

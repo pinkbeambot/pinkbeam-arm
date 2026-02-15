@@ -5,7 +5,7 @@
  * Tests local fallback behavior and rate limit calculations.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { 
   rateLimitService, 
   RATE_LIMITS, 

@@ -126,7 +126,7 @@ export function FinalCTA() {
                 <Quote className="w-4 h-4 text-primary" />
               </div>
               <blockquote className="text-muted-foreground italic mb-3">
-                "I've already hired Sarah and Mike. Best decision I made this year."
+                &quot;I&apos;ve already hired Sarah and Mike. Best decision I made this year.&quot;
               </blockquote>
               <cite className="text-sm text-muted-foreground not-italic">
                 — David Chen, CEO at Nexus AI

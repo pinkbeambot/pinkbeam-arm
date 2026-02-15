@@ -233,7 +233,7 @@ export function useNotifications({
     const channel = supabase
       .channel(`notifications:${tenantId}:${userId}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',
@@ -328,7 +328,7 @@ export function useUnreadNotificationCount(
     const channel = supabase
       .channel(`notifications-count:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        'postgres_changes',
         {
           event: '*',
           schema: 'public',

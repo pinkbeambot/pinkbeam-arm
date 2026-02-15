@@ -91,8 +91,8 @@ export async function setTenantContext(
     }]);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase.rpc as any)('set_tenant_context', { 
+   
+  const { error } = await (supabase.rpc as unknown)('set_tenant_context', { 
     tenant_id: tenantId 
   });
 
@@ -287,8 +287,8 @@ export async function validateAuthAndGetContext(
     }
 
     // Get tenant_id from user metadata or database
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let tenantId = (user.user_metadata as any)?.tenant_id || (user.app_metadata as any)?.tenant_id;
+     
+    let tenantId = (user.user_metadata as unknown)?.tenant_id || (user.app_metadata as unknown)?.tenant_id;
     
     if (!tenantId) {
       // Fetch from database
@@ -298,13 +298,13 @@ export async function validateAuthAndGetContext(
         .eq('auth_id', user.id)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if (profileError || !(userProfile as any)?.tenant_id) {
+       
+      if (profileError || !(userProfile as unknown)?.tenant_id) {
         throw authErrors.tenantNotFound();
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tenantId = (userProfile as any).tenant_id;
+       
+      tenantId = (userProfile as unknown).tenant_id;
     }
 
     // Set tenant context
@@ -364,8 +364,8 @@ export async function getTenantContextFromSession(): Promise<TenantContext | nul
     }
 
     const user = session.user;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let tenantId = (user.user_metadata as any)?.tenant_id || (user.app_metadata as any)?.tenant_id;
+     
+    let tenantId = (user.user_metadata as unknown)?.tenant_id || (user.app_metadata as unknown)?.tenant_id;
 
     if (!tenantId) {
       // Fetch from database
@@ -375,8 +375,8 @@ export async function getTenantContextFromSession(): Promise<TenantContext | nul
         .eq('auth_id', user.id)
         .single();
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      tenantId = (userProfile as any)?.tenant_id;
+       
+      tenantId = (userProfile as unknown)?.tenant_id;
     }
 
     if (!tenantId) {
@@ -434,8 +434,8 @@ export async function userHasCapability(
       return false;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return ((agent as any).capabilities as string[])?.includes(capability) || false;
+     
+    return ((agent as unknown).capabilities as string[])?.includes(capability) || false;
   } catch (error) {
     console.error('Capability check error:', error);
     return false;

@@ -19,7 +19,7 @@ const supabase = hasCredentials
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
-  : (null as any);
+  : (null as unknown);
 
 describe('Messages API Integration', () => {
   let testTenantId: string;

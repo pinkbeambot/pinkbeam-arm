@@ -37,7 +37,7 @@ function errorResponse(code: string, message: string, status = 400, retryable = 
   return jsonResponse({ success: false, error: { code, message, retryable } }, status);
 }
 
-async function handleSend(auth: AuthContext, body: any): Promise<Response> {
+async function handleSend(auth: AuthContext, body: Record<string, unknown>): Promise<Response> {
   const supabase = createAdminClient();
   const messageId = generateUUID();
   const now = nowISO();

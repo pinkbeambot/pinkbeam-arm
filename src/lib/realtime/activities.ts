@@ -91,7 +91,7 @@ export function getActivityChannelName(config: ActivitySubscriptionConfig): stri
  *   category: 'task'
  * }, {
  *   onInsert: (activity) => console.log('New activity:', activity),
- *   onError: (err) => console.error('Subscription error:', err)
+ *   onError: (_err) => console.error('Subscription error:', err)
  * });
  * ```
  */

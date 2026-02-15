@@ -135,7 +135,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
       const subscription = supabase
         .channel(`escalations:${tenantId}`)
         .on(
-          'postgres_changes' as any,
+          'postgres_changes',
           {
             event: '*',
             schema: 'public',

@@ -1,5 +1,5 @@
 import { test as base, expect, Page } from '@playwright/test';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 // Environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
@@ -25,7 +25,7 @@ export interface TestFixtures {
  * Login helper - simulates magic link authentication for E2E tests
  * Uses Supabase service role to create session directly
  */
-export async function login(page: Page, email: string = TEST_USER_EMAIL): Promise<void> {
+export async function login(page: Page, _email: string = TEST_USER_EMAIL): Promise<void> {
   // For E2E tests, we rely on the DEV_AUTH_BYPASS mode
   // This is set in the environment and allows us to skip real auth
   await page.goto('/portal');
@@ -92,17 +92,17 @@ export const test = base.extend<TestFixtures>({
   // Auto-login fixture - provides an authenticated page
   authenticatedPage: async ({ page }, use) => {
     await loginWithBypass(page);
-    await use(page);
+    await use(page); // eslint-disable-line react-hooks/rules-of-hooks
   },
 
   // Login helper
-  login: async ({}, use) => {
-    await use(login);
+  login: async ({ }, use) => {
+    await use(login); // eslint-disable-line react-hooks/rules-of-hooks
   },
 
   // Cleanup helper
-  cleanup: async ({}, use) => {
-    await use(cleanupTestData);
+  cleanup: async ({ }, use) => {
+    await use(cleanupTestData); // eslint-disable-line react-hooks/rules-of-hooks
   },
 });
 

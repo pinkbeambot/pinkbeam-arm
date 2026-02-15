@@ -5,7 +5,7 @@
  * Tests tier resolution, caching, and rate limit configuration.
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 
 // Mock Supabase client - must be before imports
 vi.mock('@supabase/supabase-js', () => {

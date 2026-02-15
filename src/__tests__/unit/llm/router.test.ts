@@ -2,7 +2,7 @@
  * Unit tests for LLM Router
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { LLMRouter, getLLMRouter, resetLLMRouter } from '@/lib/llm/router';
 import { LLMError } from '@/lib/llm/types';
 

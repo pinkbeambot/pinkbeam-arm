@@ -99,9 +99,13 @@ export function EditAgentModal({ agent, open, onOpenChange, onSave, loading }: E
   useEffect(() => {
     if (open && agent) {
       const initial = getInitialFormState(agent);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormState(initial);
+       
       setOriginalState(initial);
+       
       setValidationErrors([]);
+       
       setActiveTab('basic');
     }
   }, [agent, open]);
@@ -109,6 +113,7 @@ export function EditAgentModal({ agent, open, onOpenChange, onSave, loading }: E
   // Track changes
   useEffect(() => {
     const changed = JSON.stringify(formState) !== JSON.stringify(originalState);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHasChanges(changed);
   }, [formState, originalState]);
 
