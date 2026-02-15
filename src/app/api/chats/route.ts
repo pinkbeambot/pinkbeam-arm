@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { z } from 'zod';
 
-// Demo tenant ID - in production, this would come from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
+const createChatSchema = z.object({
+  agent_id: z.string().uuid('Invalid agent ID'),
+});
 
 /**
  * GET /api/chats
@@ -11,12 +12,14 @@ const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Call the database function to get user chats with agent info
     const { data: chats, error } = await supabase.rpc('get_user_chats', {
-      p_tenant_id: DEMO_TENANT_ID,
-      p_user_id: DEMO_USER_ID,
+      p_tenant_id: tenantId,
+      p_user_id: userId,
     });
 
     if (error) {
@@ -30,8 +33,8 @@ export async function GET(request: NextRequest) {
     // Transform the response to match our types
     const formattedChats = chats?.map((chat: Record<string, unknown>) => ({
       id: chat.id,
-      tenant_id: DEMO_TENANT_ID,
-      user_id: DEMO_USER_ID,
+      tenant_id: tenantId,
+      user_id: userId,
       agent_id: chat.agent_id,
       agent: {
         id: chat.agent_id as string,
@@ -63,24 +66,28 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createServerSupabaseClient();
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     const body = await request.json();
-    const { agent_id } = body;
+    const parsed = createChatSchema.safeParse(body);
 
-    if (!agent_id) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Agent ID is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { agent_id } = parsed.data;
 
     // Use the database function to get or create the chat
     const { data: chatId, error: chatError } = await supabase.rpc(
       'get_or_create_chat',
       {
-        p_tenant_id: DEMO_TENANT_ID,
-        p_user_id: DEMO_USER_ID,
+        p_tenant_id: tenantId,
+        p_user_id: userId,
         p_agent_id: agent_id,
       }
     );

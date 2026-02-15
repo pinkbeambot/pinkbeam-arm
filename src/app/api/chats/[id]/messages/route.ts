@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { z } from 'zod';
 
-// Demo tenant ID - in production, this would come from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
+const sendMessageSchema = z.object({
+  content: z.string().min(1, 'Message content is required').max(10000),
+});
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -15,8 +16,11 @@ interface RouteParams {
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
+
     const { id: chatId } = await params;
-    const supabase = await createServerSupabaseClient();
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -28,8 +32,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       .from('chats')
       .select('id')
       .eq('id', chatId)
-      .eq('tenant_id', DEMO_TENANT_ID)
-      .eq('user_id', DEMO_USER_ID)
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
       .single();
 
     if (chatError || !chat) {
@@ -88,18 +92,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
+
     const { id: chatId } = await params;
-    const supabase = await createServerSupabaseClient();
 
     const body = await request.json();
-    const { content } = body;
+    const parsed = sendMessageSchema.safeParse(body);
 
-    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Message content is required' },
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { content } = parsed.data;
 
     // Verify the chat belongs to the current user
     const { data: chat, error: chatError } = await supabase
@@ -110,8 +119,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         agent:agents(id, name, avatar_url, role, status, description, model, llm_config)
       `)
       .eq('id', chatId)
-      .eq('tenant_id', DEMO_TENANT_ID)
-      .eq('user_id', DEMO_USER_ID)
+      .eq('tenant_id', tenantId)
+      .eq('user_id', userId)
       .single();
 
     if (chatError || !chat) {
@@ -143,7 +152,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Trigger agent response (async - don't wait for it)
     // In production, this would be an Edge Function or background job
-    triggerAgentResponse(supabase, chatId, chat.agent_id, DEMO_TENANT_ID, content.trim())
+    triggerAgentResponse(supabase, chatId, chat.agent_id, tenantId, content.trim())
       .catch((err: Error) => console.error('Error triggering agent response:', err));
 
     return NextResponse.json({
@@ -162,7 +171,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * Trigger agent response via Edge Function
  */
 async function triggerAgentResponse(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  supabase: Awaited<ReturnType<typeof authenticateRequest>> extends infer R ? R extends { supabase: infer S } ? S : never : never,
   chatId: string,
   agentId: string,
   tenantId: string,
@@ -218,7 +227,7 @@ async function triggerAgentResponse(
  * Fetch context for agent response
  */
 async function fetchAgentContext(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  supabase: Awaited<ReturnType<typeof authenticateRequest>> extends infer R ? R extends { supabase: infer S } ? S : never : never,
   agentId: string,
   tenantId: string
 ) {
@@ -284,7 +293,6 @@ function generateAgentResponse(
   const agentName = agent.name as string;
   const activities = context.activities || [];
   const tasks = context.tasks || [];
-  // const decisions = context.decisions || [];
   const escalations = context.escalations || [];
 
   // Build a contextual response based on available data
