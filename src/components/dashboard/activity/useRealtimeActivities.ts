@@ -95,8 +95,15 @@ export function useRealtimeActivities(
   const [hasMore, setHasMore] = React.useState(false);
   const [cursor, setCursor] = React.useState<string | undefined>();
 
-  const supabase = createClient();
+  const supabase = React.useMemo(() => createClient(), []);
   const accessToken = session?.access_token;
+
+  // Refs for values used in the Realtime subscription callback so the
+  // effect doesn't re-run (and tear down/recreate the channel) on every render.
+  const filterRef = React.useRef(filter);
+  filterRef.current = filter;
+  const onNewActivityRef = React.useRef(onNewActivity);
+  onNewActivityRef.current = onNewActivity;
 
   // Fetch initial activities
   const fetchActivities = React.useCallback(async (cursor?: string) => {
@@ -166,7 +173,8 @@ export function useRealtimeActivities(
     }
   }, [enabled, fetchActivities]);
 
-  // Realtime subscription
+  // Realtime subscription — deps are only stable values (enabled, supabase)
+  // so the channel isn't torn down/recreated on every render.
   React.useEffect(() => {
     if (!enabled) return;
 
@@ -183,9 +191,10 @@ export function useRealtimeActivities(
         (payload) => {
           const newActivity = payload.new as Activity;
           const newEvent = transformActivity(newActivity);
+          const currentFilter = filterRef.current;
 
           // Apply filters
-          if (filter?.type && filter.type !== 'all') {
+          if (currentFilter?.type && currentFilter.type !== 'all') {
             const categoryMap: Record<string, string> = {
               'agent.spawned': 'agents',
               'agent.status_changed': 'agents',
@@ -205,12 +214,12 @@ export function useRealtimeActivities(
               'system.config_changed': 'system',
             };
 
-            if (categoryMap[newActivity.type] !== filter.type) {
+            if (categoryMap[newActivity.type] !== currentFilter.type) {
               return;
             }
           }
 
-          if (filter?.agentId && newActivity.agent_id !== filter.agentId) {
+          if (currentFilter?.agentId && newActivity.agent_id !== currentFilter.agentId) {
             return;
           }
 
@@ -218,7 +227,7 @@ export function useRealtimeActivities(
           setEvents(prev => [newEvent, ...prev]);
 
           // Notify callback
-          onNewActivity?.(newActivity);
+          onNewActivityRef.current?.(newActivity);
         }
       )
       .subscribe((status) => {
@@ -228,7 +237,7 @@ export function useRealtimeActivities(
     return () => {
       channel.unsubscribe();
     };
-  }, [enabled, filter, onNewActivity, supabase]);
+  }, [enabled, supabase]);
 
   const loadMore = React.useCallback(() => {
     if (hasMore && cursor && !isLoading) {
