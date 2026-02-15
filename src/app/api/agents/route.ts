@@ -105,9 +105,8 @@ export async function GET(request: NextRequest) {
         `
         *,
         parent:parent_id(id, name, avatar_url, role, status),
-        children:agents!parent_id(id, name, avatar_url, role, status),
-        current_task:current_task_id(id, title, status, priority)
-      `,
+        children:agents!parent_id(id, name, avatar_url, role, status)
+`,
         { count: 'exact' }
       )
       .eq('tenant_id', tenantId)
