@@ -78,8 +78,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Get tenant details including onboarding status
+    const { data: tenant, error: tenantError } = await supabase
+      .from('tenants')
+      .select('id, name, slug, onboarding_completed, onboarding_completed_at, created_at')
+      .eq('id', userProfile.tenant_id)
+      .single();
+
+    if (tenantError) {
+      console.error('Tenant details lookup error:', tenantError);
+      // Still return tenant_id even if full details fail
+      return NextResponse.json({
+        tenant_id: userProfile.tenant_id,
+      });
+    }
+
     return NextResponse.json({
       tenant_id: userProfile.tenant_id,
+      tenant: tenant,
     });
   } catch (error) {
     console.error('Error in GET /api/user/tenant:', error);
