@@ -123,8 +123,7 @@ export async function GET(request: NextRequest) {
         `
         *,
         agent:agent_id(id, name, avatar_url, role, status),
-        task:task_id(id, title, status, priority),
-        actor_details:actor_id(id, name, avatar_url, role)
+        task:task_id(id, title, status, priority)
       `,
         { count: 'exact' }
       )
