@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import { ApiError } from '@/lib/errors';
+import { useTenant } from '@/lib/hooks/useTenant';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
 const API_BASE = '/api/agents';
@@ -383,14 +384,12 @@ export function useDeleteAgent() {
   return { deleteAgent, loading, error };
 }
 
-// Demo tenant ID - in production, this comes from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-
 /**
  * Convenience hook for fetching all agents
- * Uses the demo tenant ID for development
+ * Uses useTenant() to get the real tenant ID from auth context
  */
 export function useAgents() {
-  const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { tenantId } = useTenant();
+  const { agents, loading, error, refetch } = useAgentsRealtime(tenantId);
   return { agents, isLoading: loading, error, refetch };
 }
