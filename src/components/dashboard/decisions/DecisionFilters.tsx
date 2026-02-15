@@ -1,36 +1,27 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { 
   Brain, 
   Search, 
   Filter, 
   X, 
-  ChevronDown,
   ArrowUpDown,
   Download,
   FileJson,
   FileSpreadsheet,
-  Calendar,
-  User,
-  Gauge,
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  MoreHorizontal,
-  Eye,
-  Pencil,
-  History,
   Save,
   Trash2,
   Bookmark
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatDateTime, getInitials, getAvatarColor } from '@/lib/utils';
+import { cn, formatRelativeTime, formatDateTime } from '@/lib/utils';
 import type { Decision, Agent, DecisionStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,21 +32,6 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -65,8 +41,10 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { DateRangeFilter, type DateRange, DATE_RANGE_OPTIONS } from './DateRangeFilter';
+import { AgentFilter } from './AgentFilter';
+import { ConfidenceFilter, type ConfidenceLevel, CONFIDENCE_OPTIONS } from './ConfidenceFilter';
 
-export type ConfidenceLevel = 'all' | 'high' | 'medium' | 'low';
 export type DecisionType = 'all' | 'proposed' | 'approved' | 'rejected' | 'overridden' | 'executed';
 
 export interface FilterPreset {
@@ -76,7 +54,7 @@ export interface FilterPreset {
     agentFilter: string | 'all';
     confidenceFilter: ConfidenceLevel;
     typeFilter: DecisionType;
-    dateRange: 'all' | 'today' | 'week' | 'month';
+    dateRange: DateRange;
     sortField: 'created_at' | 'confidence' | 'title';
     sortOrder: 'asc' | 'desc';
   };
@@ -84,6 +62,21 @@ export interface FilterPreset {
 }
 
 const PRESETS_STORAGE_KEY = 'decision-filter-presets';
+
+const TYPE_OPTIONS: { value: DecisionType; label: string; color: string }[] = [
+  { value: 'all', label: 'All Types', color: 'bg-gray-500' },
+  { value: 'proposed', label: 'Proposed', color: 'bg-blue-500' },
+  { value: 'approved', label: 'Approved', color: 'bg-green-500' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-red-500' },
+  { value: 'overridden', label: 'Overridden', color: 'bg-orange-500' },
+  { value: 'executed', label: 'Executed', color: 'bg-pink-500' },
+];
+
+const SORT_OPTIONS: { value: 'created_at' | 'confidence' | 'title'; label: string }[] = [
+  { value: 'created_at', label: 'Decision Date' },
+  { value: 'confidence', label: 'Confidence Score' },
+  { value: 'title', label: 'Title' },
+];
 
 interface DecisionFiltersProps {
   agents: Agent[];
@@ -95,8 +88,8 @@ interface DecisionFiltersProps {
   onConfidenceFilterChange: (level: ConfidenceLevel) => void;
   typeFilter: DecisionType;
   onTypeFilterChange: (type: DecisionType) => void;
-  dateRange: 'all' | 'today' | 'week' | 'month';
-  onDateRangeChange: (range: 'all' | 'today' | 'week' | 'month') => void;
+  dateRange: DateRange;
+  onDateRangeChange: (range: DateRange) => void;
   sortField: 'created_at' | 'confidence' | 'title';
   onSortFieldChange: (field: 'created_at' | 'confidence' | 'title') => void;
   sortOrder: 'asc' | 'desc';
@@ -105,35 +98,6 @@ interface DecisionFiltersProps {
   filteredCount: number;
   onExport: (format: 'csv' | 'json') => void;
 }
-
-const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string; color: string; min: number; max: number }[] = [
-  { value: 'all', label: 'All Levels', color: 'bg-gray-500', min: 0, max: 100 },
-  { value: 'high', label: 'High (>80%)', color: 'bg-green-500', min: 80, max: 100 },
-  { value: 'medium', label: 'Medium (50-80%)', color: 'bg-amber-500', min: 50, max: 80 },
-  { value: 'low', label: 'Low (<50%)', color: 'bg-red-500', min: 0, max: 50 },
-];
-
-const TYPE_OPTIONS: { value: DecisionType; label: string; color: string }[] = [
-  { value: 'all', label: 'All Types', color: 'bg-gray-500' },
-  { value: 'proposed', label: 'Proposed', color: 'bg-blue-500' },
-  { value: 'approved', label: 'Approved', color: 'bg-green-500' },
-  { value: 'rejected', label: 'Rejected', color: 'bg-red-500' },
-  { value: 'overridden', label: 'Overridden', color: 'bg-orange-500' },
-  { value: 'executed', label: 'Executed', color: 'bg-pink-500' },
-];
-
-const DATE_RANGE_OPTIONS: { value: 'all' | 'today' | 'week' | 'month'; label: string }[] = [
-  { value: 'all', label: 'All Time' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'Last 7 Days' },
-  { value: 'month', label: 'Last 30 Days' },
-];
-
-const SORT_OPTIONS: { value: 'created_at' | 'confidence' | 'title'; label: string }[] = [
-  { value: 'created_at', label: 'Decision Date' },
-  { value: 'confidence', label: 'Confidence Score' },
-  { value: 'title', label: 'Title' },
-];
 
 // LocalStorage helper functions for presets
 export function savePreset(name: string, filters: FilterPreset['filters']): void {
@@ -285,80 +249,17 @@ export function DecisionFilters({
         </div>
 
         {/* Agent Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <User className="h-4 w-4" />
-              <span>Agent</span>
-              {agentFilter !== 'all' && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  1
-                </Badge>
-              )}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Filter by Agent</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={agentFilter === 'all'}
-              onCheckedChange={() => onAgentFilterChange('all')}
-            >
-              All Agents
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            {agents.map((agent) => (
-              <DropdownMenuCheckboxItem
-                key={agent.id}
-                checked={agentFilter === agent.id}
-                onCheckedChange={() => onAgentFilterChange(agent.id)}
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={agent.avatar_url || undefined} />
-                    <AvatarFallback className="text-[8px]">
-                      {getInitials(agent.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {agent.name}
-                </div>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <AgentFilter
+          agents={agents}
+          agentFilter={agentFilter}
+          onAgentFilterChange={onAgentFilterChange}
+        />
 
         {/* Confidence Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Gauge className="h-4 w-4" />
-              <span>Confidence</span>
-              {confidenceFilter !== 'all' && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  1
-                </Badge>
-              )}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuLabel>Filter by Confidence</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {CONFIDENCE_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                checked={confidenceFilter === option.value}
-                onCheckedChange={() => onConfidenceFilterChange(option.value)}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={cn('w-2 h-2 rounded-full', option.color)} />
-                  {option.label}
-                </div>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ConfidenceFilter
+          confidenceFilter={confidenceFilter}
+          onConfidenceFilterChange={onConfidenceFilterChange}
+        />
 
         {/* Type Filter */}
         <DropdownMenu>
@@ -371,7 +272,6 @@ export function DecisionFilters({
                   1
                 </Badge>
               )}
-              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -393,33 +293,10 @@ export function DecisionFilters({
         </DropdownMenu>
 
         {/* Date Range Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>Date</span>
-              {dateRange !== 'all' && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  1
-                </Badge>
-              )}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuLabel>Filter by Date</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {DATE_RANGE_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                checked={dateRange === option.value}
-                onCheckedChange={() => onDateRangeChange(option.value)}
-              >
-                {option.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <DateRangeFilter
+          dateRange={dateRange}
+          onDateRangeChange={onDateRangeChange}
+        />
 
         {/* Sort */}
         <DropdownMenu>
@@ -427,7 +304,6 @@ export function DecisionFilters({
             <Button variant="outline" className="gap-2">
               <ArrowUpDown className="h-4 w-4" />
               <span>Sort</span>
-              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -464,7 +340,6 @@ export function DecisionFilters({
             <Button variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               <span>Export</span>
-              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-40">
@@ -530,7 +405,6 @@ export function DecisionFilters({
               <Button variant="outline" className="gap-2">
                 <Bookmark className="h-4 w-4" />
                 <span>Load Preset</span>
-                <ChevronDown className="h-3 w-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
@@ -686,7 +560,7 @@ export function filterAndSortDecisions(
   agentFilter: string | 'all',
   confidenceFilter: ConfidenceLevel,
   typeFilter: DecisionType,
-  dateRange: 'all' | 'today' | 'week' | 'month',
+  dateRange: DateRange,
   sortField: 'created_at' | 'confidence' | 'title',
   sortOrder: 'asc' | 'desc'
 ): Decision[] {
@@ -761,3 +635,7 @@ export function filterAndSortDecisions(
 
   return filtered;
 }
+
+// Re-export types for convenience
+export { DATE_RANGE_OPTIONS, CONFIDENCE_OPTIONS };
+export type { DateRange, ConfidenceLevel };
