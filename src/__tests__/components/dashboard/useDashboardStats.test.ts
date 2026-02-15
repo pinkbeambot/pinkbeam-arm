@@ -55,10 +55,12 @@ describe('useDashboardStats', () => {
   it('should fetch stats successfully', async () => {
     mockFetch.mockResolvedValue(
       okResponse({
-        activeAgents: 5,
-        tasksCompletedToday: 12,
-        pendingEscalations: 3,
-        avgResponseTime: null,
+        data: {
+          activeAgents: 5,
+          tasksCompletedToday: 12,
+          pendingEscalations: 3,
+          avgResponseTime: null,
+        },
       })
     );
 
@@ -84,9 +86,11 @@ describe('useDashboardStats', () => {
   it('should handle loading state', async () => {
     mockFetch.mockResolvedValue(
       okResponse({
-        activeAgents: 5,
-        tasksCompletedToday: 12,
-        pendingEscalations: 3,
+        data: {
+          activeAgents: 5,
+          tasksCompletedToday: 12,
+          pendingEscalations: 3,
+        },
       })
     );
 
@@ -123,17 +127,21 @@ describe('useDashboardStats', () => {
       if (callCount === 1) {
         return Promise.resolve(
           okResponse({
-            activeAgents: 5,
-            tasksCompletedToday: 12,
-            pendingEscalations: 3,
+            data: {
+              activeAgents: 5,
+              tasksCompletedToday: 12,
+              pendingEscalations: 3,
+            },
           })
         );
       }
       return Promise.resolve(
         okResponse({
-          activeAgents: 10,
-          tasksCompletedToday: 20,
-          pendingEscalations: 1,
+          data: {
+            activeAgents: 10,
+            tasksCompletedToday: 20,
+            pendingEscalations: 1,
+          },
         })
       );
     });
@@ -159,10 +167,12 @@ describe('useDashboardStats', () => {
   it('should handle null counts gracefully', async () => {
     mockFetch.mockResolvedValue(
       okResponse({
-        activeAgents: null,
-        tasksCompletedToday: null,
-        pendingEscalations: null,
-        avgResponseTime: null,
+        data: {
+          activeAgents: null,
+          tasksCompletedToday: null,
+          pendingEscalations: null,
+          avgResponseTime: null,
+        },
       })
     );
 
@@ -183,9 +193,11 @@ describe('useDashboardStats', () => {
   it('should clear interval on unmount', async () => {
     mockFetch.mockResolvedValue(
       okResponse({
-        activeAgents: 5,
-        tasksCompletedToday: 12,
-        pendingEscalations: 3,
+        data: {
+          activeAgents: 5,
+          tasksCompletedToday: 12,
+          pendingEscalations: 3,
+        },
       })
     );
 
