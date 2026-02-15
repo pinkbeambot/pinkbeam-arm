@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { REALTIME_LISTEN_TYPES } from '@supabase/supabase-js';
 import type { Decision, DecisionStatus, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
