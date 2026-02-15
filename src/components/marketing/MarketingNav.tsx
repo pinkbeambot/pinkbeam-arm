@@ -23,7 +23,7 @@ export function MarketingNav() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 10);
     };
 
     window.addEventListener("scroll", handleScroll);
@@ -41,8 +41,8 @@ export function MarketingNav() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         isScrolled
-          ? "bg-background/95 backdrop-blur-md border-b border-border shadow-sm"
-          : "bg-transparent"
+          ? "bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm"
+          : "bg-background"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -78,7 +78,7 @@ export function MarketingNav() {
             <ThemeSwitcher />
             {/* Desktop: Enter Portal button */}
             <Link href="/auth" className="hidden sm:block">
-              <Button 
+              <Button
                 size="sm"
                 className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30"
               >
@@ -124,7 +124,7 @@ export function MarketingNav() {
 
                   <div className="pt-4 border-t border-border">
                     <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="block w-full">
-                      <Button 
+                      <Button
                         className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30"
                       >
                         Enter Portal
