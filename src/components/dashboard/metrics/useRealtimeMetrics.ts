@@ -131,8 +131,8 @@ export function useRealtimeMetrics(
     agentIds,
   } = options;
 
-  const supabase = createClient();
-  
+  const supabase = React.useMemo(() => createClient(), []);
+
   // State
   const [agentMetrics, setAgentMetrics] = React.useState<AgentLiveMetrics[]>([]);
   const [selectedAgent, setSelectedAgent] = React.useState<AgentLiveMetrics | null>(null);
@@ -143,12 +143,22 @@ export function useRealtimeMetrics(
   const [lastUpdateAt, setLastUpdateAt] = React.useState<Date | null>(null);
   const [error, setError] = React.useState<Error | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
-  
+
   // Chart history state (rolling window)
   const [tasksPerMinuteHistory, setTasksPerMinuteHistory] = React.useState<LiveMetricPoint[]>([]);
   const [successRateHistory, setSuccessRateHistory] = React.useState<LiveMetricPoint[]>([]);
   const [agentLoadHistory, setAgentLoadHistory] = React.useState<LiveMetricPoint[]>([]);
-  
+
+  // Refs to break dependency cycles between effects.
+  // isRealtimeRef: prevents fetchMetricsSnapshot from depending on isRealtime state
+  // agentIdsRef: prevents fetchMetricsSnapshot from depending on agentIds array reference
+  // hasLoadedRef: avoids flashing loading skeletons on subsequent poll/retry fetches
+  const isRealtimeRef = React.useRef(isRealtime);
+  isRealtimeRef.current = isRealtime;
+  const agentIdsRef = React.useRef(agentIds);
+  agentIdsRef.current = agentIds;
+  const hasLoadedRef = React.useRef(false);
+
   // Refs for managing subscriptions
   const subscribedAgents = React.useRef<Set<string>>(new Set());
   const metricsChannelRef = React.useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -158,9 +168,12 @@ export function useRealtimeMetrics(
   // ============================================================================
 
   const fetchMetricsSnapshot = React.useCallback(async () => {
-    setIsLoading(true);
+    // Only show full loading state on initial load to avoid UI flashing on polls
+    if (!hasLoadedRef.current) {
+      setIsLoading(true);
+    }
     setError(null);
-    
+
     try {
       // Fetch agents
       const { data: agentsData, error: agentsError } = await supabase
@@ -187,20 +200,23 @@ export function useRealtimeMetrics(
 
       if (activitiesError) throw new Error(`Failed to fetch activities: ${activitiesError.message}`);
 
+      // Read current values from refs (not state) to avoid dependency cycles
+      const currentAgentIds = agentIdsRef.current;
+
       // Process agent metrics
       const agents: AgentLiveMetrics[] = (agentsData || []).map((agent: Agent) => {
         const agentActivities = (activitiesData || []).filter(
           (a: Activity) => a.agent_id === agent.id
         );
-        
+
         const completedTasks = agentActivities.filter(
           (a: Activity) => a.type === 'task_completed'
         ).length;
-        
+
         const failedTasks = agentActivities.filter(
           (a: Activity) => a.type === 'task_failed'
         ).length;
-        
+
         const totalTasks = completedTasks + failedTasks;
         const tasksPerMinute = totalTasks / 5; // per 5 minute window
         const successRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 100;
@@ -221,8 +237,8 @@ export function useRealtimeMetrics(
       });
 
       // Filter by agentIds if specified
-      const filteredAgents = agentIds 
-        ? agents.filter(a => agentIds.includes(a.agentId))
+      const filteredAgents = currentAgentIds
+        ? agents.filter(a => currentAgentIds.includes(a.agentId))
         : agents;
 
       // Calculate aggregated metrics
@@ -283,7 +299,7 @@ export function useRealtimeMetrics(
           queryLatency: { p50: 10, p95: 25, p99: 50 },
         },
         realtime: {
-          status: isRealtime ? 'healthy' : 'degraded',
+          status: isRealtimeRef.current ? 'healthy' : 'degraded',
           connections: filteredAgents.length,
           messagesPerSecond: Math.random() * 10,
           latency: Math.random() * 100,
@@ -321,6 +337,7 @@ export function useRealtimeMetrics(
       setSuccessRateHistory(prev => [...prev.slice(-maxDataPoints + 1), newSuccessPoint]);
       setAgentLoadHistory(prev => [...prev.slice(-maxDataPoints + 1), newLoadPoint]);
       setError(null);
+      hasLoadedRef.current = true;
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch metrics';
@@ -329,11 +346,16 @@ export function useRealtimeMetrics(
     } finally {
       setIsLoading(false);
     }
-  }, [supabase, agentIds, maxDataPoints, isRealtime]);
+  }, [supabase, maxDataPoints]);
 
   // ============================================================================
   // Realtime Subscription
   // ============================================================================
+
+  // Ref for fetchMetricsSnapshot so the Realtime subscription and polling
+  // effects don't depend on its identity (which would cause teardown loops).
+  const fetchMetricsSnapshotRef = React.useRef(fetchMetricsSnapshot);
+  fetchMetricsSnapshotRef.current = fetchMetricsSnapshot;
 
   React.useEffect(() => {
     if (!enabled) return;
@@ -348,9 +370,9 @@ export function useRealtimeMetrics(
           schema: 'public',
           table: 'activities',
         },
-        (payload: RealtimePostgresChangesPayload<Activity>) => {
+        () => {
           // Trigger refresh when new activities arrive
-          fetchMetricsSnapshot();
+          fetchMetricsSnapshotRef.current();
         }
       )
       .on(
@@ -362,7 +384,7 @@ export function useRealtimeMetrics(
         },
         () => {
           // Trigger refresh when agents update
-          fetchMetricsSnapshot();
+          fetchMetricsSnapshotRef.current();
         }
       )
       .subscribe((status) => {
@@ -375,7 +397,7 @@ export function useRealtimeMetrics(
     return () => {
       channel.unsubscribe();
     };
-  }, [enabled, supabase, fetchMetricsSnapshot]);
+  }, [enabled, supabase]);
 
   // ============================================================================
   // Polling Fallback
@@ -385,19 +407,19 @@ export function useRealtimeMetrics(
     if (!enabled) return;
 
     // Initial fetch
-    fetchMetricsSnapshot();
+    fetchMetricsSnapshotRef.current();
 
     // Set up polling as fallback when realtime is not connected
     const intervalId = setInterval(() => {
-      if (!isRealtime) {
-        fetchMetricsSnapshot();
+      if (!isRealtimeRef.current) {
+        fetchMetricsSnapshotRef.current();
       }
     }, refreshInterval);
 
     return () => {
       clearInterval(intervalId);
     };
-  }, [enabled, refreshInterval, isRealtime, fetchMetricsSnapshot]);
+  }, [enabled, refreshInterval]);
 
   // ============================================================================
   // Agent Subscription Actions
@@ -419,7 +441,15 @@ export function useRealtimeMetrics(
   // Refresh Action
   // ============================================================================
 
+  // When disabled, ensure loading state is false (initial state is true).
+  React.useEffect(() => {
+    if (!enabled) {
+      setIsLoading(false);
+    }
+  }, [enabled]);
+
   const refresh = React.useCallback(() => {
+    setIsLoading(true);
     fetchMetricsSnapshot();
   }, [fetchMetricsSnapshot]);
 

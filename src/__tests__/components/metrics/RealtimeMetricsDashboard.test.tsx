@@ -104,7 +104,8 @@ describe('RealtimeMetricsDashboard', () => {
         expect(screen.getByTestId('metrics-error-banner')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      expect(screen.getByText('Failed to fetch metrics')).toBeInTheDocument();
+      // Both the error banner and agent list show the error text
+      expect(screen.getAllByText('Failed to fetch metrics').length).toBeGreaterThanOrEqual(1);
     });
 
     it('should display error state in agent list when fetch fails', async () => {

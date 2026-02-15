@@ -107,23 +107,21 @@ describe('useRealtimeMetrics', () => {
     });
 
     it('should set error state when tasks fetch fails', async () => {
-      let callCount = 0;
       mockSupabaseClient.from.mockImplementation((table: string) => {
-        callCount++;
-        if (table === 'tasks' || callCount === 2) {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ 
-                data: null, 
-                error: { message: 'Tasks table error' } 
-              })),
-            })),
-          };
-        }
-        if (table === 'agents' || callCount === 1) {
+        if (table === 'agents') {
           return {
             select: vi.fn(() => ({
               order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+            })),
+          };
+        }
+        if (table === 'tasks') {
+          // tasks query calls .select('status') without .order(), so return
+          // a thenable directly from select()
+          return {
+            select: vi.fn(() => Promise.resolve({
+              data: null,
+              error: { message: 'Tasks table error' },
             })),
           };
         }
