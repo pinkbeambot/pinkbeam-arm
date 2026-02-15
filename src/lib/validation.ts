@@ -509,6 +509,43 @@ export type SendTaskCompleteEmailInput = z.infer<typeof sendTaskCompleteEmailSch
 export type DigestType = z.infer<typeof digestTypeSchema>;
 
 // ============================================================================
+// Webhook Validation
+// ============================================================================
+
+import { WEBHOOK_EVENT_TYPES } from '@/types/webhook';
+
+export const createWebhookEndpointSchema = z.object({
+  url: z.string().url(),
+  description: z.string().max(500).optional(),
+  events: z.array(z.enum(WEBHOOK_EVENT_TYPES as [string, ...string[]])).min(1),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const updateWebhookEndpointSchema = z.object({
+  url: z.string().url().optional(),
+  description: z.string().max(500).optional(),
+  events: z.array(z.enum(WEBHOOK_EVENT_TYPES as [string, ...string[]])).min(1).optional(),
+  is_active: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+export const testWebhookSchema = z.object({
+  endpoint_id: z.string().uuid(),
+});
+
+export const listWebhookDeliveriesQuerySchema = z.object({
+  endpoint_id: z.string().uuid().optional(),
+  status: z.enum(['pending', 'success', 'failed', 'expired']).optional(),
+  limit: z.coerce.number().int().positive().max(100).default(20),
+  offset: z.coerce.number().int().nonnegative().default(0),
+});
+
+export type CreateWebhookEndpointInput = z.infer<typeof createWebhookEndpointSchema>;
+export type UpdateWebhookEndpointInput = z.infer<typeof updateWebhookEndpointSchema>;
+export type TestWebhookInput = z.infer<typeof testWebhookSchema>;
+export type ListWebhookDeliveriesQuery = z.infer<typeof listWebhookDeliveriesQuerySchema>;
+
+// ============================================================================
 // Re-export Auth Validation
 // ============================================================================
 
