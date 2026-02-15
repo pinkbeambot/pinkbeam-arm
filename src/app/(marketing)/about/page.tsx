@@ -12,8 +12,6 @@ import {
   Award,
   Rocket,
   ArrowRight,
-  Linkedin,
-  Twitter,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -73,37 +71,6 @@ const values = [
     title: "Ambition",
     description:
       "We're here to change how work gets done. Small thinking has no place at Pink Beam.",
-  },
-];
-
-const team = [
-  {
-    name: "Alex Chen",
-    role: "CEO & Co-Founder",
-    bio: "Former product lead at OpenAI. Built AI systems at scale for Fortune 500 companies.",
-    twitter: "#",
-    linkedin: "#",
-  },
-  {
-    name: "Sarah Kim",
-    role: "CTO & Co-Founder",
-    bio: "Ex-Google Brain. PhD in ML from Stanford. 15+ years building autonomous systems.",
-    twitter: "#",
-    linkedin: "#",
-  },
-  {
-    name: "Marcus Johnson",
-    role: "Head of Design",
-    bio: "Previously led design at Notion and Figma. Obsessed with human-AI interfaces.",
-    twitter: "#",
-    linkedin: "#",
-  },
-  {
-    name: "Elena Rodriguez",
-    role: "Head of Engineering",
-    bio: "Built distributed systems at Netflix and Uber. Expert in multi-tenant architectures.",
-    twitter: "#",
-    linkedin: "#",
   },
 ];
 
@@ -218,66 +185,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="py-20 md:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Meet the Team
-            </h2>
-            <p className="text-muted-foreground">
-              The people building the future of work.
-            </p>
-          </FadeIn>
-
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {team.map((member) => (
-              <Card
-                key={member.name}
-                className="group hover:border-primary/30 transition-all duration-300"
-              >
-                <CardContent className="p-6">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center mb-4 mx-auto">
-                    <span className="text-2xl font-bold text-muted-foreground">
-                      {member.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-center mb-1">
-                    {member.name}
-                  </h3>
-                  <p className="text-sm text-primary text-center mb-3">
-                    {member.role}
-                  </p>
-                  <p className="text-sm text-muted-foreground text-center mb-4">
-                    {member.bio}
-                  </p>
-                  <div className="flex justify-center gap-3">
-                    <a
-                      href={member.twitter}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={`${member.name} on Twitter`}
-                    >
-                      <Twitter className="w-4 h-4" />
-                    </a>
-                    <a
-                      href={member.linkedin}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={`${member.name} on LinkedIn`}
-                    >
-                      <Linkedin className="w-4 h-4" />
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {/* Join Us CTA */}
+      {/* CTA */}
       <section className="py-20 md:py-32 bg-gradient-to-b from-muted/30 to-background">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <FadeIn>

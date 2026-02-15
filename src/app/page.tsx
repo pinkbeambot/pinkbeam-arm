@@ -5,8 +5,7 @@ import {
   EmployeeTabs,
   HowItWorks,
   UseCases,
-  TrustSignals,
-  Testimonials,
+
   PricingSection,
   FAQ,
   FinalCTA,
@@ -24,13 +23,11 @@ export default function LandingPage() {
         <div className="bg-[#0A0A0F] pt-16">
           <Hero />
         </div>
-        <TrustSignals />
         <ProblemSection />
         <SolutionSection />
         <EmployeeTabs />
         <HowItWorks />
         <UseCases />
-        <Testimonials />
         <PricingSection />
         <div id="faq">
           <FAQ />
