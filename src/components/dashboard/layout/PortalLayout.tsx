@@ -168,6 +168,7 @@ export function PortalSidebar({
     const linkContent = (
       <Link
         href={item.href}
+        aria-current={isActive ? 'page' : undefined}
         className={cn(
           'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
           'hover:bg-sidebar-accent/80',
@@ -266,7 +267,7 @@ export function PortalSidebar({
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
+        <nav role="navigation" aria-label="Main navigation" className="flex-1 px-2 py-4 space-y-6 overflow-y-auto scrollbar-thin">
           {navGroups.map((group) => (
             <div key={group.label} className="space-y-1">
               {!collapsed && (
@@ -481,6 +482,8 @@ export function PortalLayout({ children }: PortalLayoutProps) {
             variant="ghost"
             size="icon"
             onClick={() => setMobileMenuOpen(true)}
+            aria-expanded={mobileMenuOpen}
+            aria-label="Open navigation menu"
             className="mr-4"
           >
             <Menu className="h-5 w-5" />
