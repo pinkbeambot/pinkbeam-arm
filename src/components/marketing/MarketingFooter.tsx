@@ -15,26 +15,6 @@ const footerLinks = {
     links: [
       { href: "/about", label: "About" },
       { href: "/contact", label: "Contact" },
-      { href: "#", label: "Blog" },
-      { href: "#", label: "Careers" },
-    ],
-  },
-  resources: {
-    title: "Resources",
-    links: [
-      { href: "#", label: "Documentation" },
-      { href: "#", label: "API Reference" },
-      { href: "#", label: "Status" },
-      { href: "#", label: "Changelog" },
-    ],
-  },
-  legal: {
-    title: "Legal",
-    links: [
-      { href: "#", label: "Privacy Policy" },
-      { href: "#", label: "Terms of Service" },
-      { href: "#", label: "Security" },
-      { href: "#", label: "Cookies" },
     ],
   },
 };
@@ -45,7 +25,7 @@ export function MarketingFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Main Footer Content */}
         <div className="py-12 lg:py-16">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-12">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 lg:gap-12">
             {/* Brand Column */}
             <div className="col-span-2 md:col-span-3 lg:col-span-2">
               <Link href="/" className="flex items-center gap-2 mb-4 group">

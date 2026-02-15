@@ -238,11 +238,7 @@ export function ContactPageClient() {
                       </Button>
 
                       <p className="text-xs text-muted-foreground text-center">
-                        By submitting this form, you agree to our{" "}
-                        <Link href="#" className="underline hover:text-foreground">
-                          Privacy Policy
-                        </Link>
-                        .
+                        By submitting this form, you agree to our Privacy Policy.
                       </p>
                     </form>
                   )}

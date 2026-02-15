@@ -96,7 +96,7 @@ export function FAQ() {
         <FadeIn delay={0.2} className="mt-12 text-center">
           <p className="text-muted-foreground">
             Still have questions?{" "}
-            <a href="#" className="text-primary hover:text-primary/80 font-medium">
+            <a href="/contact" className="text-primary hover:text-primary/80 font-medium">
               Book a demo
             </a>{" "}
             and we'll answer everything.
