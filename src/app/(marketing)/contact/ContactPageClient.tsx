@@ -21,10 +21,8 @@ import {
   Clock,
   ArrowRight,
   CheckCircle,
-  Loader2,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 const inquiryTypes = [
   { value: "sales", label: "Sales Inquiry" },
@@ -63,7 +61,6 @@ const contactInfo = [
 ];
 
 export function ContactPageClient() {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -73,18 +70,18 @@ export function ContactPageClient() {
     message: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    const subject = encodeURIComponent(
+      `[${formData.inquiryType || "General"}] Contact from ${formData.name}`
+    );
+    const body = encodeURIComponent(
+      `Name: ${formData.name}\nEmail: ${formData.email}\nCompany: ${formData.company || "N/A"}\nInquiry Type: ${formData.inquiryType || "N/A"}\n\n${formData.message}`
+    );
 
-    setIsSubmitting(false);
+    window.location.href = `mailto:hello@pinkbeam.io?subject=${subject}&body=${body}`;
     setIsSubmitted(true);
-    toast.success("Message sent!", {
-      description: "We'll get back to you within 24 hours.",
-    });
   };
 
   const handleInputChange = (
@@ -150,7 +147,6 @@ export function ContactPageClient() {
                             onChange={handleInputChange}
                             placeholder="Your name"
                             required
-                            disabled={isSubmitting}
                           />
                         </div>
                         <div className="space-y-2">
@@ -163,7 +159,6 @@ export function ContactPageClient() {
                             onChange={handleInputChange}
                             placeholder="you@company.com"
                             required
-                            disabled={isSubmitting}
                           />
                         </div>
                       </div>
@@ -177,7 +172,6 @@ export function ContactPageClient() {
                             value={formData.company}
                             onChange={handleInputChange}
                             placeholder="Your company name"
-                            disabled={isSubmitting}
                           />
                         </div>
                         <div className="space-y-2">
@@ -187,7 +181,6 @@ export function ContactPageClient() {
                             onValueChange={(value) =>
                               setFormData((prev) => ({ ...prev, inquiryType: value }))
                             }
-                            disabled={isSubmitting}
                             required
                           >
                             <SelectTrigger id="inquiryType">
@@ -222,19 +215,9 @@ export function ContactPageClient() {
                         type="submit"
                         size="lg"
                         className="w-full"
-                        disabled={isSubmitting}
                       >
-                        {isSubmitting ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            Send Message
-                            <ArrowRight className="w-4 h-4 ml-2" />
-                          </>
-                        )}
+                        Send Message
+                        <ArrowRight className="w-4 h-4 ml-2" />
                       </Button>
 
                       <p className="text-xs text-muted-foreground text-center">
