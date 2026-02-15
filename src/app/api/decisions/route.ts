@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.lte('proposed_at', validatedQuery.date_to);
     }
     if (validatedQuery.confidence_min !== undefined) {
-      dbQuery = dbQuery.gte('reasoning->>confidence', validatedQuery.confidence_min.toString());
+      dbQuery = dbQuery.gte('reasoning->confidence', validatedQuery.confidence_min);
     }
     if (validatedQuery.search) {
       const searchTerm = validatedQuery.search;
