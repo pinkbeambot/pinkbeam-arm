@@ -1,17 +1,17 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Database } from './database';
+import { TypedDatabase } from './database';
 
 // Environment variables - safe for client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Client-side Supabase client (RLS enforced)
-export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabaseClient = createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey);
 
 // Server-side Supabase client (for API routes, RLS enforced via JWT)
 export function createServerClient(authToken?: string) {
   if (authToken) {
-    return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    return createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -23,11 +23,11 @@ export function createServerClient(authToken?: string) {
       },
     });
   }
-  return createClient<Database>(supabaseUrl, supabaseAnonKey);
+  return createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey);
 }
 
 // Helper to set tenant context for RLS
-export async function setTenantContext(supabase: SupabaseClient<Database>, tenantId: string) {
+export async function setTenantContext(supabase: SupabaseClient<TypedDatabase>, tenantId: string) {
   await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 }
 

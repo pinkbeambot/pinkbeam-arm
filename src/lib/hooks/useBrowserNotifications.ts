@@ -292,11 +292,12 @@ export function useBrowserNotifications({
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload: {
-          eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-          new: AppNotification | null;
-          old: AppNotification | null;
-        }) => {
+        (rawPayload) => {
+          const payload = rawPayload as unknown as {
+            eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+            new: AppNotification | null;
+            old: AppNotification | null;
+          };
           if (payload.eventType === 'INSERT' && payload.new) {
             // Only handle notifications for this user or global
             if (!payload.new.user_id || payload.new.user_id === userId) {

@@ -241,11 +241,12 @@ export function useNotifications({
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload: {
-          eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-          new: Notification | null;
-          old: Notification | null;
-        }) => {
+        (rawPayload) => {
+          const payload = rawPayload as unknown as {
+            eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+            new: Notification | null;
+            old: Notification | null;
+          };
           setNotifications((current) => {
             if (payload.eventType === 'INSERT' && payload.new) {
               // Only add if it's for this user or global
@@ -257,7 +258,7 @@ export function useNotifications({
               return current;
             } else if (payload.eventType === 'UPDATE' && payload.new) {
               const updated = current.map((n) =>
-                n.id === payload.new?.id ? payload.new : n
+                n.id === payload.new?.id ? payload.new! : n
               );
               setUnreadCount(calculateUnreadCount(updated));
               return updated;

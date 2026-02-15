@@ -110,7 +110,8 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
       .on(
         REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         { event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL, schema: 'public', table: 'decisions' },
-        (payload: RealtimeChangePayload<Decision>) => {
+        (rawPayload) => {
+          const payload = rawPayload as unknown as RealtimeChangePayload<Decision>;
           const currentOpts = optionsRef.current;
           if (currentOpts.page === 1 && !currentOpts.agentId && !currentOpts.status && !currentOpts.search) {
             fetchDecisions();

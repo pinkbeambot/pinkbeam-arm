@@ -143,7 +143,8 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
             table: 'escalations',
             filter: `tenant_id=eq.${tenantId}`,
           },
-          (payload: RealtimeChangePayload<Escalation>) => {
+          (rawPayload) => {
+            const payload = rawPayload as unknown as RealtimeChangePayload<Escalation>;
             if (payload.eventType === 'INSERT') {
               // Only add if it matches current filters
               const newEscalation = payload.new;

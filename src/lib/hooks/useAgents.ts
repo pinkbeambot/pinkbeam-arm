@@ -233,10 +233,11 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
           table: 'agents',
           filter: `id=eq.${agentId}`,
         },
-        (payload: RealtimeChangePayload<Agent>) => {
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            setAgent(current => current ? { ...current, ...payload.new } : payload.new);
-          } else if (payload.eventType === 'DELETE') {
+        (payload) => {
+          const change = payload as unknown as RealtimeChangePayload<Agent>;
+          if (change.eventType === 'UPDATE' && change.new) {
+            setAgent(current => current ? { ...current, ...change.new! } : change.new!);
+          } else if (change.eventType === 'DELETE') {
             setAgent(null);
           }
         }
