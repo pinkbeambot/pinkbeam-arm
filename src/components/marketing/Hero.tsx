@@ -2,16 +2,8 @@
 
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FadeIn, FadeInOnMount } from "@/components/animations";
+import { FadeIn, FadeInOnMount } from "@components/animations";
 import Link from "next/link";
-import { useState } from "react";
-
-// VALIS quotes for hero
-const valisQuotes = [
-  "Build a workforce that scales with your ambition. AI agents handle the details while your team focuses on the big picture.",
-  "What could your team achieve with an extra 1,000 hours per week? AI agents handle the repetitive work so your people can focus on what matters.",
-  "The future of work isn't humans vs. AI. It's humans with AI. Give your team digital colleagues that handle the routine, so they can handle the remarkable."
-];
 
 // Logo placeholder component
 function LogoPlaceholder({ name }: { name: string }) {
@@ -25,14 +17,6 @@ function LogoPlaceholder({ name }: { name: string }) {
 }
 
 export function Hero() {
-  // Pick random quote on client only to avoid hydration mismatch
-  const [quote] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return valisQuotes[Math.floor(Math.random() * valisQuotes.length)];
-    }
-    return valisQuotes[0]; // Default for SSR
-  });
-
   return (
     <section className="relative min-h-[85vh] lg:min-h-[80vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-background via-background to-muted/30">
       {/* Background Effects */}
@@ -68,11 +52,18 @@ export function Hero() {
             </h1>
           </FadeInOnMount>
           
-          {/* VALIS Quote - Random */}
+          {/* Subheadline */}
+          <FadeInOnMount delay={0.15}>
+            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+              Build a workforce that scales with your ambition. AI agents handle the details while your team focuses on the big picture.
+            </p>
+          </FadeInOnMount>
+          
+          {/* VALIS Quote */}
           <FadeInOnMount delay={0.2}>
             <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-primary/30 bg-primary/5">
               <p className="text-lg text-primary italic mb-3">
-                "{quote}"
+                "The future of work isn't humans vs. AI. It's humans with AI."
               </p>
               <p className="text-sm text-muted-foreground">
                 — VALIS
