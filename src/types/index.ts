@@ -588,3 +588,27 @@ export type {
   BroadcastParams,
   BroadcastResult,
 } from './meta-agent';
+
+// ============================================================================
+// Billing Types
+// ============================================================================
+
+export type {
+  SubscriptionTier,
+  SubscriptionStatus,
+  SubscriptionTierConfig,
+  TenantBilling,
+  TenantWithBilling,
+  TenantUsage,
+  UsageLimits,
+  UsageWithLimits,
+  CreateCheckoutSessionRequest,
+  CreateCheckoutSessionResponse,
+  CreatePortalSessionRequest,
+  CreatePortalSessionResponse,
+  Invoice,
+  BillingEventType,
+  BillingEvent,
+  PlanFeature,
+  StripeWebhookPayload,
+} from './billing';
