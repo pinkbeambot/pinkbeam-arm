@@ -19,6 +19,7 @@ const PUBLIC_ROUTES = [
 
 // Public page routes
 const PUBLIC_PAGE_ROUTES = [
+  '/auth',
   '/login',
   '/signup',
   '/',
@@ -206,17 +207,19 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Handle page routes - redirect unauthenticated users from /portal/* to /login
+  // Handle page routes - redirect unauthenticated users from /portal/* to /auth
   if (pathname.startsWith('/portal/') || pathname === '/portal') {
     if (!session) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      const authUrl = new URL('/auth', request.url);
+      authUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(authUrl);
     }
   }
 
-  // Redirect authenticated users away from /login
-  if (pathname === '/login' || pathname.startsWith('/login/')) {
+  // Redirect authenticated users away from /auth, /login, and /signup
+  if (pathname === '/auth' || pathname.startsWith('/auth/') ||
+      pathname === '/login' || pathname.startsWith('/login/') ||
+      pathname === '/signup' || pathname.startsWith('/signup/')) {
     if (session) {
       const redirectTo = request.nextUrl.searchParams.get('redirect') || '/portal';
       return NextResponse.redirect(new URL(redirectTo, request.url));
