@@ -1,6 +1,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-limit';
+import { csrfMiddleware } from '@/lib/middleware/csrf';
 
 // Dev auth bypass - SERVER SIDE ONLY, development only
 // NEVER set DEV_AUTH_BYPASS in production - build will fail
@@ -62,6 +63,7 @@ function isPublicPageRoute(pathname: string): boolean {
  * - Extracts tenant_id from JWT claims
  * - Handles token refresh automatically
  * - Returns 401 for invalid/missing tokens on API routes
+ * - Enforces CSRF protection (origin validation + double-submit cookie)
  * - Applies per-tenant rate limiting (100 req/min free, 1000 req/min pro)
  * - Returns 429 with Retry-After header when limit exceeded
  */
@@ -173,9 +175,15 @@ export async function middleware(request: NextRequest) {
       );
     }
 
+    // CSRF validation (origin + double-submit cookie)
+    const csrf = csrfMiddleware(request);
+    if (csrf.errorResponse) {
+      return csrf.errorResponse;
+    }
+
     // Get user's tenant_id from session
     const user = session.user;
-    const tenantId = user.user_metadata?.tenant_id || 
+    const tenantId = user.user_metadata?.tenant_id ||
                      user.app_metadata?.tenant_id ||
                      (await getTenantIdFromUser(supabase, user.id));
 
@@ -196,15 +204,16 @@ export async function middleware(request: NextRequest) {
     // Apply rate limiting (unless excluded)
     if (!isRateLimitExcluded(pathname)) {
       const rateLimitResponse = await rateLimitMiddleware(request, tenantId);
-      
+
       if (rateLimitResponse) {
         return rateLimitResponse;
       }
-      
+
       response = await addRateLimitHeaders(response, tenantId);
     }
 
-    return response;
+    // Attach CSRF cookie to the response
+    return csrf.attachCookie(response);
   }
 
   // Handle page routes - redirect unauthenticated users from /portal/* to /auth
@@ -226,7 +235,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  return response;
+  // Set CSRF cookie on page responses so it's available before the first API call
+  const pageCsrf = csrfMiddleware(request);
+  return pageCsrf.attachCookie(response);
 }
 
 /**
