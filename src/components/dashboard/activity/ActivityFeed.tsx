@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ActivityItem, ActivityItemSkeleton } from './ActivityItem';
+import { ActivityFeedSkeleton, ActivityItemSkeleton } from '@/components/loading';
+import { EmptyStateSearch, EmptyStateError } from '@/components/empty';
+import { ActivityItem } from './ActivityItem';
 import { ActivityFilterBar } from './ActivityFilter';
 import { useRealtimeActivities } from './useRealtimeActivities';
 import type { ConnectionState } from '@/lib/realtime/useRealtime';
@@ -92,19 +94,32 @@ function ConnectionStatus({ state, retryCount, onRetry }: ConnectionStatusProps)
 // Empty State Component
 // ============================================================================
 
-function EmptyState({ filter }: { filter: ActivityFilter }) {
+function ActivityEmptyState({ filter, onClear }: { filter: ActivityFilter; onClear: () => void }) {
+  const hasFilters = filter.search || filter.type || filter.agentId || filter.timeRange;
+  
+  if (hasFilters) {
+    return (
+      <EmptyStateSearch
+        title="No activities found"
+        description={filter.search 
+          ? `No activities match "${filter.search}".` 
+          : 'Try adjusting your filters to see more activities.'}
+        onClear={onClear}
+        clearLabel="Clear filters"
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div className="flex flex-col items-center justify-center py-12 text-center px-6">
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
         <AlertCircle className="w-8 h-8 text-muted-foreground" />
       </div>
       <h3 className="text-lg font-medium text-foreground mb-1">
-        No activities found
+        No activities yet
       </h3>
       <p className="text-sm text-muted-foreground max-w-xs">
-        {filter.search || filter.type || filter.agentId
-          ? 'Try adjusting your filters to see more activities.'
-          : 'Activities will appear here when agents start working.'}
+        Activities will appear here when agents start working.
       </p>
     </div>
   );
@@ -350,19 +365,14 @@ export function ActivityFeed({
         )}
         
         {error ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center px-6">
-            <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
-              <AlertCircle className="w-8 h-8 text-red-500" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-1">
-              Failed to load activities
-            </h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              {error.message}
-            </p>
-            <Button onClick={refetch} variant="outline">
-              Try again
-            </Button>
+          <div className="p-4">
+            <EmptyStateError
+              title="Failed to load activities"
+              description="We couldn't fetch your activities. Please try again."
+              onRetry={refetch}
+              retryLabel="Try Again"
+              error={error}
+            />
           </div>
         ) : (
           <div
@@ -375,13 +385,14 @@ export function ActivityFeed({
           >
             {isLoading && events.length === 0 ? (
               // Initial loading skeletons
-              <div className="p-4 space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <ActivityItemSkeleton key={i} />
-                ))}
+              <div className="p-4">
+                <ActivityFeedSkeleton count={5} />
               </div>
             ) : events.length === 0 ? (
-              <EmptyState filter={filter} />
+              <ActivityEmptyState 
+                filter={filter} 
+                onClear={() => setFilter({})}
+              />
             ) : (
               <div className="divide-y divide-border/50">
                 {events.map((event, index) => (
