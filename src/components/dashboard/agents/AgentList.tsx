@@ -1,11 +1,11 @@
 'use client';
 
-import { Bot } from 'lucide-react';
+import { Bot, Plus } from 'lucide-react';
 import type { Agent, ViewMode } from '@/types';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { AgentGridView } from './AgentGridView';
 import { AgentTableView } from './AgentTableView';
+import { SkeletonCard, SkeletonList } from '@/components/loading';
+import { EmptyState } from '@/components/empty';
 
 interface AgentListProps {
   agents: Agent[];
@@ -20,8 +20,19 @@ interface AgentListProps {
   onToggleStatus: (agent: Agent) => void;
   onDeleteAgent: (agent: Agent) => void;
   onCloneAgent: (agent: Agent) => void;
+  onCreateAgent?: () => void;
+  canCreate?: boolean;
 }
 
+/**
+ * AgentList - Displays a list of agents with loading and empty states
+ * 
+ * Features:
+ * - Grid and table view modes
+ * - Skeleton loading states that match the UI layout
+ * - Empty state with CTA for creating first agent
+ * - Selection support for bulk actions
+ */
 export function AgentList({
   agents,
   loading,
@@ -35,13 +46,20 @@ export function AgentList({
   onToggleStatus,
   onDeleteAgent,
   onCloneAgent,
+  onCreateAgent,
+  canCreate = false,
 }: AgentListProps) {
   if (loading) {
     return <AgentListSkeleton viewMode={viewMode} />;
   }
 
   if (agents.length === 0) {
-    return <EmptyAgentState />;
+    return (
+      <EmptyAgentState 
+        onCreateAgent={onCreateAgent} 
+        canCreate={canCreate} 
+      />
+    );
   }
 
   return viewMode === 'grid' ? (
@@ -72,64 +90,50 @@ export function AgentList({
   );
 }
 
+/**
+ * AgentListSkeleton - Loading placeholder that matches agent list layout
+ * Prevents layout shift during loading
+ */
 function AgentListSkeleton({ viewMode }: { viewMode: ViewMode }) {
   if (viewMode === 'grid') {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-4 space-y-4">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-12 w-12 rounded-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-3 w-16" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-              </div>
-            </CardContent>
-          </Card>
+          <SkeletonCard key={i} showFooter={false} lines={3} />
         ))}
       </div>
     );
   }
 
   return (
-    <Card>
-      <div className="p-4 space-y-4">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-4">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-3 w-48" />
-            </div>
-            <Skeleton className="h-8 w-20" />
-          </div>
-        ))}
-      </div>
-    </Card>
+    <SkeletonList count={6} />
   );
 }
 
-function EmptyAgentState() {
+/**
+ * EmptyAgentState - Displayed when no agents exist
+ * Provides helpful copy and CTA to create first agent
+ */
+interface EmptyAgentStateProps {
+  onCreateAgent?: () => void;
+  canCreate?: boolean;
+}
+
+function EmptyAgentState({ onCreateAgent, canCreate }: EmptyAgentStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
-      <div className="flex h-20 w-20 items-center justify-center rounded-full bg-muted mb-6">
-        <Bot className="h-10 w-10 text-muted-foreground" />
-      </div>
-      <h3 className="text-lg font-semibold text-foreground mb-2">
-        No agents yet
-      </h3>
-      <p className="text-muted-foreground max-w-sm mb-6">
-        Create your first AI agent to start building your workforce. 
-        Agents can handle tasks, make decisions, and collaborate autonomously.
-      </p>
-    </div>
+    <EmptyState
+      icon={Bot}
+      title="No agents yet"
+      description="Create your first AI agent to start building your workforce. Agents can handle tasks, make decisions, and collaborate autonomously."
+      action={
+        canCreate && onCreateAgent
+          ? {
+              label: 'Create Agent',
+              onClick: onCreateAgent,
+            }
+          : undefined
+      }
+    />
   );
 }
 
