@@ -6,12 +6,11 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock the resend module - must be before imports
-const mockSend = vi.fn();
+// Mock the resend module
 vi.mock('@/lib/resend', () => ({
   resend: {
     emails: {
-      send: mockSend,
+      send: vi.fn(),
     },
   },
   isResendConfigured: vi.fn().mockReturnValue(true),
@@ -19,24 +18,11 @@ vi.mock('@/lib/resend', () => ({
 }));
 
 // Mock the service role client
-const mockSupabaseFrom = vi.fn();
-const mockSupabaseSelect = vi.fn();
-const mockSupabaseEq = vi.fn();
-const mockSupabaseSingle = vi.fn();
-const mockSupabaseUpdate = vi.fn();
-
 vi.mock('@/lib/supabase/service-role', () => ({
-  createServiceRoleClient: vi.fn(() => ({
-    from: mockSupabaseFrom,
-    auth: {
-      admin: {
-        getUserById: vi.fn(),
-      },
-    },
-  })),
+  createServiceRoleClient: vi.fn(),
 }));
 
-import { isResendConfigured } from '@/lib/resend';
+import { resend, isResendConfigured } from '@/lib/resend';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   sendWelcomeEmail,
@@ -54,7 +40,6 @@ import {
 describe('Email Send Functions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSend.mockReset();
   });
 
   afterEach(() => {
@@ -63,7 +48,7 @@ describe('Email Send Functions', () => {
 
   describe('sendWelcomeEmail', () => {
     it('should send welcome email successfully', async () => {
-      mockSend.mockResolvedValueOnce({
+      const mockSend = vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'test-message-id' },
         error: null,
       });
@@ -101,7 +86,7 @@ describe('Email Send Functions', () => {
     });
 
     it('should handle resend API errors', async () => {
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: null,
         error: { message: 'Invalid email address' },
       });
@@ -120,7 +105,7 @@ describe('Email Send Functions', () => {
 
   describe('sendEscalationEmail', () => {
     it('should send escalation email with correct urgency subject', async () => {
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'escalation-id' },
         error: null,
       });
@@ -137,7 +122,7 @@ describe('Email Send Functions', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(resend!.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'manager@example.com',
           subject: '[CRITICAL] Escalation: API Rate Limit Exceeded',
@@ -146,7 +131,7 @@ describe('Email Send Functions', () => {
     });
 
     it('should use different subject for normal urgency', async () => {
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'escalation-id' },
         error: null,
       });
@@ -162,7 +147,7 @@ describe('Email Send Functions', () => {
         unsubscribeUrl: 'http://localhost:3000/unsubscribe',
       });
 
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(resend!.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: 'Escalation: Clarification Needed',
         })
@@ -172,7 +157,7 @@ describe('Email Send Functions', () => {
 
   describe('sendDecisionEmail', () => {
     it('should send decision email with approval buttons', async () => {
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'decision-id' },
         error: null,
       });
@@ -191,7 +176,7 @@ describe('Email Send Functions', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(resend!.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
           to: 'approver@example.com',
           subject: '[ACTION REQUIRED] Decision: Deploy to Production',
@@ -202,7 +187,7 @@ describe('Email Send Functions', () => {
 
   describe('sendTaskCompleteEmail', () => {
     it('should send task completion email', async () => {
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'task-id' },
         error: null,
       });
@@ -219,7 +204,7 @@ describe('Email Send Functions', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(resend!.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: 'Task Completed: Generate Report',
         })
@@ -235,7 +220,7 @@ describe('Email Send Functions', () => {
       ['subscription_updated', 'Your Subscription Has Been Updated'],
       ['usage_alert', 'Usage Limit Approaching - Pink Beam'],
     ])('should send %s email with correct subject', async (type, expectedSubject) => {
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'billing-id' },
         error: null,
       });
@@ -250,7 +235,7 @@ describe('Email Send Functions', () => {
         unsubscribeUrl: 'http://localhost:3000/unsubscribe',
       });
 
-      expect(mockSend).toHaveBeenCalledWith(
+      expect(resend!.emails.send).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: expectedSubject,
         })
@@ -260,40 +245,41 @@ describe('Email Send Functions', () => {
 });
 
 describe('Notification Service', () => {
+  const mockSupabase = {
+    from: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn(),
+    update: vi.fn().mockReturnThis(),
+    auth: {
+      admin: {
+        getUserById: vi.fn(),
+      },
+    },
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSend.mockReset();
+    vi.mocked(createServiceRoleClient).mockReturnValue(mockSupabase as any);
   });
 
   describe('processNotificationEmail', () => {
     it('should process escalation notification and send email', async () => {
-      // Setup mock chain for notification preferences query
-      const mockPrefQuery = {
+      mockSupabase.single.mockResolvedValue({
+        data: { auth_id: 'user-123', name: 'Test User', email: 'user@example.com' },
+        error: null,
+      });
+
+      mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: { channels: { email: true }, min_priority: 'normal' },
           error: null,
         }),
-      };
-
-      // Setup mock chain for users query
-      const mockUserQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { auth_id: 'user-123', name: 'Test User', email: 'user@example.com' },
-          error: null,
-        }),
-      };
-
-      mockSupabaseFrom.mockImplementation((table: string) => {
-        if (table === 'notification_preferences') return mockPrefQuery;
-        if (table === 'users') return mockUserQuery;
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
       });
 
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'msg-id' },
         error: null,
       });
@@ -316,12 +302,11 @@ describe('Notification Service', () => {
 
       const result = await processNotificationEmail(notification);
 
-      // Since we mock the resend module at the top level, this should work
-      expect(mockSend).toHaveBeenCalled();
+      expect(result.sent).toBe(true);
     });
 
     it('should not send email if user has disabled email channel', async () => {
-      const mockPrefQuery = {
+      mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -331,21 +316,6 @@ describe('Notification Service', () => {
           },
           error: null,
         }),
-      };
-
-      const mockUserQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { auth_id: 'user-123', name: 'Test User', email: 'user@example.com' },
-          error: null,
-        }),
-      };
-
-      mockSupabaseFrom.mockImplementation((table: string) => {
-        if (table === 'notification_preferences') return mockPrefQuery;
-        if (table === 'users') return mockUserQuery;
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
       });
 
       const notification = {
@@ -367,7 +337,7 @@ describe('Notification Service', () => {
     });
 
     it('should not send email if priority is below threshold', async () => {
-      const mockPrefQuery = {
+      mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -377,21 +347,6 @@ describe('Notification Service', () => {
           },
           error: null,
         }),
-      };
-
-      const mockUserQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { auth_id: 'user-123', name: 'Test User', email: 'user@example.com' },
-          error: null,
-        }),
-      };
-
-      mockSupabaseFrom.mockImplementation((table: string) => {
-        if (table === 'notification_preferences') return mockPrefQuery;
-        if (table === 'users') return mockUserQuery;
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
       });
 
       const notification = {
@@ -412,11 +367,11 @@ describe('Notification Service', () => {
     });
 
     it('should respect quiet hours', async () => {
-      // Mock current time to be during quiet hours (11 PM UTC)
+      // Mock current time to be during quiet hours (11 PM)
       const mockDate = new Date('2026-02-17T23:00:00Z');
       vi.setSystemTime(mockDate);
 
-      const mockPrefQuery = {
+      mockSupabase.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
@@ -432,21 +387,6 @@ describe('Notification Service', () => {
           },
           error: null,
         }),
-      };
-
-      const mockUserQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { auth_id: 'user-123', name: 'Test User', email: 'user@example.com' },
-          error: null,
-        }),
-      };
-
-      mockSupabaseFrom.mockImplementation((table: string) => {
-        if (table === 'notification_preferences') return mockPrefQuery;
-        if (table === 'users') return mockUserQuery;
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
       });
 
       const notification = {
@@ -471,21 +411,12 @@ describe('Notification Service', () => {
 
   describe('sendWelcomeEmailOnSignup', () => {
     it('should send welcome email on signup', async () => {
-      const mockUserQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { email: 'newuser@example.com', auth_id: 'auth-123' },
-          error: null,
-        }),
-      };
-
-      mockSupabaseFrom.mockImplementation((table: string) => {
-        if (table === 'users') return mockUserQuery;
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+      mockSupabase.single.mockResolvedValue({
+        data: { email: 'newuser@example.com', auth_id: 'auth-123' },
+        error: null,
       });
 
-      mockSend.mockResolvedValueOnce({
+      vi.mocked(resend!.emails.send).mockResolvedValue({
         data: { id: 'welcome-id' },
         error: null,
       });
@@ -493,28 +424,67 @@ describe('Notification Service', () => {
       const result = await sendWelcomeEmailOnSignup('tenant-123', 'user-123', 'New User');
 
       expect(result.sent).toBe(true);
-      expect(mockSend).toHaveBeenCalled();
+      expect(resend!.emails.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Welcome to Pink Beam ARM!',
+        })
+      );
     });
 
     it('should handle missing user', async () => {
-      const mockUserQuery = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: null,
-          error: { message: 'User not found' },
-        }),
-      };
-
-      mockSupabaseFrom.mockImplementation((table: string) => {
-        if (table === 'users') return mockUserQuery;
-        return { select: vi.fn().mockReturnThis(), eq: vi.fn().mockReturnThis() };
+      mockSupabase.single.mockResolvedValue({
+        data: null,
+        error: { message: 'User not found' },
       });
 
       const result = await sendWelcomeEmailOnSignup('tenant-123', 'user-123', 'New User');
 
       expect(result.sent).toBe(false);
       expect(result.error).toBe('User not found');
+    });
+  });
+
+  describe('sendTaskCompletionEmails', () => {
+    it('should send completion emails to multiple users', async () => {
+      mockSupabase.from.mockImplementation((table: string) => {
+        if (table === 'users') {
+          return {
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            then: vi.fn().mockResolvedValue({
+              data: [
+                { auth_id: 'user-1', name: 'User 1', email: 'user1@example.com' },
+                { auth_id: 'user-2', name: 'User 2', email: 'user2@example.com' },
+              ],
+              error: null,
+            }),
+          };
+        }
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({
+            data: { channels: { email: true } },
+            error: null,
+          }),
+        };
+      });
+
+      vi.mocked(resend!.emails.send).mockResolvedValue({
+        data: { id: 'task-complete-id' },
+        error: null,
+      });
+
+      const result = await sendTaskCompletionEmails(
+        'tenant-123',
+        'task-123',
+        'Test Task',
+        'Agent-1',
+        '2026-02-17T10:00:00Z'
+      );
+
+      expect(result.sent).toBe(2);
+      expect(result.errors).toHaveLength(0);
     });
   });
 });
