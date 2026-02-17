@@ -47,7 +47,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
-import type { KanbanBoardProps, KanbanColumn as KanbanColumnType, KanbanTask } from './types';
+import type { KanbanBoardProps, KanbanColumnType, KanbanTask } from './types';
 import type { TaskStatus } from '@/types';
 
 // ============================================================================
@@ -470,5 +470,5 @@ export type {
   KanbanColumnProps,
   TaskCardProps,
   KanbanTask,
-  KanbanColumn as KanbanColumnType,
+  KanbanColumnType,
 } from './types';

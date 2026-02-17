@@ -173,7 +173,6 @@ export function TaskCard({
   return (
     <div
       ref={setNodeRef}
-      style={style}
       {...attributes}
       {...listeners}
       tabIndex={0}
@@ -189,22 +188,22 @@ export function TaskCard({
         'cursor-grab active:cursor-grabbing',
         'hover:border-primary/50 hover:shadow-md',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
-        
+
         // Border styling with priority color
         'border-l-4',
-        
+
         // Dragging state
         isDragging && 'opacity-50 scale-105 rotate-2 shadow-xl z-50',
-        
+
         // Overlay state (when being dragged)
         isOverlay && 'opacity-90 scale-105 shadow-2xl cursor-grabbing rotate-2',
-        
+
         // Updating state
         task.isUpdating && 'ring-2 ring-primary/30',
-        
+
         // New task indicator
         task.isNew && 'ring-2 ring-green-400/50',
-        
+
         // Touch device optimization
         'touch-manipulation',
       )}

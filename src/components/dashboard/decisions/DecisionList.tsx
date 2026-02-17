@@ -10,7 +10,8 @@ import {
   ArrowRight,
   Sparkles,
   Lightbulb,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight
 } from 'lucide-react';
 import { cn, formatRelativeTime, formatDateTime, getInitials } from '@/lib/utils';
 import type { Decision, Agent } from '@/types';
@@ -32,7 +33,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { 
   getConfidenceColor, 
@@ -103,7 +103,7 @@ export function DecisionList({
 
   return (
     <TooltipProvider>
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {filteredDecisions.map((decision) => (
           <DecisionCard
             key={decision.id}
@@ -137,17 +137,18 @@ function DecisionCard({ decision, isSelected, onSelect, onOverride, onViewTask }
     <Card
       className={cn(
         'cursor-pointer transition-all duration-200 hover:shadow-md',
+        'active:scale-[0.99]',
         isSelected && 'ring-2 ring-primary ring-offset-2'
       )}
       onClick={onSelect}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start gap-3 sm:gap-4">
           {/* Agent Avatar */}
           <div className="flex-shrink-0">
-            <Avatar className="h-10 w-10">
+            <Avatar className="h-9 w-9 sm:h-10 sm:w-10">
               <AvatarImage src={agent?.avatar_url || undefined} />
-              <AvatarFallback className={cn('text-xs', getConfidenceColor(decision.confidence))}>
+              <AvatarFallback className={cn('text-[10px] sm:text-xs', getConfidenceColor(decision.confidence))}>
                 {agent ? getInitials(agent.name) : 'AI'}
               </AvatarFallback>
             </Avatar>
@@ -159,22 +160,26 @@ function DecisionCard({ decision, isSelected, onSelect, onOverride, onViewTask }
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-semibold text-foreground truncate">
+                  <h3 className="font-semibold text-sm sm:text-base text-foreground truncate">
                     {decision.title}
                   </h3>
-                  <Badge variant={confidenceVariant} className="text-xs">
+                  <Badge variant={confidenceVariant} className="text-[10px] sm:text-xs">
                     {decision.confidence}%
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1 line-clamp-2">
                   {decision.description}
                 </p>
               </div>
 
-              {/* Actions */}
+              {/* Actions - Desktop */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 flex-shrink-0 hidden sm:flex min-h-[32px] min-w-[32px]"
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -199,33 +204,37 @@ function DecisionCard({ decision, isSelected, onSelect, onOverride, onViewTask }
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              {/* Mobile Chevron */}
+              <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0 sm:hidden" />
             </div>
 
             {/* Meta Row */}
-            <div className="flex items-center gap-4 mt-3 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 sm:mt-3">
               {/* Agent Name */}
-              <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                <span className="font-medium">{agent?.name || 'Unknown Agent'}</span>
-              </div>
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                {agent?.name || 'Unknown Agent'}
+              </span>
 
-              <Separator orientation="vertical" className="h-4" />
+              <Separator orientation="vertical" className="h-3 sm:h-4 hidden sm:block" />
 
               {/* Status Badge */}
-              <Badge variant="outline" className={cn('text-xs', statusColorClass)}>
+              <Badge variant="outline" className={cn('text-[10px] sm:text-xs', statusColorClass)}>
                 <span className="flex items-center gap-1">
-                  {statusIcon}
+                  <span className="hidden sm:inline">{statusIcon}</span>
                   {getDecisionStatusLabel(decision.status)}
                 </span>
               </Badge>
 
-              <Separator orientation="vertical" className="h-4" />
+              <Separator orientation="vertical" className="h-3 sm:h-4 hidden sm:block" />
 
               {/* Timestamp */}
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    {formatRelativeTime(decision.created_at)}
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <span className="sm:hidden">{formatRelativeTime(decision.created_at)}</span>
+                    <span className="hidden sm:inline">{formatRelativeTime(decision.created_at)}</span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -233,20 +242,43 @@ function DecisionCard({ decision, isSelected, onSelect, onOverride, onViewTask }
                 </TooltipContent>
               </Tooltip>
 
-              {/* Task Link */}
+              {/* Task Link - Desktop */}
               {decision.task_id && (
                 <>
-                  <Separator orientation="vertical" className="h-4" />
+                  <Separator orientation="vertical" className="h-4 hidden sm:block" />
                   <Button
                     variant="link"
                     size="sm"
-                    className="h-auto p-0 text-xs"
+                    className="h-auto p-0 text-xs hidden sm:inline-flex"
                     onClick={(e) => { e.stopPropagation(); onViewTask(); }}
                   >
                     View Task
                   </Button>
                 </>
               )}
+            </div>
+
+            {/* Mobile Actions Row */}
+            <div className="flex items-center gap-2 mt-3 sm:hidden">
+              {decision.task_id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs flex-1"
+                  onClick={(e) => { e.stopPropagation(); onViewTask(); }}
+                >
+                  View Task
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs flex-1"
+                onClick={(e) => { e.stopPropagation(); onOverride(); }}
+                disabled={decision.status === 'overridden'}
+              >
+                Override
+              </Button>
             </div>
           </div>
         </div>
@@ -257,19 +289,19 @@ function DecisionCard({ decision, isSelected, onSelect, onOverride, onViewTask }
 
 function DecisionListSkeleton() {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       {[1, 2, 3, 4, 5].map((i) => (
         <Card key={i}>
-          <CardContent className="p-4">
-            <div className="flex items-start gap-4">
-              <Skeleton className="h-10 w-10 rounded-full" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <Skeleton className="h-9 w-9 sm:h-10 sm:w-10 rounded-full" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 sm:h-5 w-3/4" />
+                <Skeleton className="h-3 sm:h-4 w-full" />
                 <div className="flex items-center gap-2 pt-1">
-                  <Skeleton className="h-4 w-20" />
-                  <Skeleton className="h-4 w-24" />
-                  <Skeleton className="h-4 w-16" />
+                  <Skeleton className="h-3 sm:h-4 w-16 sm:w-20" />
+                  <Skeleton className="h-3 sm:h-4 w-20 sm:w-24" />
+                  <Skeleton className="h-3 sm:h-4 w-14 sm:w-16" />
                 </div>
               </div>
             </div>
@@ -283,14 +315,14 @@ function DecisionListSkeleton() {
 function EmptyDecisionState({ hasFilters }: { hasFilters: boolean }) {
   return (
     <Card className="border-dashed">
-      <CardContent className="p-8 text-center">
-        <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-          <Brain className="h-6 w-6 text-muted-foreground" />
+      <CardContent className="p-6 sm:p-8 text-center">
+        <div className="mx-auto w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-muted flex items-center justify-center mb-3 sm:mb-4">
+          <Brain className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground" />
         </div>
-        <h3 className="font-semibold text-lg mb-2">
+        <h3 className="font-semibold text-base sm:text-lg mb-2">
           {hasFilters ? 'No decisions match your filters' : 'No decisions yet'}
         </h3>
-        <p className="text-muted-foreground max-w-md mx-auto">
+        <p className="text-sm text-muted-foreground max-w-md mx-auto">
           {hasFilters
             ? 'Try adjusting your filters to see more decisions.'
             : 'Decisions appear when agents make choices during task execution. Start by creating tasks and letting agents work on them.'}

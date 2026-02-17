@@ -21,7 +21,7 @@ export interface KanbanTask extends Task {
   isNew?: boolean;
 }
 
-export interface KanbanColumn {
+export interface KanbanColumnType {
   id: TaskStatus;
   label: string;
   color: string;
@@ -56,7 +56,7 @@ export interface KanbanBoardProps {
 }
 
 export interface KanbanColumnProps {
-  column: KanbanColumn;
+  column: KanbanColumnType;
   tasks: KanbanTask[];
   onTaskClick?: (task: KanbanTask) => void;
   onTaskEdit?: (task: KanbanTask) => void;

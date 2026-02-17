@@ -54,7 +54,7 @@ export function ChatInput({
       // Auto-resize textarea
       const textarea = e.target;
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 150)}px`;
     },
     [maxLength]
   );
@@ -74,8 +74,8 @@ export function ChatInput({
           disabled={disabled}
           rows={1}
           className={cn(
-            'min-h-[44px] max-h-[200px] resize-none py-3 px-4',
-            'focus-visible:ring-1 focus-visible:ring-ring'
+            'min-h-[48px] sm:min-h-[44px] max-h-[120px] sm:max-h-[150px] resize-none py-3 px-3 sm:px-4 text-sm sm:text-base',
+            'focus-visible:ring-1 focus-visible:ring-ring rounded-xl'
           )}
           style={{ height: 'auto' }}
         />
@@ -83,32 +83,30 @@ export function ChatInput({
           onClick={handleSend}
           disabled={!content.trim() || disabled}
           size="icon"
-          className="h-11 w-11 flex-shrink-0"
+          className="h-12 w-12 sm:h-11 sm:w-11 flex-shrink-0 rounded-xl min-h-[48px] min-w-[48px]"
         >
           {disabled ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 sm:h-4 sm:w-4 animate-spin" />
           ) : (
-            <Send className="h-4 w-4" />
+            <Send className="h-5 w-5 sm:h-4 sm:w-4" />
           )}
         </Button>
       </div>
 
-      {/* Character count */}
-      <div className="flex justify-end">
+      {/* Character count and hint row */}
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">
+          Press Enter to send, Shift+Enter for new line
+        </span>
         <span
           className={cn(
-            'text-xs',
+            'text-[10px] sm:text-xs ml-auto',
             isOverLimit ? 'text-amber-500' : 'text-muted-foreground'
           )}
         >
           {charCount}/{maxLength}
         </span>
       </div>
-
-      {/* Hint */}
-      <p className="text-xs text-muted-foreground">
-        Press Enter to send, Shift+Enter for new line
-      </p>
     </div>
   );
 }

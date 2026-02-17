@@ -13,6 +13,6 @@ export type {
   KanbanColumnProps,
   TaskCardProps,
   KanbanTask,
-  KanbanColumn,
+  KanbanColumnType,
   KanbanStats,
 } from './types';
