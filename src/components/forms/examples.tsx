@@ -14,7 +14,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { 
   FormField, 
-  FormSection, 
+  FormSection,
+  FormDivider,
   FormActions,
   FormValidationSummary,
   RequiredFieldLegend 
@@ -23,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Task } from 'lucide-react';
+import { CheckSquare } from 'lucide-react';
 
 const taskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be 200 characters or less'),
@@ -75,7 +76,7 @@ function CreateTaskFormExample() {
           <RequiredFieldLegend />
 
           {/* Form Section */}
-          <FormSection title="Task Details" icon={Task}>
+          <FormSection title="Task Details" icon={CheckSquare}>
             <FormField
               name="title"
               label="Title"

@@ -86,7 +86,7 @@ export function FormField({
           'aria-invalid': !!error,
           'aria-describedby': describedBy,
           'aria-required': required,
-        })}
+        } as Partial<React.ComponentProps<typeof children.type>>)}
         
         {/* Async validation indicator */}
         {isValidating && (
