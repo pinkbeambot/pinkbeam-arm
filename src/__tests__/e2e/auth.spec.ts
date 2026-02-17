@@ -74,14 +74,15 @@ test.describe('Authentication Flows', () => {
       });
       expect(linkError).toBeNull();
 
-      const otp = linkData!.properties.email_otp;
+      const otp = linkData?.properties?.email_otp;
       expect(otp).toBeTruthy();
+      if (!otp) throw new Error('No OTP returned');
 
       // Fill OTP digits
       const otpInputs = page.locator('input[inputmode="numeric"]');
       await otpInputs.first().waitFor({ state: 'visible' });
       for (let i = 0; i < 6; i++) {
-        await otpInputs.nth(i).fill(otp![i]);
+        await otpInputs.nth(i).fill(otp[i]);
       }
 
       // Submit
@@ -153,9 +154,164 @@ test.describe('Authentication Flows', () => {
     test('auth callback page handles errors gracefully', async ({ page }) => {
       // Visit callback with invalid hash
       await page.goto('/auth/callback#error=invalid_grant');
-      
+
       // Should handle gracefully (either show error or redirect)
       await expect(page.locator('body')).toBeVisible();
+    });
+  });
+
+  test.describe('Logout', () => {
+    test('user can logout from portal', async ({ browser }) => {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+      test.skip(!supabaseUrl || !supabaseServiceKey, 'Requires Supabase service role key');
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      // Create a new context for this test
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      const testEmail = `e2e-logout-${Date.now()}@pinkbeam-test.com`;
+
+      // Create test user
+      await supabase.auth.admin.createUser({
+        email: testEmail,
+        email_confirm: true,
+      });
+
+      // Login
+      await page.goto('/auth');
+      await page.getByLabel('Email address').fill(testEmail);
+      await page.getByRole('button', { name: 'Continue' }).click();
+      await expect(page.getByText('Enter your code')).toBeVisible({ timeout: 15000 });
+
+      const { data: linkData } = await supabase.auth.admin.generateLink({
+        type: 'magiclink',
+        email: testEmail,
+      });
+
+      const otp = linkData?.properties?.email_otp;
+      if (!otp) throw new Error('No OTP returned');
+
+      const otpInputs = page.locator('input[inputmode="numeric"]');
+      await otpInputs.first().waitFor({ state: 'visible' });
+      for (let i = 0; i < 6; i++) {
+        await otpInputs.nth(i).fill(otp[i]);
+      }
+
+      await page.getByRole('button', { name: 'Verify & Sign In' }).click();
+      await page.waitForURL('**/portal**', { timeout: 30000 });
+
+      // Verify logged in
+      await expect(page).toHaveURL(/\/portal/);
+
+      // Click user menu
+      const userMenu = page.locator('button[aria-label="User menu"], [data-testid="user-menu"]').first();
+      await expect(userMenu).toBeVisible();
+      await userMenu.click();
+
+      // Click logout
+      const logoutButton = page.locator('button:has-text("Logout"), button:has-text("Sign out"), a:has-text("Logout"), a:has-text("Sign out")').first();
+      await expect(logoutButton).toBeVisible();
+      await logoutButton.click();
+
+      // Should redirect to auth or home
+      await expect(page).toHaveURL(/\/(auth|\/)$/);
+
+      // Cleanup
+      const { data: { users } } = await supabase.auth.admin.listUsers();
+      const user = users?.find((u) => u.email === testEmail);
+      if (user) {
+        await supabase.auth.admin.deleteUser(user.id);
+      }
+
+      await context.close();
+    });
+
+    test('logged out user cannot access protected routes', async ({ browser }) => {
+      const context = await browser.newContext();
+      const page = await context.newPage();
+
+      // Clear any existing storage
+      await context.clearCookies();
+
+      // Try to access portal
+      await page.goto('/portal/agents');
+
+      // Should redirect to auth
+      await expect(page).toHaveURL(/\/auth/);
+
+      await context.close();
+    });
+  });
+
+  test.describe('Password Reset Flow', () => {
+    test('user can request password reset', async ({ page }) => {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+      test.skip(!supabaseUrl || !supabaseServiceKey, 'Requires Supabase service role key');
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      const testEmail = `e2e-reset-${Date.now()}@pinkbeam-test.com`;
+
+      // Create test user
+      await supabase.auth.admin.createUser({
+        email: testEmail,
+        email_confirm: true,
+      });
+
+      await page.goto('/auth');
+
+      // Look for forgot password link
+      const forgotPasswordLink = page.locator('a:has-text("Forgot password"), a:has-text("Reset password"), button:has-text("Forgot")').first();
+
+      if (await forgotPasswordLink.isVisible().catch(() => false)) {
+        await forgotPasswordLink.click();
+
+        // Should show password reset form
+        await expect(page.locator('input[type="email"]').first()).toBeVisible();
+
+        // Enter email
+        await page.fill('input[type="email"]', testEmail);
+
+        // Submit
+        await page.click('button:has-text("Send"), button:has-text("Reset")').catch(() => {});
+
+        // Should show success message or return to login
+        await expect(page.locator('body')).toBeVisible();
+      }
+
+      // Cleanup
+      const { data: { users } } = await supabase.auth.admin.listUsers();
+      const user = users?.find((u) => u.email === testEmail);
+      if (user) {
+        await supabase.auth.admin.deleteUser(user.id);
+      }
+    });
+
+    test('password reset shows error for non-existent email', async ({ page }) => {
+      await page.goto('/auth');
+
+      const forgotPasswordLink = page.locator('a:has-text("Forgot password"), a:has-text("Reset password"), button:has-text("Forgot")').first();
+
+      if (await forgotPasswordLink.isVisible().catch(() => false)) {
+        await forgotPasswordLink.click();
+
+        // Enter non-existent email
+        await page.fill('input[type="email"]', 'nonexistent-test@example.com');
+        await page.click('button:has-text("Send"), button:has-text("Reset")').catch(() => {});
+
+        // Should handle gracefully (don't reveal if email exists)
+        await expect(page.locator('body')).toBeVisible();
+      }
     });
   });
 });

@@ -7,38 +7,42 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   // Test directories
   testDir: './src/__tests__',
-  
+
   // Run tests in files in parallel
   fullyParallel: true,
-  
+
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
-  
+
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
-  
+
   // Opt out of parallel tests on CI
   workers: process.env.CI ? 1 : undefined,
-  
+
   // Reporter to use
   reporter: [
     ['html', { open: 'never' }],
-    ['list']
+    ['list'],
+    ['junit', { outputFile: 'test-results/junit.xml' }]
   ],
-  
+
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
     baseURL: 'http://localhost:3000',
-    
+
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
-    
+
     // Capture screenshot on failure
     screenshot: 'only-on-failure',
+
+    // Record video on failure
+    video: 'on-first-retry',
   },
 
-  // Configure projects for major browsers
+  // Configure projects for major browsers and viewports
   projects: [
     // Auth setup — runs first, saves session cookies for dependent projects
     {
@@ -46,7 +50,7 @@ export default defineConfig({
       testMatch: /e2e\/auth\.setup\.ts$/,
     },
 
-    // E2E Tests (depend on auth setup)
+    // E2E Tests - Desktop Chromium (depend on auth setup)
     {
       name: 'e2e-chromium',
       testMatch: /e2e\/.*\.spec\.ts$/,
@@ -56,12 +60,56 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 }
       },
     },
+
+    // E2E Tests - Desktop Firefox
     {
       name: 'e2e-firefox',
       testMatch: /e2e\/.*\.spec\.ts$/,
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Firefox'],
+        viewport: { width: 1280, height: 720 }
+      },
+    },
+
+    // E2E Tests - Desktop Safari
+    {
+      name: 'e2e-webkit',
+      testMatch: /e2e\/.*\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Safari'],
+        viewport: { width: 1280, height: 720 }
+      },
+    },
+
+    // E2E Tests - Mobile Chrome
+    {
+      name: 'e2e-mobile-chrome',
+      testMatch: /e2e\/.*\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Pixel 7'],
+      },
+    },
+
+    // E2E Tests - Mobile Safari
+    {
+      name: 'e2e-mobile-safari',
+      testMatch: /e2e\/.*\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['iPhone 14'],
+      },
+    },
+
+    // Critical Path Tests - Run on all browsers
+    {
+      name: 'critical-chromium',
+      testMatch: /e2e\/critical\/.*\.spec\.ts$/,
+      dependencies: ['setup'],
+      use: {
+        ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }
       },
     },
@@ -91,4 +139,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
+
+  // Output directory for test artifacts
+  outputDir: 'test-results/',
 });
