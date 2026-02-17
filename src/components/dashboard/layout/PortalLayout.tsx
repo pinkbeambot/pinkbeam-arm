@@ -49,6 +49,7 @@ const mobileNavItems = [
   { label: 'Dashboard', href: '/portal', icon: LayoutDashboard },
   { label: 'Agents', href: '/portal/agents', icon: Bot },
   { label: 'Tasks', href: '/portal/tasks', icon: Kanban },
+  { label: 'Analytics', href: '/portal/analytics', icon: BarChart3 },
   { label: 'Chat', href: '/portal/chat', icon: MessageSquare },
 ];
 
@@ -94,6 +95,7 @@ export function PortalSidebar({
     { label: 'Decisions', href: '/portal/decisions', icon: Brain },
     { label: 'Escalations', href: '/portal/escalations', icon: AlertCircle },
     { label: 'Performance', href: '/portal/performance', icon: BarChart3 },
+    { label: 'Analytics', href: '/portal/analytics', icon: BarChart3 },
     { label: 'Chat', href: '/portal/chat', icon: MessageSquare },
   ];
 
