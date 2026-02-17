@@ -4,8 +4,8 @@ import { stripe, STRIPE_WEBHOOK_SECRET } from '@/lib/billing/stripe';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   updateTenantBilling,
-  logBillingEvent,
   saveInvoice,
+  logBillingEvent,
   findTenantByStripeCustomerId,
   findTenantByStripeSubscriptionId,
 } from '@/lib/billing/service';
@@ -14,12 +14,6 @@ import type { SubscriptionTier } from '@/types/billing';
 /**
  * POST /api/webhooks/stripe
  * Handles Stripe webhook events. No auth required — verified via Stripe signature.
- * 
- * Events handled:
- * - invoice.paid - Payment succeeded
- * - invoice.payment_failed - Payment failed
- * - customer.subscription.deleted - Subscription canceled
- * - customer.subscription.updated - Subscription updated
  */
 export async function POST(request: NextRequest) {
   if (!stripe) {
@@ -48,10 +42,6 @@ export async function POST(request: NextRequest) {
 
   try {
     switch (event.type) {
-      // =========================================================================
-      // Invoice Events
-      // =========================================================================
-
       case 'invoice.paid': {
         const invoice = event.data.object as Stripe.Invoice;
         const tenantId = await findTenantByStripeCustomerId(supabase, invoice.customer as string);
@@ -89,7 +79,6 @@ export async function POST(request: NextRequest) {
             event.type
           );
 
-          // Update subscription status if needed
           if (invoice.subscription) {
             await updateTenantBilling(supabase, tenantId, {
               subscription_status: 'active',
@@ -137,7 +126,6 @@ export async function POST(request: NextRequest) {
             event.type
           );
 
-          // Update subscription status to past_due if applicable
           if (invoice.subscription) {
             await updateTenantBilling(supabase, tenantId, {
               subscription_status: 'past_due',
@@ -146,10 +134,6 @@ export async function POST(request: NextRequest) {
         }
         break;
       }
-
-      // =========================================================================
-      // Subscription Events
-      // =========================================================================
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
@@ -222,10 +206,6 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      // =========================================================================
-      // Checkout Session Events
-      // =========================================================================
-
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         const metadata = session.metadata;
@@ -263,10 +243,6 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      // =========================================================================
-      // Payment Method Events
-      // =========================================================================
-
       case 'payment_method.attached': {
         const paymentMethod = event.data.object as Stripe.PaymentMethod;
         const tenantId = await findTenantByStripeCustomerId(
@@ -290,12 +266,7 @@ export async function POST(request: NextRequest) {
         break;
       }
 
-      // =========================================================================
-      // Unhandled Events
-      // =========================================================================
-
       default:
-        // Log unhandled event for monitoring
         console.log(`Unhandled Stripe webhook event: ${event.type}`);
         break;
     }

@@ -119,15 +119,6 @@ ON CONFLICT (id) DO UPDATE SET
     sort_order = EXCLUDED.sort_order;
 
 -- ============================================================================
--- UPDATE SUBSCRIPTION STATUS CHECK CONSTRAINT
--- ============================================================================
-
--- Make sure the check constraint is up to date
-ALTER TABLE tenants DROP CONSTRAINT IF EXISTS tenants_subscription_status_check;
-ALTER TABLE tenants ADD CONSTRAINT tenants_subscription_status_check 
-    CHECK (subscription_status IN ('trialing', 'active', 'past_due', 'canceled', 'incomplete', 'incomplete_expired', 'unpaid', 'paused'));
-
--- ============================================================================
 -- ADD PAYMENT METHODS TABLE
 -- ============================================================================
 
@@ -150,7 +141,6 @@ CREATE TABLE IF NOT EXISTS payment_methods (
 CREATE INDEX IF NOT EXISTS idx_payment_methods_tenant ON payment_methods(tenant_id);
 CREATE INDEX IF NOT EXISTS idx_payment_methods_stripe ON payment_methods(stripe_payment_method_id);
 
--- Add trigger for updated_at
 CREATE TRIGGER IF NOT EXISTS update_payment_methods_updated_at 
     BEFORE UPDATE ON payment_methods 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -199,7 +189,6 @@ CREATE POLICY billing_history_tenant_isolation ON billing_history
 -- UPDATE FUNCTIONS
 -- ============================================================================
 
--- Update can_create_agent function to handle new tiers
 CREATE OR REPLACE FUNCTION can_create_agent(p_tenant_id UUID)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -208,7 +197,6 @@ DECLARE
     v_subscription_status VARCHAR(50);
     v_current_tier VARCHAR(50);
 BEGIN
-    -- Get tenant subscription info
     SELECT 
         t.subscription_status,
         t.current_tier,
@@ -218,17 +206,14 @@ BEGIN
     LEFT JOIN subscription_tiers st ON st.id = t.current_tier
     WHERE t.id = p_tenant_id;
     
-    -- Get current agent count
     SELECT COUNT(*)::BIGINT INTO v_current_agents
     FROM agents
     WHERE tenant_id = p_tenant_id AND status != 'terminated';
     
-    -- Unlimited agents for enterprise tier
     IF v_agent_limit IS NULL OR v_current_tier = 'enterprise' THEN
         RETURN TRUE;
     END IF;
     
-    -- Check if under limit
     RETURN v_current_agents < v_agent_limit;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -237,7 +222,6 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- UPDATE AUTO-TRIAL FUNCTION
 -- ============================================================================
 
--- Update auto_start_trial to use 'free' tier instead of 'starter'
 CREATE OR REPLACE FUNCTION auto_start_trial()
 RETURNS TRIGGER AS $$
 BEGIN

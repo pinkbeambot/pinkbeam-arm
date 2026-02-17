@@ -9,7 +9,6 @@ import { z } from 'zod';
 /**
  * POST /api/billing/payment-method
  * Adds a new payment method to the customer's account.
- * Returns a client secret for Stripe Elements to confirm the setup.
  */
 export async function POST(request: NextRequest) {
   try {
