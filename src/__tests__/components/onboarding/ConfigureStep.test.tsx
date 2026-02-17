@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ConfigureStep } from '@/components/onboarding/steps/ConfigureStep';
 import { DEFAULT_ONBOARDING_DATA } from '@/components/onboarding/types';
+import type { AgentRole, Capability } from '@/types';
 
 describe('ConfigureStep', () => {
   const mockOnNext = vi.fn();
@@ -15,7 +16,7 @@ describe('ConfigureStep', () => {
     data: {
       ...DEFAULT_ONBOARDING_DATA,
       agentName: 'Test Agent',
-      agentRole: 'worker',
+      agentRole: 'worker' as AgentRole,
       agentModel: 'claude-3-sonnet',
     },
     onUpdateData: mockOnUpdateData,
