@@ -19,8 +19,8 @@ interface AgentTableViewProps {
   onSelectAll?: () => void;
   onSelectAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
-  onToggleStatus: (agent: Agent) => void;
-  onDeleteAgent: (agent: Agent) => void;
+  onToggleStatus?: (agent: Agent) => void;
+  onDeleteAgent?: (agent: Agent) => void;
   onCloneAgent: (agent: Agent) => void;
 }
 
@@ -147,27 +147,33 @@ export function AgentTableView({
                         <Copy className="mr-2 h-4 w-4" />
                         Clone Agent
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onToggleStatus(agent)}>
-                        {agent.status === 'paused' ? (
-                          <>
-                            <Play className="mr-2 h-4 w-4" />
-                            Resume Agent
-                          </>
-                        ) : (
-                          <>
-                            <Pause className="mr-2 h-4 w-4" />
-                            Pause Agent
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={() => onDeleteAgent(agent)}
-                        className="text-red-600 focus:text-red-600"
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Agent
-                      </DropdownMenuItem>
+                      {onToggleStatus && (
+                        <DropdownMenuItem onClick={() => onToggleStatus(agent)}>
+                          {agent.status === 'paused' ? (
+                            <>
+                              <Play className="mr-2 h-4 w-4" />
+                              Resume Agent
+                            </>
+                          ) : (
+                            <>
+                              <Pause className="mr-2 h-4 w-4" />
+                              Pause Agent
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      )}
+                      {onDeleteAgent && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => onDeleteAgent(agent)}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Agent
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </td>

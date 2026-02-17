@@ -24,8 +24,8 @@ interface AgentGridViewProps {
   onToggleSelect?: (agentId: string) => void;
   onSelectAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
-  onToggleStatus: (agent: Agent) => void;
-  onDeleteAgent: (agent: Agent) => void;
+  onToggleStatus?: (agent: Agent) => void;
+  onDeleteAgent?: (agent: Agent) => void;
   onCloneAgent: (agent: Agent) => void;
 }
 
@@ -53,8 +53,8 @@ export function AgentGridView({
           onToggleSelect={selectionEnabled ? () => onToggleSelect!(agent.id) : undefined}
           onClick={() => onSelectAgent(agent)}
           onEdit={() => onEditAgent(agent)}
-          onToggleStatus={() => onToggleStatus(agent)}
-          onDelete={() => onDeleteAgent(agent)}
+          onToggleStatus={onToggleStatus ? () => onToggleStatus(agent) : undefined}
+          onDelete={onDeleteAgent ? () => onDeleteAgent(agent) : undefined}
           onClone={() => onCloneAgent(agent)}
         />
       ))}
@@ -67,11 +67,11 @@ interface AgentCardProps {
   isSelected?: boolean;
   isChecked?: boolean;
   onToggleSelect?: () => void;
-  onClick: () => void;
-  onEdit: () => void;
-  onToggleStatus: () => void;
-  onDelete: () => void;
-  onClone: () => void;
+  onClick?: () => void;
+  onEdit?: () => void;
+  onToggleStatus?: () => void;
+  onDelete?: () => void;
+  onClone?: () => void;
 }
 
 function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEdit, onToggleStatus, onDelete, onClone }: AgentCardProps) {
@@ -82,7 +82,7 @@ function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEd
         isSelected && 'ring-2 ring-primary',
         isChecked && 'ring-2 ring-primary bg-primary/5'
       )}
-      onClick={onClick}
+      onClick={() => onClick?.()}
     >
       <CardContent className="p-4">
         {onToggleSelect !== undefined && (
@@ -148,24 +148,30 @@ function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEd
                 <Copy className="mr-2 h-4 w-4" />
                 Clone
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={onToggleStatus}>
-                {agent.status === 'paused' ? (
-                  <>
-                    <Play className="mr-2 h-4 w-4" />
-                    Resume
-                  </>
-                ) : (
-                  <>
-                    <Pause className="mr-2 h-4 w-4" />
-                    Pause
-                  </>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onDelete} className="text-red-600 focus:text-red-600">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              {onToggleStatus && (
+                <DropdownMenuItem onClick={onToggleStatus}>
+                  {agent.status === 'paused' ? (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      Resume
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="mr-2 h-4 w-4" />
+                      Pause
+                    </>
+                  )}
+                </DropdownMenuItem>
+              )}
+              {onDelete && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onDelete} className="text-red-600 focus:text-red-600">
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
