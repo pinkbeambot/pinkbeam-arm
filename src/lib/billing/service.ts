@@ -187,14 +187,21 @@ function mapTierRow(row: Record<string, unknown>): SubscriptionTierConfig {
 export async function getRecentInvoices(
   supabase: SupabaseClient,
   tenantId: string,
-  limit = 10
+  limit = 10,
+  status?: string
 ): Promise<Invoice[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('invoices')
     .select('*')
     .eq('tenant_id', tenantId)
     .order('created_at', { ascending: false })
     .limit(limit);
+
+  if (status) {
+    query = query.eq('status', status);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data) return [];
 

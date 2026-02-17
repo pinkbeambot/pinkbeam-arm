@@ -1,9 +1,14 @@
+/**
+ * Optimized Chat Page
+ * 
+ * Uses lazy loading for the heavy ChatPanel component.
+ */
+
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { MessageSquare, Bot, Search, X, Bookmark, Loader2 } from 'lucide-react';
 import { PortalLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
-import { ChatPanel } from '@/components/chat';
 import { useChats } from '@/lib/hooks/useChat';
 import { useAgentsRealtime } from '@/lib/hooks/useAgents';
 import { useTenant } from '@/lib/hooks/useTenant';
@@ -22,6 +27,9 @@ import {
 } from '@/components/ui/select';
 import { cn, formatRelativeTime, getAvatarColor, getInitials } from '@/lib/utils';
 import type { Chat, ChatSearchResult } from '@/types';
+
+// LAZY LOAD: ChatPanel is heavy due to TipTap editor and realtime subscriptions
+import { ChatPanelLazy } from '@/lib/performance/lazy-components';
 
 export default function ChatPage() {
   const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
@@ -295,8 +303,8 @@ export default function ChatPage() {
           </Card>
         </div>
 
-        {/* Chat Panel */}
-        <ChatPanel
+        {/* Chat Panel - LAZY LOADED */}
+        <ChatPanelLazy
           chatId={selectedChatId}
           agentId={selectedAgentId || undefined}
           open={chatOpen}
