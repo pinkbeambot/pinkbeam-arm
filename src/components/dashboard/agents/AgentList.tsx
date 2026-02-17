@@ -1,10 +1,10 @@
 'use client';
 
-import { Bot, Plus } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import type { Agent, ViewMode } from '@/types';
 import { AgentGridView } from './AgentGridView';
 import { AgentTableView } from './AgentTableView';
-import { SkeletonCard, SkeletonList } from '@/components/loading';
+import { AgentCardSkeleton, SkeletonList } from '@/components/loading';
 import { EmptyState } from '@/components/empty';
 
 interface AgentListProps {
@@ -17,8 +17,8 @@ interface AgentListProps {
   onSelectAll?: () => void;
   onSelectAgent: (agent: Agent) => void;
   onEditAgent: (agent: Agent) => void;
-  onToggleStatus: (agent: Agent) => void;
-  onDeleteAgent: (agent: Agent) => void;
+  onToggleStatus?: (agent: Agent) => void;
+  onDeleteAgent?: (agent: Agent) => void;
   onCloneAgent: (agent: Agent) => void;
   onCreateAgent?: () => void;
   canCreate?: boolean;
@@ -70,8 +70,8 @@ export function AgentList({
       onToggleSelect={onToggleSelect}
       onSelectAgent={onSelectAgent}
       onEditAgent={onEditAgent}
-      onToggleStatus={onToggleStatus}
-      onDeleteAgent={onDeleteAgent}
+      onToggleStatus={onToggleStatus ?? undefined}
+      onDeleteAgent={onDeleteAgent ?? undefined}
       onCloneAgent={onCloneAgent}
     />
   ) : (
@@ -83,8 +83,8 @@ export function AgentList({
       onSelectAll={onSelectAll}
       onSelectAgent={onSelectAgent}
       onEditAgent={onEditAgent}
-      onToggleStatus={onToggleStatus}
-      onDeleteAgent={onDeleteAgent}
+      onToggleStatus={onToggleStatus ?? undefined}
+      onDeleteAgent={onDeleteAgent ?? undefined}
       onCloneAgent={onCloneAgent}
     />
   );
@@ -99,7 +99,7 @@ function AgentListSkeleton({ viewMode }: { viewMode: ViewMode }) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {Array.from({ length: 8 }).map((_, i) => (
-          <SkeletonCard key={i} showFooter={false} lines={3} />
+          <AgentCardSkeleton key={i} />
         ))}
       </div>
     );

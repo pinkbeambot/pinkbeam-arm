@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
-import { Plus, LayoutGrid, GitBranch, Upload } from 'lucide-react';
+import { Plus, LayoutGrid, GitBranch, Upload, ClipboardList } from 'lucide-react';
 import {
   DashboardLayout,
   PageContainer,
@@ -21,12 +21,34 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { CSVImportDialog, TASK_SAMPLE_CSV } from '@/components/shared/CSVImportDialog';
 import { TASK_COLUMNS } from '@/lib/csv-parser';
+import { ErrorBoundary, ErrorFallback } from '@/components/error';
+import { DashboardStatsSkeleton, TaskCardSkeleton } from '@/components/loading';
+import { EmptyState } from '@/components/empty';
 import { cn } from '@/lib/utils';
 import type { Task, TaskStatus, TaskPriority } from '@/types';
 
 type ViewMode = 'kanban' | 'graph';
 
 export default function TasksPage() {
+  return (
+    <ErrorBoundary
+      fallback={
+        <DashboardLayout>
+          <PageContainer>
+            <ErrorFallback
+              title="Failed to load tasks"
+              description="We couldn't load your task pipeline. Please try again."
+            />
+          </PageContainer>
+        </DashboardLayout>
+      }
+    >
+      <TasksPageContent />
+    </ErrorBoundary>
+  );
+}
+
+function TasksPageContent() {
   const { toast } = useToast();
 
   // Fetch data using existing hooks
@@ -265,7 +287,27 @@ export default function TasksPage() {
     return { succeeded, failed: requested - succeeded };
   }, [refetch]);
 
-  const loading = tasksLoading || agentsLoading;
+  const isLoading = tasksLoading || agentsLoading;
+
+  // Show full page skeleton during initial load
+  if (isLoading && tasks.length === 0) {
+    return (
+      <DashboardLayout>
+        <PageContainer>
+          <DashboardStatsSkeleton />
+          <div className="mt-6">
+            <div className="bg-card rounded-lg border p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <TaskCardSkeleton key={i} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </PageContainer>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -341,10 +383,35 @@ export default function TasksPage() {
 
         {/* Main Content */}
         <div className="bg-card rounded-lg border p-4">
-          {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
+          {tasks.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No tasks yet"
+              description="Create your first task to start tracking work. Tasks can be assigned to agents and tracked through your pipeline."
+              action={
+                canCreateTasks
+                  ? {
+                      label: 'Create Task',
+                      onClick: () => setCreateModalOpen(true),
+                    }
+                  : undefined
+              }
+            />
+          ) : filteredTasks.length === 0 ? (
+            <EmptyState
+              icon={ClipboardList}
+              title="No matching tasks"
+              description="Try adjusting your filters to see more results."
+              action={{
+                label: 'Clear Filters',
+                onClick: () => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setPriorityFilter('all');
+                  setAssigneeFilter('all');
+                },
+              }}
+            />
           ) : viewMode === 'kanban' ? (
             <KanbanBoard
               tasks={filteredTasks}
