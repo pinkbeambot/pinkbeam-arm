@@ -612,3 +612,28 @@ export type {
   PlanFeature,
   StripeWebhookPayload,
 } from './billing';
+
+// Analytics Types
+export type {
+  DateRangePreset,
+  DateRange,
+  AnalyticsFilters,
+  AgentPerformanceMetrics,
+  AgentPerformanceResponse,
+  TaskStatusBreakdown,
+  TaskPipelineStage,
+  TaskPipelineResponse,
+  DecisionCategoryMetrics,
+  DecisionTrend,
+  DecisionAnalyticsResponse,
+  CostBreakdown,
+  CostTrend,
+  AgentCostMetrics,
+  CostAnalyticsResponse,
+  ActivityTimelineItem,
+  ActivityTimelineResponse,
+  ExportFormat,
+  ExportRequest,
+  ExportResponse,
+  AnalyticsQueryParams,
+} from './analytics';

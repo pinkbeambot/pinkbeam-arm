@@ -58,7 +58,6 @@ export function TaskPipelineWidget({
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-6">
-        {/* Funnel Visualization */}
         <div className="space-y-2">
           {pipelineStages.map((stage, index) => (
             <FunnelStage 
@@ -71,7 +70,6 @@ export function TaskPipelineWidget({
           ))}
         </div>
 
-        {/* Status Breakdown */}
         <div className="space-y-3">
           <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             Status Breakdown
@@ -83,7 +81,6 @@ export function TaskPipelineWidget({
           </div>
         </div>
 
-        {/* Summary Stats */}
         <div className="grid grid-cols-3 gap-4 pt-4 border-t">
           <SummaryStat 
             icon={<CheckCircle2 className="h-4 w-4 text-green-500" />}
@@ -118,12 +115,7 @@ function FunnelStage({
   isLast: boolean;
 }) {
   const widthPercent = total > 0 ? (stage.count / total) * 100 : 0;
-  const colors = [
-    'bg-blue-500',
-    'bg-indigo-500',
-    'bg-violet-500',
-    'bg-purple-500',
-  ];
+  const colors = ['bg-blue-500', 'bg-indigo-500', 'bg-violet-500', 'bg-purple-500'];
   const color = colors[index % colors.length];
 
   return (

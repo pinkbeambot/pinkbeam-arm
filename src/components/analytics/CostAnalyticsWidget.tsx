@@ -1,9 +1,8 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { cn, formatCurrency, formatNumber } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { DollarSign, TrendingUp, TrendingDown, AlertCircle, Wallet } from 'lucide-react';
 import type { CostTrend, CostBreakdown, AgentCostMetrics } from '@/types/analytics';
 
@@ -76,7 +75,6 @@ export function CostAnalyticsWidget({
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-6">
-        {/* Cost Trend Chart */}
         {recentTrends.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -86,7 +84,6 @@ export function CostAnalyticsWidget({
           </div>
         )}
 
-        {/* Top Agents by Cost */}
         {topAgents.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -100,7 +97,6 @@ export function CostAnalyticsWidget({
           </div>
         )}
 
-        {/* Summary Stats */}
         <div className="grid grid-cols-2 gap-4 pt-4 border-t">
           <CostStat 
             icon={<Wallet className="h-4 w-4 text-blue-500" />}
@@ -138,19 +134,13 @@ function CostTrendChart({ trends }: { trends: CostTrend[] }) {
 
   return (
     <div className="relative h-[80px] w-full">
-      <svg 
-        viewBox={`0 0 ${width} ${height}`} 
-        className="h-full w-full" 
-        preserveAspectRatio="none"
-      >
+      <svg viewBox={`0 0 ${width} ${height}`} className="h-full w-full" preserveAspectRatio="none">
         <path d={areaPath} fill="rgba(99, 102, 241, 0.2)" />
         <path d={linePath} fill="none" stroke="rgb(99, 102, 241)" strokeWidth={0.5} vectorEffect="non-scaling-stroke" />
         {trends.map((t, i) => {
           const x = i;
           const y = height - ((t.cost - minCost) / range) * height * 0.8 - height * 0.1;
-          return (
-            <circle key={t.date} cx={x} cy={y} r={0.3} fill="rgb(99, 102, 241)" />
-          );
+          return <circle key={t.date} cx={x} cy={y} r={0.3} fill="rgb(99, 102, 241)" />;
         })}
       </svg>
       <div className="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-muted-foreground">
@@ -173,29 +163,16 @@ function AgentCostRow({ agent, totalCost }: { agent: AgentCostMetrics; totalCost
         </div>
         <div className="mt-1 flex items-center gap-2">
           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-            <div 
-              className="h-full bg-indigo-500 transition-all"
-              style={{ width: `${Math.min(percentage, 100)}%` }}
-            />
+            <div className="h-full bg-indigo-500 transition-all" style={{ width: `${Math.min(percentage, 100)}%` }} />
           </div>
-          <span className="text-xs text-muted-foreground w-10 text-right">
-            {percentage.toFixed(0)}%
-          </span>
+          <span className="text-xs text-muted-foreground w-10 text-right">{percentage.toFixed(0)}%</span>
         </div>
       </div>
     </div>
   );
 }
 
-function CostStat({ 
-  icon, 
-  label, 
-  value 
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: string;
-}) {
+function CostStat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">

@@ -65,7 +65,6 @@ export function DecisionAnalyticsWidget({
         </div>
       </CardHeader>
       <CardContent className="flex-1 space-y-6">
-        {/* Decision Categories */}
         <div className="space-y-3">
           <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             By Category
@@ -81,7 +80,6 @@ export function DecisionAnalyticsWidget({
           </div>
         </div>
 
-        {/* Recent Trend Sparkline */}
         {recentTrends.length > 0 && (
           <div className="space-y-3">
             <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -91,7 +89,6 @@ export function DecisionAnalyticsWidget({
           </div>
         )}
 
-        {/* Summary Stats */}
         <div className="grid grid-cols-4 gap-2 pt-4 border-t">
           <DecisionStat 
             icon={<CheckCircle2 className="h-3.5 w-3.5 text-green-500" />}
@@ -140,18 +137,9 @@ function CategoryRow({ category }: { category: DecisionCategoryMetrics }) {
       <div className="flex h-2 overflow-hidden rounded-full bg-muted">
         {decidedCount > 0 && (
           <>
-            <div 
-              className="bg-green-500 transition-all"
-              style={{ width: `${(category.approved / decidedCount) * 100}%` }}
-            />
-            <div 
-              className="bg-red-500 transition-all"
-              style={{ width: `${(category.rejected / decidedCount) * 100}%` }}
-            />
-            <div 
-              className="bg-amber-500 transition-all"
-              style={{ width: `${(category.overridden / decidedCount) * 100}%` }}
-            />
+            <div className="bg-green-500 transition-all" style={{ width: `${(category.approved / decidedCount) * 100}%` }} />
+            <div className="bg-red-500 transition-all" style={{ width: `${(category.rejected / decidedCount) * 100}%` }} />
+            <div className="bg-amber-500 transition-all" style={{ width: `${(category.overridden / decidedCount) * 100}%` }} />
           </>
         )}
       </div>
@@ -191,24 +179,8 @@ function TrendSparkline({ trends }: { trends: DecisionTrend[] }) {
           
           return (
             <g key={trend.date}>
-              {/* Approved bar */}
-              <rect
-                x={x + 2}
-                y={height - approvedHeight}
-                width={barWidth - 4}
-                height={approvedHeight}
-                fill="rgb(34, 197, 94)"
-                rx={1}
-              />
-              {/* Rejected bar (stacked) */}
-              <rect
-                x={x + 2}
-                y={height - approvedHeight - rejectedHeight}
-                width={barWidth - 4}
-                height={rejectedHeight}
-                fill="rgb(239, 68, 68)"
-                rx={1}
-              />
+              <rect x={x + 2} y={height - approvedHeight} width={barWidth - 4} height={approvedHeight} fill="rgb(34, 197, 94)" rx={1} />
+              <rect x={x + 2} y={height - approvedHeight - rejectedHeight} width={barWidth - 4} height={rejectedHeight} fill="rgb(239, 68, 68)" rx={1} />
             </g>
           );
         })}
@@ -221,17 +193,7 @@ function TrendSparkline({ trends }: { trends: DecisionTrend[] }) {
   );
 }
 
-function DecisionStat({ 
-  icon, 
-  label, 
-  value,
-  color
-}: { 
-  icon: React.ReactNode; 
-  label: string; 
-  value: number;
-  color: string;
-}) {
+function DecisionStat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
   return (
     <div className="text-center">
       <div className="mb-1 flex justify-center">{icon}</div>

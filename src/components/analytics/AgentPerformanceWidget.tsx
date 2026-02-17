@@ -6,8 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn, formatCurrency, getInitials, getAgentStatusColor, getRoleLabel } from '@/lib/utils';
-import { CheckCircle2, XCircle, Clock, TrendingUp, Users } from 'lucide-react';
+import { cn, formatCurrency, getInitials, getRoleLabel } from '@/lib/utils';
+import { CheckCircle2, XCircle, Clock, Users } from 'lucide-react';
 import type { AgentPerformanceMetrics } from '@/types/analytics';
 
 interface AgentPerformanceWidgetProps {
