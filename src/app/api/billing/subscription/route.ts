@@ -9,10 +9,6 @@ import { stripe } from '@/lib/billing/stripe';
 import { updateSubscriptionSchema } from '@/lib/validation';
 import { z } from 'zod';
 
-/**
- * GET /api/billing/subscription
- * Returns the current subscription details for the authenticated tenant.
- */
 export async function GET(request: NextRequest) {
   try {
     const auth = await authenticateRequest(request);
@@ -21,10 +17,7 @@ export async function GET(request: NextRequest) {
 
     const billing = await getTenantBilling(supabase, tenantId);
     if (!billing) {
-      return NextResponse.json(
-        { error: 'Subscription not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
     }
 
     const usage = await getUsageWithLimits(supabase, tenantId, billing.currentTier);
@@ -46,25 +39,14 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in GET /api/billing/subscription:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-/**
- * POST /api/billing/subscription
- * Creates a new subscription for the authenticated tenant.
- * Uses Stripe Checkout for payment collection.
- */
 export async function POST(request: NextRequest) {
   try {
     if (!stripe) {
-      return NextResponse.json(
-        { error: 'Stripe is not configured' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 503 });
     }
 
     const auth = await authenticateRequest(request);
@@ -76,7 +58,6 @@ export async function POST(request: NextRequest) {
 
     const billing = await getTenantBilling(supabase, tenantId);
 
-    // Check if already subscribed
     if (billing?.subscriptionStatus === 'active' && billing?.stripeSubscriptionId) {
       return NextResponse.json(
         { error: 'Already subscribed. Use PATCH to change plans.' },
@@ -84,33 +65,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create or get Stripe customer
     let customerId = billing?.stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create({
-        metadata: {
-          tenant_id: tenantId,
-          user_id: userId,
-        },
+        metadata: { tenant_id: tenantId, user_id: userId },
       });
       customerId = customer.id;
-
-      await updateTenantBilling(supabase, tenantId, {
-        stripe_customer_id: customerId,
-      });
+      await updateTenantBilling(supabase, tenantId, { stripe_customer_id: customerId });
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-
-    // Create checkout session
     const { STRIPE_PRICE_IDS, TRIAL_PERIOD_DAYS } = await import('@/lib/billing/stripe');
     const priceId = STRIPE_PRICE_IDS[tier];
 
     if (!priceId) {
-      return NextResponse.json(
-        { error: `Invalid tier: ${tier}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Invalid tier: ${tier}` }, { status: 400 });
     }
 
     const isTrialing = billing?.subscriptionStatus === 'trialing';
@@ -122,51 +91,27 @@ export async function POST(request: NextRequest) {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl || `${appUrl}/portal/settings/billing?success=true`,
       cancel_url: cancelUrl || `${appUrl}/portal/settings/billing?canceled=true`,
-      metadata: {
-        tenant_id: tenantId,
-        tier,
-      },
+      metadata: { tenant_id: tenantId, tier },
       subscription_data: {
-        metadata: {
-          tenant_id: tenantId,
-          tier,
-        },
+        metadata: { tenant_id: tenantId, tier },
         ...(isTrialing ? { trial_period_days: TRIAL_PERIOD_DAYS } : {}),
       },
     });
 
-    return NextResponse.json({
-      data: {
-        sessionId: session.id,
-        url: session.url,
-      },
-    });
+    return NextResponse.json({ data: { sessionId: session.id, url: session.url } });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Validation error', details: error.issues }, { status: 400 });
     }
     console.error('Error in POST /api/billing/subscription:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-/**
- * PATCH /api/billing/subscription
- * Updates the current subscription (upgrade/downgrade plan).
- */
 export async function PATCH(request: NextRequest) {
   try {
     if (!stripe) {
-      return NextResponse.json(
-        { error: 'Stripe is not configured' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 503 });
     }
 
     const auth = await authenticateRequest(request);
@@ -189,43 +134,21 @@ export async function PATCH(request: NextRequest) {
     const newPriceId = STRIPE_PRICE_IDS[tier];
 
     if (!newPriceId) {
-      return NextResponse.json(
-        { error: `Invalid tier: ${tier}` },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: `Invalid tier: ${tier}` }, { status: 400 });
     }
 
-    // Get current subscription to find the subscription item
-    const subscription = await stripe.subscriptions.retrieve(
-      billing.stripeSubscriptionId
-    );
+    const subscription = await stripe.subscriptions.retrieve(billing.stripeSubscriptionId);
 
     if (!subscription.items.data.length) {
-      return NextResponse.json(
-        { error: 'Subscription has no items' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Subscription has no items' }, { status: 400 });
     }
 
-    // Update subscription with new price
-    const updatedSubscription = await stripe.subscriptions.update(
-      billing.stripeSubscriptionId,
-      {
-        items: [
-          {
-            id: subscription.items.data[0].id,
-            price: newPriceId,
-          },
-        ],
-        metadata: {
-          tenant_id: tenantId,
-          tier,
-        },
-        proration_behavior: 'create_prorations',
-      }
-    );
+    const updatedSubscription = await stripe.subscriptions.update(billing.stripeSubscriptionId, {
+      items: [{ id: subscription.items.data[0].id, price: newPriceId }],
+      metadata: { tenant_id: tenantId, tier },
+      proration_behavior: 'create_prorations',
+    });
 
-    // Update tenant record
     await updateTenantBilling(supabase, tenantId, {
       current_tier: tier,
       stripe_price_id: newPriceId,
@@ -233,40 +156,21 @@ export async function PATCH(request: NextRequest) {
     });
 
     return NextResponse.json({
-      data: {
-        subscription: {
-          id: updatedSubscription.id,
-          status: updatedSubscription.status,
-          tier,
-        },
-      },
+      data: { subscription: { id: updatedSubscription.id, status: updatedSubscription.status, tier } },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: 'Validation error', details: error.issues },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Validation error', details: error.issues }, { status: 400 });
     }
     console.error('Error in PATCH /api/billing/subscription:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-/**
- * DELETE /api/billing/subscription
- * Cancels the current subscription at period end.
- */
 export async function DELETE(request: NextRequest) {
   try {
     if (!stripe) {
-      return NextResponse.json(
-        { error: 'Stripe is not configured' },
-        { status: 503 }
-      );
+      return NextResponse.json({ error: 'Stripe is not configured' }, { status: 503 });
     }
 
     const auth = await authenticateRequest(request);
@@ -276,24 +180,14 @@ export async function DELETE(request: NextRequest) {
     const billing = await getTenantBilling(supabase, tenantId);
 
     if (!billing?.stripeSubscriptionId) {
-      return NextResponse.json(
-        { error: 'No active subscription found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'No active subscription found' }, { status: 404 });
     }
 
-    // Cancel at period end (allows user to continue using until period ends)
-    const canceledSubscription = await stripe.subscriptions.update(
-      billing.stripeSubscriptionId,
-      {
-        cancel_at_period_end: true,
-      }
-    );
-
-    // Update tenant record
-    await updateTenantBilling(supabase, tenantId, {
+    const canceledSubscription = await stripe.subscriptions.update(billing.stripeSubscriptionId, {
       cancel_at_period_end: true,
     });
+
+    await updateTenantBilling(supabase, tenantId, { cancel_at_period_end: true });
 
     return NextResponse.json({
       data: {
@@ -301,17 +195,12 @@ export async function DELETE(request: NextRequest) {
           id: canceledSubscription.id,
           status: canceledSubscription.status,
           cancelAtPeriodEnd: canceledSubscription.cancel_at_period_end,
-          currentPeriodEnd: new Date(
-            canceledSubscription.current_period_end * 1000
-          ).toISOString(),
+          currentPeriodEnd: new Date(canceledSubscription.current_period_end * 1000).toISOString(),
         },
       },
     });
   } catch (error) {
     console.error('Error in DELETE /api/billing/subscription:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
