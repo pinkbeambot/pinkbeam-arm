@@ -163,6 +163,7 @@ export interface CostTrackingEntry {
   costUsd: number;
   timestamp: Date;
   latencyMs: number;
+  requestType?: string;
 }
 
 // Agent LLM preferences
