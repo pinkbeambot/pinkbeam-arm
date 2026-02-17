@@ -156,11 +156,37 @@ export function ActivityFeed({
   const [newEventIds, setNewEventIds] = React.useState<Set<string>>(new Set());
   const [showScrollButton, setShowScrollButton] = React.useState(false);
   const [missedEventCount, setMissedEventCount] = React.useState(0);
+  const [agents, setAgents] = React.useState<{ id: string; name: string }[]>([]);
+  const [isLoadingAgents, setIsLoadingAgents] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const isUserScrolling = React.useRef(false);
   const isHovering = React.useRef(false);
   const scrollTimeout = React.useRef<NodeJS.Timeout | null>(null);
   
+  // Fetch agents for filter dropdown
+  React.useEffect(() => {
+    async function fetchAgents() {
+      try {
+        setIsLoadingAgents(true);
+        const response = await fetch('/api/agents?limit=100');
+        if (response.ok) {
+          const data = await response.json();
+          const agentList = data.data?.map((agent: { id: string; name: string }) => ({
+            id: agent.id,
+            name: agent.name,
+          })) || [];
+          setAgents(agentList);
+        }
+      } catch {
+        // Silently fail - agents list is not critical
+      } finally {
+        setIsLoadingAgents(false);
+      }
+    }
+
+    fetchAgents();
+  }, []);
+
   const {
     events,
     isLoading,
@@ -302,6 +328,7 @@ export function ActivityFeed({
             <ActivityFilterBar
               filter={filter}
               onFilterChange={setFilter}
+              agentOptions={agents}
             />
           </div>
         )}
