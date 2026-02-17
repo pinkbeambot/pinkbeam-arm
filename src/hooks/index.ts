@@ -21,3 +21,10 @@ export {
   type UseActivityFeedOptions,
   type UseActivityFeedReturn,
 } from "@/components/dashboard/activity";
+
+// Real-time Activities Hook
+export {
+  useActivitiesRealtime,
+  type UseActivitiesRealtimeOptions,
+  type UseActivitiesRealtimeReturn,
+} from "./useActivitiesRealtime";
