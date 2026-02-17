@@ -22,27 +22,33 @@ export function isStripeConfigured(): boolean {
 }
 
 // Price IDs mapping - these should be set via environment variables
-export const STRIPE_PRICE_IDS: Record<string, string> = {
+export const STRIPE_PRICE_IDS: Record<string, string | undefined> = {
+  free: undefined, // Free tier has no Stripe price
   starter: process.env.STRIPE_PRICE_STARTER || 'price_starter_test',
   pro: process.env.STRIPE_PRICE_PRO || 'price_pro_test',
   business: process.env.STRIPE_PRICE_BUSINESS || 'price_business_test',
   scale: process.env.STRIPE_PRICE_SCALE || 'price_scale_test',
+  enterprise: undefined, // Enterprise is custom - contact sales
 };
 
 // Plan pricing for reference (in cents)
-export const PLAN_PRICES: Record<string, number> = {
-  starter: 4900,    // $49/month
-  pro: 19900,       // $199/month
-  business: 49900,  // $499/month
-  scale: 99900,     // $999/month
+export const PLAN_PRICES: Record<string, number | null> = {
+  free: 0,          // Free tier
+  starter: 2900,    // $29/month (legacy)
+  pro: 2900,        // $29/month
+  business: 9900,   // $99/month
+  scale: 29900,     // $299/month
+  enterprise: null, // Custom pricing - contact sales
 };
 
 // Agent limits per tier
 export const AGENT_LIMITS: Record<string, number | null> = {
-  starter: 3,
-  pro: 10,
-  business: 25,
-  scale: null, // unlimited
+  free: 1,          // 1 agent for free tier
+  starter: 3,       // 3 agents for starter (legacy)
+  pro: 5,           // 5 agents for Pro ($29/mo)
+  business: 15,     // 15 agents for Business
+  scale: 50,        // 50 agents for Scale
+  enterprise: null, // unlimited for Enterprise
 };
 
 // Trial period in days

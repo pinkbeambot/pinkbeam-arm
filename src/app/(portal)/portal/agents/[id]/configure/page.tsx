@@ -1,15 +1,37 @@
+/**
+ * Optimized Agent Configure Page
+ * 
+ * Uses lazy loading for the heavy agent configuration form.
+ */
+
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAgentRealtime, useUpdateAgent } from '@/lib/hooks/useAgents';
 import { useTenant } from '@/lib/hooks/useTenant';
-import { AgentConfigForm } from '@/components/dashboard/agents/configure';
 import { DashboardLayout, PageContainer } from '@/components/dashboard/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
 import type { Agent } from '@/types';
+
+// Lazy load the heavy AgentConfigForm
+const AgentConfigFormLazy = dynamic(
+  () => import('@/components/dashboard/agents/configure/AgentConfigForm').then(mod => ({ 
+    default: mod.AgentConfigForm 
+  })),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-6">
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-[600px] w-full" />
+      </div>
+    ),
+  }
+);
 
 export default function AgentConfigurePage() {
   const params = useParams();
@@ -70,7 +92,7 @@ export default function AgentConfigurePage() {
   return (
     <DashboardLayout>
       <div className="h-[calc(100vh-4rem)]">
-        <AgentConfigForm
+        <AgentConfigFormLazy
           agent={agent}
           onSave={handleSave}
           onCancel={handleCancel}

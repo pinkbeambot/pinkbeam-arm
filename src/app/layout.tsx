@@ -4,20 +4,27 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/use-toast";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { PerformanceMonitor } from "@/components/performance/PerformanceMonitor";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: 'swap', // Font display swap for better performance
 });
 
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  display: 'swap', // Font display swap for better performance
 });
 
 export const metadata: Metadata = {
   title: "Pink Beam ARM - Agent Relationship Management",
   description: "The command center for managing AI agent workforces",
+  // Performance optimizations
+  other: {
+    'X-DNS-Prefetch-Control': 'on',
+  },
 };
 
 /**
@@ -52,6 +59,9 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        {/* Preconnect to critical origins */}
+        <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} />
+        <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_SUPABASE_URL || ''} />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
@@ -67,6 +77,7 @@ export default function RootLayout({
           </AuthProvider>
         </ThemeProvider>
         <Toaster />
+        <PerformanceMonitor />
       </body>
     </html>
   );

@@ -7,7 +7,7 @@
 // Subscription Tiers
 // ============================================================================
 
-export type SubscriptionTier = 'starter' | 'pro' | 'business' | 'scale';
+export type SubscriptionTier = 'free' | 'starter' | 'pro' | 'business' | 'scale' | 'enterprise';
 export type SubscriptionStatus = 
   | 'trialing' 
   | 'active' 

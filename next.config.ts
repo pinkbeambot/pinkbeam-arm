@@ -65,6 +65,93 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
 
+  // Image optimization configuration
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+
+  // Turbopack configuration
+  turbopack: {
+    // Module resolution
+    resolveAlias: {
+      'date-fns': 'date-fns/esm',
+    },
+    // Root directories
+    root: process.cwd(),
+  },
+
+  // Experimental features for performance
+  experimental: {
+    // Optimize package imports for tree shaking
+    optimizePackageImports: [
+      'lucide-react',
+      'recharts',
+      'framer-motion',
+      '@radix-ui/react-icons',
+    ],
+    // Enable server actions (already default in Next.js 15)
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+  },
+
+  // Webpack configuration for bundle optimization (fallback for non-turbopack)
+  webpack: (config, { isServer }) => {
+    // Tree shaking for heavy libraries
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Use lighter date-fns entry point
+        'date-fns': 'date-fns/esm',
+      };
+
+      // Split chunks optimization
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            // Vendor chunk for node_modules
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+              priority: 10,
+            },
+            // Recharts is heavy - separate chunk
+            recharts: {
+              test: /[\\/]node_modules[\\/](recharts|victory-vendor|d3-)[\\/]/,
+              name: 'recharts',
+              chunks: 'all',
+              priority: 20,
+            },
+            // Framer Motion - separate chunk
+            framerMotion: {
+              test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+              name: 'framer-motion',
+              chunks: 'all',
+              priority: 20,
+            },
+            // UI components - separate chunk
+            ui: {
+              test: /[\\/]src[\\/]components[\\/]ui[\\/]/,
+              name: 'ui-components',
+              chunks: 'all',
+              priority: 5,
+            },
+          },
+        },
+      };
+    }
+
+    return config;
+  },
+
   // API versioning: route /api/v1/* to physical /api/* route files
   async rewrites() {
     return {
@@ -124,8 +211,34 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Cache static assets aggressively
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Cache images
+      {
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=31536000',
+          },
+        ],
+      },
     ];
   },
+
+  // Compression
+  compress: true,
+
+  // Powered by header
+  poweredByHeader: false,
 };
 
 module.exports = withBundleAnalyzer(nextConfig);
