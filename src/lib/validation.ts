@@ -46,6 +46,8 @@ export const listAgentsQuerySchema = z.object({
   status: z.enum(['initializing', 'idle', 'active', 'paused', 'blocked', 'error', 'escaped', 'terminated']).optional(),
   role: z.enum(['ceo', 'manager', 'worker', 'specialist', 'system']).optional(),
   search: z.string().max(200).optional(),
+  parent_id: z.string().uuid().optional(),
+  include_descendants: z.coerce.boolean().default(false),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 });

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { CompleteStep } from '@/components/onboarding/steps/CompleteStep';
 import { DEFAULT_ONBOARDING_DATA } from '@/components/onboarding/types';
+import type { AgentRole, Capability } from '@/types';
 
 describe('CompleteStep', () => {
   const mockOnNext = vi.fn();
@@ -13,8 +14,8 @@ describe('CompleteStep', () => {
     data: {
       ...DEFAULT_ONBOARDING_DATA,
       agentName: 'My First Agent',
-      agentRole: 'worker',
-      agentCapabilities: ['decide', 'escalate', 'access_external'],
+      agentRole: 'worker' as AgentRole,
+      agentCapabilities: ['decide', 'escalate', 'access_external'] as Capability[],
     },
     onUpdateData: vi.fn(),
   };

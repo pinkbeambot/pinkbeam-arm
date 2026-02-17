@@ -2,20 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import {
   EmptyState,
-  EmptySearchResults,
-  EmptyFilteredResults,
 } from '@/components/empty';
-import { Users, SearchX, FilterX } from 'lucide-react';
-
-// Mock Lucide icons
-vi.mock('lucide-react', async () => {
-  const actual = await vi.importActual('lucide-react');
-  return {
-    ...actual,
-    SearchX: vi.fn(() => <svg data-testid="search-x-icon" />),
-    FilterX: vi.fn(() => <svg data-testid="filter-x-icon" />),
-  };
-});
+import { Users } from 'lucide-react';
 
 describe('EmptyState', () => {
   it('should render with icon, title, and description', () => {
@@ -75,44 +63,12 @@ describe('EmptyState', () => {
         title="No users"
         description="Choose an action"
         action={{ label: 'Primary', onClick: primaryClick }}
-        secondaryAction={{ label: 'Secondary', onClick: secondaryClick, variant: 'outline' }}
+        secondaryAction={{ label: 'Secondary', onClick: secondaryClick }}
       />
     );
 
     expect(screen.getByRole('button', { name: 'Primary' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Secondary' })).toBeInTheDocument();
-  });
-
-  it('should apply size classes correctly', () => {
-    const { rerender } = render(
-      <EmptyState
-        icon={Users}
-        title="Test"
-        description="Test description"
-        size="sm"
-      />
-    );
-
-    rerender(
-      <EmptyState
-        icon={Users}
-        title="Test"
-        description="Test description"
-        size="md"
-      />
-    );
-
-    rerender(
-      <EmptyState
-        icon={Users}
-        title="Test"
-        description="Test description"
-        size="lg"
-      />
-    );
-
-    // Component renders successfully with different sizes
-    expect(screen.getByText('Test')).toBeInTheDocument();
   });
 
   it('should apply custom className', () => {
@@ -141,7 +97,7 @@ describe('EmptyState', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
-  it('should have pink-500 class on default action button', () => {
+  it('should have beam variant class on default action button', () => {
     render(
       <EmptyState
         icon={Users}
@@ -152,75 +108,7 @@ describe('EmptyState', () => {
     );
 
     const button = screen.getByRole('button', { name: 'Create User' });
-    expect(button).toHaveClass('bg-pink-500');
-  });
-});
-
-describe('EmptySearchResults', () => {
-  it('should render with search query', () => {
-    render(
-      <EmptySearchResults
-        query="test search"
-        onClear={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('No results found')).toBeInTheDocument();
-    expect(screen.getByText(/test search/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear Search' })).toBeInTheDocument();
-  });
-
-  it('should call onClear when button is clicked', () => {
-    const onClear = vi.fn();
-
-    render(
-      <EmptySearchResults
-        query="test"
-        onClear={onClear}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Clear Search' }));
-    expect(onClear).toHaveBeenCalled();
-  });
-});
-
-describe('EmptyFilteredResults', () => {
-  it('should render with single filter', () => {
-    render(
-      <EmptyFilteredResults
-        filterCount={1}
-        onClear={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText('No matching items')).toBeInTheDocument();
-    expect(screen.getByText(/1 filter/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Clear Filters' })).toBeInTheDocument();
-  });
-
-  it('should render with multiple filters', () => {
-    render(
-      <EmptyFilteredResults
-        filterCount={3}
-        onClear={vi.fn()}
-      />
-    );
-
-    expect(screen.getByText(/3 filters/)).toBeInTheDocument();
-  });
-
-  it('should call onClear when button is clicked', () => {
-    const onClear = vi.fn();
-
-    render(
-      <EmptyFilteredResults
-        filterCount={2}
-        onClear={onClear}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: 'Clear Filters' }));
-    expect(onClear).toHaveBeenCalled();
+    // The beam variant applies a gradient from-pink-500 to-pink-600
+    expect(button.className).toContain('from-pink-500');
   });
 });
