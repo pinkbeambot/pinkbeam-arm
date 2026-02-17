@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ActivityItem, ActivityItemSkeleton } from './ActivityItem';
+import { ActivityFeedSkeleton } from '@/components/loading';
+import { EmptyStateSearch, EmptyStateError } from '@/components/empty';
+import { ActivityItem } from './ActivityItem';
 import { ActivityFilterBar } from './ActivityFilter';
 import { useRealtimeActivities } from './useRealtimeActivities';
 import type { ConnectionState } from '@/lib/realtime/useRealtime';
@@ -92,19 +94,32 @@ function ConnectionStatus({ state, retryCount, onRetry }: ConnectionStatusProps)
 // Empty State Component
 // ============================================================================
 
-function EmptyState({ filter }: { filter: ActivityFilter }) {
+function ActivityEmptyState({ filter, onClear }: { filter: ActivityFilter; onClear: () => void }) {
+  const hasFilters = filter.search || filter.type || filter.agentId || filter.timeRange;
+  
+  if (hasFilters) {
+    return (
+      <EmptyStateSearch
+        title="No activities found"
+        description={filter.search 
+          ? `No activities match "${filter.search}".` 
+          : 'Try adjusting your filters to see more activities.'}
+        onClear={onClear}
+        clearLabel="Clear filters"
+      />
+    );
+  }
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 text-center">
+    <div className="flex flex-col items-center justify-center py-12 text-center px-6">
       <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
         <AlertCircle className="w-8 h-8 text-muted-foreground" />
       </div>
       <h3 className="text-lg font-medium text-foreground mb-1">
-        No activities found
+        No activities yet
       </h3>
       <p className="text-sm text-muted-foreground max-w-xs">
-        {filter.search || filter.type || filter.agentId
-          ? 'Try adjusting your filters to see more activities.'
-          : 'Activities will appear here when agents start working.'}
+        Activities will appear here when agents start working.
       </p>
     </div>
   );
