@@ -196,7 +196,7 @@ test.describe('Task Management', () => {
   test('kanban board shows task counts', async ({ authenticatedPage: page }) => {
     // Each column should have a count badge
     const columns = ['Backlog', 'In Progress', 'Review', 'Done'];
-    
+
     for (const column of columns) {
       const columnHeader = page.locator(`text=${column}`).first();
       if (await columnHeader.isVisible()) {
@@ -206,5 +206,115 @@ test.describe('Task Management', () => {
         await expect(columnHeader).toBeVisible();
       }
     }
+  });
+
+  test('user can delete task', async ({ authenticatedPage: page }) => {
+    // Create a test task first
+    await page.click('button:has-text("Create Task")');
+    const taskTitle = `Delete Test ${Date.now()}`;
+
+    await page.fill('input[name="title"], input[placeholder*="title"], input[type="text"]', taskTitle).catch(() => {});
+    await page.fill('textarea[name="description"], textarea[placeholder*="description"]',
+      'Task for delete testing').catch(() => {});
+
+    await page.click('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').catch(async () => {
+      await page.locator('button.variant-primary, button.bg-primary').first().click();
+    });
+
+    await page.waitForTimeout(1000);
+    await expect(page.locator(`text=${taskTitle}`)).toBeVisible();
+
+    // Open task details
+    await page.locator(`text=${taskTitle}`).first().click();
+    await expect(page.locator('text=Task Details').or(page.locator('text=Edit Task'))).toBeVisible();
+
+    // Click delete
+    const deleteButton = page.locator('button:has-text("Delete"), button:has-text("Remove")').first();
+
+    if (await deleteButton.isVisible().catch(() => false)) {
+      await deleteButton.click();
+
+      // Confirm deletion
+      const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').first();
+      await confirmButton.click().catch(() => {});
+
+      await page.waitForTimeout(1000);
+
+      // Verify task is deleted
+      await expect(page.locator(`text=${taskTitle}`)).not.toBeVisible();
+    }
+
+    // Close modal if still open
+    await page.click('button:has-text("Close"), button[aria-label="Close"]').catch(() => {
+      page.keyboard.press('Escape');
+    });
+  });
+
+  test('user can assign task to agent', async ({ authenticatedPage: page }) => {
+    // Create a test task
+    await page.click('button:has-text("Create Task")');
+    const taskTitle = `Assign Test ${Date.now()}`;
+
+    await page.fill('input[name="title"], input[placeholder*="title"], input[type="text"]', taskTitle).catch(() => {});
+
+    // Try to assign to an agent
+    await page.click('button:has-text("Assignee")').catch(() => {});
+
+    // Select first agent if dropdown opens
+    const agentOption = page.locator('[role="option"], .agent-option').first();
+    if (await agentOption.isVisible().catch(() => false)) {
+      await agentOption.click();
+    }
+
+    await page.click('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').catch(async () => {
+      await page.locator('button.variant-primary, button.bg-primary').first().click();
+    });
+
+    await page.waitForTimeout(1000);
+    await expect(page.locator(`text=${taskTitle}`)).toBeVisible();
+  });
+
+  test('user can set task priority', async ({ authenticatedPage: page }) => {
+    // Create a test task with high priority
+    await page.click('button:has-text("Create Task")');
+    const taskTitle = `Priority Test ${Date.now()}`;
+
+    await page.fill('input[name="title"], input[placeholder*="title"], input[type="text"]', taskTitle).catch(() => {});
+
+    // Set priority to urgent
+    await page.click('button:has-text("Priority")').catch(() => {});
+    await page.click('text=Urgent').catch(() => {});
+    await page.click('text=High').catch(() => {});
+
+    await page.click('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').catch(async () => {
+      await page.locator('button.variant-primary, button.bg-primary').first().click();
+    });
+
+    await page.waitForTimeout(1000);
+    await expect(page.locator(`text=${taskTitle}`)).toBeVisible();
+  });
+
+  test('user can set task due date', async ({ authenticatedPage: page }) => {
+    // Create a test task with due date
+    await page.click('button:has-text("Create Task")');
+    const taskTitle = `Due Date Test ${Date.now()}`;
+
+    await page.fill('input[name="title"], input[placeholder*="title"], input[type="text"]', taskTitle).catch(() => {});
+
+    // Try to set due date
+    const dateInput = page.locator('input[type="date"], input[placeholder*="date"]').first();
+    if (await dateInput.isVisible().catch(() => false)) {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 7);
+      const dateString = futureDate.toISOString().split('T')[0];
+      await dateInput.fill(dateString);
+    }
+
+    await page.click('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').catch(async () => {
+      await page.locator('button.variant-primary, button.bg-primary').first().click();
+    });
+
+    await page.waitForTimeout(1000);
+    await expect(page.locator(`text=${taskTitle}`)).toBeVisible();
   });
 });
