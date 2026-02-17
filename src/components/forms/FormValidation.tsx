@@ -24,7 +24,7 @@ export interface FormValidationSummaryProps {
   /** Callback when user clicks an error (for focus management) */
   onErrorClick?: (error: string, index: number) => void;
   /** Variant - affects styling */
-  variant?: 'destructive' | 'warning';
+  variant?: 'default' | 'destructive';
 }
 
 export function FormValidationSummary({

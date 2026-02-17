@@ -14,8 +14,8 @@
  * ```
  */
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { supabaseAnon } from '@/lib/supabase/client';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+import { createClient } from '@/lib/supabase/client';
 import type { Activity } from '@/types';
 import type { RealtimePostgresInsertPayload } from '@supabase/supabase-js';
 
@@ -63,12 +63,14 @@ export function useActivitiesRealtime({
   enableReconnection = true,
   initialActivities = [],
 }: UseActivitiesRealtimeOptions): UseActivitiesRealtimeReturn {
+  const supabase = useMemo(() => createClient(), []);
+  
   const [activities, setActivities] = useState<Activity[]>(initialActivities);
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   
-  const channelRef = useRef<ReturnType<typeof supabaseAnon.channel> | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
 
@@ -79,7 +81,7 @@ export function useActivitiesRealtime({
   const setupSubscription = useCallback(() => {
     // Clean up existing channel
     if (channelRef.current) {
-      supabaseAnon.removeChannel(channelRef.current);
+      supabase.removeChannel(channelRef.current);
       channelRef.current = null;
     }
 
@@ -101,7 +103,7 @@ export function useActivitiesRealtime({
       type || 'all',
     ].join(':');
 
-    const channel = supabaseAnon
+    const channel = supabase
       .channel(channelName)
       .on<RealtimePostgresInsertPayload<Activity>>(
         'postgres_changes',
@@ -153,7 +155,7 @@ export function useActivitiesRealtime({
       });
 
     channelRef.current = channel;
-  }, [tenantId, agentId, category, type, maxActivities, enableReconnection]);
+  }, [supabase, tenantId, agentId, category, type, maxActivities, enableReconnection]);
 
   const reconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
@@ -165,11 +167,11 @@ export function useActivitiesRealtime({
 
     return () => {
       if (channelRef.current) {
-        supabaseAnon.removeChannel(channelRef.current);
+        supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [setupSubscription]);
+  }, [setupSubscription, supabase]);
 
   return {
     activities,

@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 export interface SkeletonProps {
   className?: string;
   children?: React.ReactNode;
+  style?: React.CSSProperties;
 }
 
 /**
