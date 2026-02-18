@@ -19,9 +19,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 const TEST_TENANT_ID = process.env.TEST_TENANT_ID || 'test-tenant-id';
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const IS_CI = process.env.CI === 'true';
 
-// Skip tests if environment not configured
-const shouldSkip = !SUPABASE_URL || !SERVICE_ROLE_KEY;
+// Skip tests if not in CI or environment not properly configured
+const shouldSkip = !IS_CI || !SUPABASE_URL || !SERVICE_ROLE_KEY;
 
 describe.skipIf(shouldSkip)('Decisions API Integration', () => {
   let supabase: SupabaseClient;
