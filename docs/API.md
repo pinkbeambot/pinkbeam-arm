@@ -336,7 +336,9 @@ GET /api/v1/agents
 |-----------|------|-------------|
 | `status` | string | Filter by status: `initializing`, `idle`, `active`, `paused`, `blocked`, `error`, `escaped`, `terminated` |
 | `role` | string | Filter by role: `ceo`, `manager`, `worker`, `specialist`, `system` |
-| `search` | string | Search in name and description |
+| `search` | string | Search in name and description (case-insensitive) |
+| `parent_id` | UUID | Filter by parent agent ID for hierarchy queries |
+| `include_descendants` | boolean | Include all descendants when filtering by parent_id (default: false) |
 | `page` | number | Page number (default: 1) |
 | `limit` | number | Items per page (default: 20, max: 100) |
 
@@ -378,9 +380,22 @@ POST /api/v1/agents
 
 **Request Body:**
 
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Agent name (1-255 chars) |
+| `slug` | string | No | URL-friendly identifier (auto-generated if not provided) |
+| `role` | string | No | Agent role: `ceo`, `manager`, `worker`, `specialist`, `system` (default: worker) |
+| `description` | string | No | Agent description (max 2000 chars) |
+| `parent_id` | UUID | No | Parent agent ID for hierarchy |
+| `capabilities` | string[] | No | Array of capabilities |
+| `llm_config` | object | No | LLM configuration |
+| `limits` | object | No | Agent limits |
+| `config` | object | No | Additional configuration |
+
 ```json
 {
   "name": "New Agent",
+  "slug": "new-agent",
   "role": "worker",
   "description": "Agent description",
   "parent_id": "uuid",
@@ -393,11 +408,25 @@ POST /api/v1/agents
   },
   "limits": {
     "max_sub_agents": 5,
+    "max_concurrent_tasks": 3,
     "escalation_threshold": 0.8,
-    "timeout_seconds": 300
+    "timeout_seconds": 300,
+    "max_tokens_per_task": 100000,
+    "max_cost_per_task_usd": 5.00
   }
 }
 ```
+
+**Valid Capabilities:**
+- `spawn` - Can create sub-agents
+- `delegate` - Can delegate tasks
+- `decide` - Can make decisions
+- `escalate` - Can escalate to humans
+- `access_external` - Can access external APIs
+- `modify_config` - Can modify configuration
+- `create_tasks` - Can create tasks
+- `manage_agents` - Can manage other agents
+- `execute_code` - Can execute code
 
 **Response:** 201 Created
 
@@ -407,11 +436,21 @@ POST /api/v1/agents
     "id": "uuid",
     "name": "New Agent",
     "slug": "new-agent",
+    "role": "worker",
     "status": "initializing",
+    "depth": 0,
+    "created_at": "2026-02-18T12:00:00Z",
     ...
   }
 }
 ```
+
+**Validation:**
+- Slug auto-generated from name if not provided (lowercase, hyphenated, max 100 chars)
+- Tenant agent limits are enforced (based on plan tier)
+- Parent agent must exist and belong to same tenant
+- Parent's `max_sub_agents` limit is enforced
+- Invalid capabilities are rejected
 
 ### Get Single Agent
 
@@ -419,21 +458,71 @@ POST /api/v1/agents
 GET /api/v1/agents/:id
 ```
 
+Get a single agent by ID with full details including parent info, child count, active tasks count, and recent activities.
+
 **Response:**
 
 ```json
 {
   "data": {
     "id": "uuid",
+    "tenant_id": "uuid",
     "name": "Agent Name",
-    "parent": { ... },
-    "children": [...],
-    "current_task": { ... },
+    "slug": "agent-name",
+    "role": "worker",
+    "status": "idle",
+    "status_reason": "Waiting for tasks",
+    "description": "Agent description",
+    "capabilities": ["delegate", "decide"],
+    "depth": 1,
+    "parent_id": "parent-uuid",
+    "root_id": "root-uuid",
+    "parent": {
+      "id": "parent-uuid",
+      "name": "Parent Agent",
+      "role": "manager",
+      "status": "active"
+    },
+    "children": [{ "count": 3 }],
+    "current_task": {
+      "id": "task-uuid",
+      "title": "Current Task",
+      "status": "in_progress",
+      "progress_percent": 45
+    },
+    "active_tasks_count": 5,
+    "recent_activities": [
+      {
+        "id": "activity-uuid",
+        "type": "agent.status_changed",
+        "title": "Agent status changed",
+        "created_at": "2026-02-18T11:00:00Z"
+      }
+    ],
+    "llm_config": {
+      "provider": "anthropic",
+      "model": "claude-3-sonnet",
+      "temperature": 0.7,
+      "max_tokens": 4096
+    },
+    "limits": {
+      "max_sub_agents": 5,
+      "max_concurrent_tasks": 3,
+      "escalation_threshold": 0.7,
+      "timeout_seconds": 300,
+      "max_tokens_per_task": 100000,
+      "max_cost_per_task_usd": 5.00
+    },
     "stats": {
       "tasks_completed": 42,
-      "success_rate": 0.95,
-      ...
-    }
+      "tasks_failed": 2,
+      "escalations_raised": 5,
+      "avg_task_duration_seconds": 360,
+      "total_cost_usd": 125.50
+    },
+    "created_at": "2026-02-15T10:00:00Z",
+    "updated_at": "2026-02-18T12:00:00Z",
+    "activated_at": "2026-02-15T11:00:00Z"
   }
 }
 ```
@@ -444,13 +533,57 @@ GET /api/v1/agents/:id
 PATCH /api/v1/agents/:id
 ```
 
+Update an agent's properties. Partial updates are supported.
+
+**Restrictions:**
+- Cannot modify terminated agents
+- Cannot change role of system agents
+- Cannot change status to `terminated` (use DELETE endpoint)
+- Setting `parent_id` is validated to prevent circular hierarchy
+
 **Request Body:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Agent name (1-255 chars) |
+| `description` | string | Agent description (max 2000 chars) |
+| `role` | string | Agent role (cannot change from 'system') |
+| `status` | string | Agent status (cannot set to 'terminated') |
+| `status_reason` | string | Reason for status change (max 500 chars) |
+| `parent_id` | UUID \| null | Parent agent ID (null to remove from hierarchy) |
+| `capabilities` | string[] | Array of capability strings |
+| `llm_config` | object | LLM configuration (partial updates supported) |
+| `limits` | object | Agent limits |
+| `config` | object | Additional configuration |
+| `avatar_url` | string \| null | Agent avatar URL |
 
 ```json
 {
   "name": "Updated Name",
+  "description": "Updated description",
   "status": "active",
-  "capabilities": ["delegate", "decide", "spawn"]
+  "status_reason": "Agent approved for production",
+  "capabilities": ["delegate", "decide", "spawn"],
+  "llm_config": {
+    "temperature": 0.5
+  },
+  "limits": {
+    "max_sub_agents": 10
+  }
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "name": "Updated Name",
+    "status": "active",
+    "updated_at": "2026-02-18T12:00:00Z",
+    ...
+  }
 }
 ```
 
@@ -460,7 +593,190 @@ PATCH /api/v1/agents/:id
 DELETE /api/v1/agents/:id
 ```
 
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `reason` | string | Termination reason (optional) |
+| `force` | boolean | Force terminate even with active tasks (default: false) |
+
 **Response:** 204 No Content
+
+**Error Responses:**
+
+- `409 Conflict` - Agent has active tasks or child agents
+
+### Update Agent Status
+
+```
+POST /api/v1/agents/:id/status
+```
+
+Update agent status with validation. Validates status transitions and creates activity log entries.
+Notifies parent agent when child is blocked or in error state.
+
+**Request Body:**
+
+```json
+{
+  "status": "active",
+  "reason": "Starting task execution"
+}
+```
+
+**Status Values:** `initializing`, `idle`, `active`, `paused`, `blocked`, `error`, `escaped`, `terminated`
+
+**Valid Transitions:**
+
+| From | To | Notes |
+|------|-----|-------|
+| `initializing` | `idle`, `active`, `error`, `terminated` | |
+| `idle` | `active`, `paused`, `blocked`, `error`, `terminated` | |
+| `active` | `idle`, `paused`, `blocked`, `error`, `terminated` | |
+| `paused` | `idle`, `active`, `blocked`, `error`, `terminated` | |
+| `blocked` | `idle`, `active`, `paused`, `error`, `terminated` | |
+| `error` | `idle`, `active`, `paused`, `blocked`, `terminated` | |
+| `escaped` | `blocked`, `terminated` | Restricted transitions |
+| `terminated` | - | Terminal state |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "id": "uuid",
+    "status": "active",
+    "status_reason": "Starting task execution",
+    "updated_at": "2026-02-18T12:00:00Z"
+  }
+}
+```
+
+### Get Agent Children
+
+```
+GET /api/v1/agents/:id/children
+```
+
+Get child agents (direct descendants) of an agent.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `recursive` | boolean | Include all descendants as tree (default: false) |
+| `include_terminated` | boolean | Include terminated agents (default: false) |
+
+**Response (non-recursive):**
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Child Agent 1",
+      "role": "worker",
+      "status": "idle",
+      "depth": 1,
+      "parent_id": "parent-uuid"
+    }
+  ]
+}
+```
+
+**Response (recursive=true):**
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "name": "Child Agent 1",
+      "role": "worker",
+      "status": "idle",
+      "depth": 1,
+      "children": [
+        {
+          "id": "uuid",
+          "name": "Grandchild Agent",
+          "role": "worker",
+          "status": "idle",
+          "depth": 2,
+          "children": []
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Get Agent Tasks
+
+```
+GET /api/v1/agents/:id/tasks
+```
+
+Get tasks assigned to an agent. By default, returns only active tasks.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `status` | string | Filter by status (single or comma-separated) |
+| `priority` | string | Filter by priority: `low`, `normal`, `high`, `urgent` |
+| `include_completed` | boolean | Include completed/failed/cancelled tasks (default: false) |
+| `sort` | string | Sort field: `created_at`, `updated_at`, `deadline_at`, `priority` (default: created_at) |
+| `order` | string | Sort order: `asc`, `desc` (default: desc) |
+| `page` | number | Page number (default: 1) |
+| `limit` | number | Items per page (default: 20, max: 100) |
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "Task Title",
+      "status": "in_progress",
+      "priority": "high",
+      "progress_percent": 45,
+      "deadline_at": "2026-02-20T15:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 5,
+    "totalPages": 1
+  },
+  "meta": {
+    "stats": {
+      "total": 5,
+      "active": 3,
+      "completed": 2,
+      "failed": 0
+    }
+  }
+}
+```
+
+## Agents API Error Codes
+
+| Code | Description | HTTP Status |
+|------|-------------|-------------|
+| `AGENT_NOT_FOUND` | Agent does not exist or access denied | 404 |
+| `AGENT_LIMIT_REACHED` | Tenant has reached max agents limit | 403 |
+| `PARENT_NOT_FOUND` | Parent agent not found or access denied | 404 |
+| `PARENT_MAX_SUBAGENTS` | Parent has reached max sub-agents limit | 403 |
+| `CIRCULAR_HIERARCHY` | Cannot set parent to descendant (circular) | 400 |
+| `INVALID_STATUS_TRANSITION` | Status change not allowed | 400 |
+| `AGENT_TERMINATED` | Cannot modify terminated agent | 400 |
+| `ACTIVE_TASKS_EXIST` | Cannot delete agent with active tasks | 409 |
+| `ACTIVE_CHILDREN_EXIST` | Cannot delete agent with active children | 409 |
+| `SYSTEM_ROLE_IMMUTABLE` | Cannot change role of system agent | 403 |
+| `INVALID_CAPABILITIES` | One or more capabilities are invalid | 400 |
+| `DUPLICATE_SLUG` | Agent with this slug already exists | 409 |
 
 ## Tasks API
 
