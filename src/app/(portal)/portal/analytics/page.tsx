@@ -102,7 +102,6 @@ export default function AnalyticsPage() {
           <PageHeader
             title="Analytics Dashboard"
             description="Track agent performance, task pipeline, and system metrics"
-            icon={<BarChart3 className="h-5 w-5" />}
           />
           <div className="flex flex-wrap items-center gap-2">
             <DateRangeSelector

@@ -1,6 +1,6 @@
 /**
  * Lazy Loading Components
- * 
+ *
  * Centralized dynamic imports for heavy components.
  * This reduces initial bundle size and improves page load times.
  */
@@ -47,8 +47,8 @@ export const ChatInterfaceLazy = dynamic(
 
 // Lazy load RealtimeMetricsDashboard - heavy due to Recharts
 export const RealtimeMetricsDashboardLazy = dynamic(
-  () => import('@/components/dashboard/metrics/RealtimeMetricsDashboard').then(mod => ({ 
-    default: mod.RealtimeMetricsDashboard 
+  () => import('@/components/dashboard/metrics/RealtimeMetricsDashboard').then(mod => ({
+    default: mod.RealtimeMetricsDashboard
   })),
   {
     ssr: false, // Charts don't work well with SSR
@@ -58,8 +58,8 @@ export const RealtimeMetricsDashboardLazy = dynamic(
 
 // Lazy load LiveLineChart
 export const LiveLineChartLazy = dynamic(
-  () => import('@/components/dashboard/metrics/LiveLineChart').then(mod => ({ 
-    default: mod.LiveLineChart 
+  () => import('@/components/dashboard/metrics/LiveLineChart').then(mod => ({
+    default: mod.LiveLineChart
   })),
   {
     ssr: false,
@@ -69,8 +69,8 @@ export const LiveLineChartLazy = dynamic(
 
 // Lazy load full metrics dashboard components
 export const AgentMetricsCardLazy = dynamic(
-  () => import('@/components/dashboard/metrics/AgentMetricsCard').then(mod => ({ 
-    default: mod.AgentMetricsCard 
+  () => import('@/components/dashboard/metrics/AgentMetricsCard').then(mod => ({
+    default: mod.AgentMetricsCard
   })),
   {
     loading: () => <div className="h-32 bg-muted/30 animate-pulse rounded-lg" />,
@@ -83,8 +83,8 @@ export const AgentMetricsCardLazy = dynamic(
 
 // Lazy load AgentConfigForm - heavy form with many fields
 export const AgentConfigFormLazy = dynamic(
-  () => import('@/components/dashboard/agents/configure/AgentConfigForm').then(mod => ({ 
-    default: mod.AgentConfigForm 
+  () => import('@/components/dashboard/agents/configure/AgentConfigForm').then(mod => ({
+    default: mod.AgentConfigForm
   })),
   {
     ssr: false,
@@ -121,7 +121,7 @@ export const SwaggerUILazy = dynamic(
 
 // Lazy load ReactFlow - heavy canvas component
 export const ReactFlowLazy = dynamic(
-  () => import('@xyflow/react'),
+  () => import('@xyflow/react').then((mod) => ({ default: mod.ReactFlow })),
   {
     ssr: false,
     loading: () => (
@@ -133,38 +133,14 @@ export const ReactFlowLazy = dynamic(
 );
 
 // ============================================================================
-// RICH TEXT EDITOR COMPONENTS
-// ============================================================================
-
-// Lazy load TipTap editor
-export const TipTapEditorLazy = dynamic(
-  () => import('@/components/forms/RichTextEditor'),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-48 bg-muted/30 animate-pulse rounded-lg" />
-    ),
-  }
-);
-
-// ============================================================================
 // MARKETING PAGE COMPONENTS
 // ============================================================================
 
 // Lazy load heavy animation components
-export const AnimatedHeroLazy = dynamic(
-  () => import('@/components/marketing/AnimatedHero'),
+export const HeroLazy = dynamic(
+  () => import('@/components/marketing/Hero').then(mod => ({ default: mod.Hero })),
   {
     ssr: true,
     loading: () => <div className="h-96 bg-muted/30 animate-pulse rounded-lg" />,
-  }
-);
-
-// Lazy load feature showcase with heavy animations
-export const FeatureShowcaseLazy = dynamic(
-  () => import('@/components/marketing/FeatureShowcase'),
-  {
-    ssr: true,
-    loading: () => <div className="h-64 bg-muted/30 animate-pulse rounded-lg" />,
   }
 );

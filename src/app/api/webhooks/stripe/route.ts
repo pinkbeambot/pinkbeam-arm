@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
           await saveInvoice(supabase, tenantId, {
             stripe_invoice_id: invoice.id,
             stripe_customer_id: invoice.customer as string,
-            stripe_subscription_id: (invoice.subscription as string) ?? null,
+            stripe_subscription_id: (invoice as unknown as { subscription?: string }).subscription ?? null,
             amount_due: invoice.amount_due,
             amount_paid: invoice.amount_paid,
             currency: invoice.currency ?? 'usd',
@@ -73,13 +73,13 @@ export async function POST(request: NextRequest) {
             {
               invoice_id: invoice.id,
               amount: invoice.amount_due,
-              subscription_id: invoice.subscription,
+              subscription_id: (invoice as unknown as { subscription?: string }).subscription,
             },
             event.id,
             event.type
           );
 
-          if (invoice.subscription) {
+          if ((invoice as unknown as { subscription?: string }).subscription) {
             await updateTenantBilling(supabase, tenantId, {
               subscription_status: 'active',
             });
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
           await saveInvoice(supabase, tenantId, {
             stripe_invoice_id: invoice.id,
             stripe_customer_id: invoice.customer as string,
-            stripe_subscription_id: (invoice.subscription as string) ?? null,
+            stripe_subscription_id: (invoice as unknown as { subscription?: string }).subscription ?? null,
             amount_due: invoice.amount_due,
             amount_paid: invoice.amount_paid,
             currency: invoice.currency ?? 'usd',
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
             event.type
           );
 
-          if (invoice.subscription) {
+          if ((invoice as unknown as { subscription?: string }).subscription) {
             await updateTenantBilling(supabase, tenantId, {
               subscription_status: 'past_due',
             });
@@ -144,15 +144,16 @@ export async function POST(request: NextRequest) {
 
         if (tenantId) {
           const tier = subscription.metadata?.tier as SubscriptionTier | undefined;
+          const subWithPeriod = subscription as unknown as { current_period_start?: number; current_period_end?: number };
 
           await updateTenantBilling(supabase, tenantId, {
             stripe_subscription_id: subscription.id,
             subscription_status: subscription.status,
-            current_period_starts_at: subscription.current_period_start
-              ? new Date(subscription.current_period_start * 1000).toISOString()
+            current_period_starts_at: subWithPeriod.current_period_start
+              ? new Date(subWithPeriod.current_period_start * 1000).toISOString()
               : null,
-            current_period_ends_at: subscription.current_period_end
-              ? new Date(subscription.current_period_end * 1000).toISOString()
+            current_period_ends_at: subWithPeriod.current_period_end
+              ? new Date(subWithPeriod.current_period_end * 1000).toISOString()
               : null,
             cancel_at_period_end: subscription.cancel_at_period_end,
             ...(tier ? { current_tier: tier } : {}),

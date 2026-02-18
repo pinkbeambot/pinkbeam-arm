@@ -195,7 +195,9 @@ export async function DELETE(request: NextRequest) {
           id: canceledSubscription.id,
           status: canceledSubscription.status,
           cancelAtPeriodEnd: canceledSubscription.cancel_at_period_end,
-          currentPeriodEnd: new Date(canceledSubscription.current_period_end * 1000).toISOString(),
+          currentPeriodEnd: (canceledSubscription as unknown as { current_period_end: number }).current_period_end
+            ? new Date((canceledSubscription as unknown as { current_period_end: number }).current_period_end * 1000).toISOString()
+            : null,
         },
       },
     });

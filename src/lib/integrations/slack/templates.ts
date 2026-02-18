@@ -89,7 +89,8 @@ export function createEscalationAlert(data: EscalationTemplateData): SlackMessag
 
   // Add task info if available
   if (data.task_title) {
-    blocks[blocks.length - 1].fields?.push({
+    const lastBlock = blocks[blocks.length - 1] as { fields?: Array<{ type: string; text: string }> };
+    lastBlock.fields?.push({
       type: 'mrkdwn',
       text: `*Task:*\n${data.task_title}`,
     });
@@ -354,7 +355,7 @@ export function createDecisionRequiredNotification(data: DecisionTemplateData): 
   if (data.deadline) {
     const deadlineDate = new Date(data.deadline);
     const isOverdue = deadlineDate < new Date();
-    blocks[blocks.length - 1].fields?.push({
+    (blocks[blocks.length - 1] as { fields?: Array<{ type: string; text: string }> }).fields?.push({
       type: 'mrkdwn',
       text: `*Deadline:*\n${isOverdue ? '⚠️ ' : ''}${deadlineDate.toLocaleString()}`,
     });

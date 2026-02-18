@@ -11,7 +11,7 @@
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { rateLimitService } from '@/lib/rate-limit';
-import type { SlackWebhook, SlackWebhookInput, SlackMessage, SlackDeliveryResult } from './types';
+import type { SlackWebhook, SlackWebhookInput, SlackMessage, SlackDeliveryResult } from './slack/types';
 
 // Rate limit: 1 message per second per webhook (Slack's recommended rate limit)
 const SLACK_RATE_LIMIT_PER_SECOND = 1;
