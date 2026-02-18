@@ -80,8 +80,12 @@ export const updateAgentSchema = z.object({
     .max(255)
     .optional(),
   description: z.string().max(2000).optional(),
+  role: AgentRoleEnum.optional(),
   status: AgentStatusEnum.optional(),
   status_reason: z.string().max(500).optional(),
+  parent_id: z.string().uuid().nullable().optional(),
+  root_id: z.string().uuid().nullable().optional(),
+  depth: z.number().int().nonnegative().optional(),
   capabilities: z.array(z.string()).optional(),
   llm_config: llmConfigSchema.partial().optional(),
   limits: limitsSchema.optional(),
