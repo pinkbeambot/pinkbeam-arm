@@ -158,14 +158,3 @@ export const agentActionSchema = z.object({
 });
 
 export type AgentActionInput = z.infer<typeof agentActionSchema>;
-
-// ============================================================================
-// Re-export from main validation file for consistency
-// ============================================================================
-
-// These are the canonical schemas used in the API routes
-export {
-  createAgentSchema as createAgentSchemaCanonical,
-  updateAgentSchema as updateAgentSchemaCanonical,
-  listAgentsQuerySchema as listAgentsQuerySchemaCanonical,
-} from '@/lib/validation';
