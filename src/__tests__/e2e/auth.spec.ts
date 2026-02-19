@@ -74,14 +74,14 @@ test.describe('Authentication Flows', () => {
       });
       expect(linkError).toBeNull();
 
-      const otp = linkData!.properties.email_otp;
+      const otp = linkData?.properties?.email_otp;
       expect(otp).toBeTruthy();
 
       // Fill OTP digits
       const otpInputs = page.locator('input[inputmode="numeric"]');
       await otpInputs.first().waitFor({ state: 'visible' });
       for (let i = 0; i < 6; i++) {
-        await otpInputs.nth(i).fill(otp![i]);
+        await otpInputs.nth(i).fill(otp?.[i] ?? '');
       }
 
       // Submit
