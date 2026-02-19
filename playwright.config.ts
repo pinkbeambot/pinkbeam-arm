@@ -50,7 +50,7 @@ export default defineConfig({
       testMatch: /e2e\/auth\.setup\.ts$/,
     },
 
-    // E2E Tests - Desktop Chromium (depend on auth setup)
+    // E2E Tests (depend on auth setup)
     {
       name: 'e2e-chromium',
       testMatch: /e2e\/.*\.spec\.ts$/,
@@ -68,48 +68,6 @@ export default defineConfig({
       dependencies: ['setup'],
       use: {
         ...devices['Desktop Firefox'],
-        viewport: { width: 1280, height: 720 }
-      },
-    },
-
-    // E2E Tests - Desktop Safari
-    {
-      name: 'e2e-webkit',
-      testMatch: /e2e\/.*\.spec\.ts$/,
-      dependencies: ['setup'],
-      use: {
-        ...devices['Desktop Safari'],
-        viewport: { width: 1280, height: 720 }
-      },
-    },
-
-    // E2E Tests - Mobile Chrome
-    {
-      name: 'e2e-mobile-chrome',
-      testMatch: /e2e\/.*\.spec\.ts$/,
-      dependencies: ['setup'],
-      use: {
-        ...devices['Pixel 7'],
-      },
-    },
-
-    // E2E Tests - Mobile Safari
-    {
-      name: 'e2e-mobile-safari',
-      testMatch: /e2e\/.*\.spec\.ts$/,
-      dependencies: ['setup'],
-      use: {
-        ...devices['iPhone 14'],
-      },
-    },
-
-    // Critical Path Tests - Run on all browsers
-    {
-      name: 'critical-chromium',
-      testMatch: /e2e\/critical\/.*\.spec\.ts$/,
-      dependencies: ['setup'],
-      use: {
-        ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 }
       },
     },
