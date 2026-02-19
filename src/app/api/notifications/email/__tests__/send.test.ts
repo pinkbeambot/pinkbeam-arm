@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from '../send/route';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // Mock dependencies
 vi.mock('@/lib/api/auth', () => ({
@@ -238,7 +238,7 @@ describe('Send Email API', () => {
 
     it('should require authentication', async () => {
       vi.mocked(authenticateRequest).mockResolvedValue(
-        new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 })
+        NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
       );
 
       const request = new NextRequest('http://localhost/api/notifications/email/send', {

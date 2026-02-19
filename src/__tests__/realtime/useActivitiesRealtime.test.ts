@@ -227,7 +227,7 @@ describe('Connection Status Transitions', () => {
   });
 
   it('should handle CLOSED status', () => {
-    const status = 'CLOSED';
+    const status: string = 'CLOSED';
     
     const isConnected = status === 'SUBSCRIBED';
 
@@ -235,7 +235,7 @@ describe('Connection Status Transitions', () => {
   });
 
   it('should handle CHANNEL_ERROR status', () => {
-    const status = 'CHANNEL_ERROR';
+    const status: string = 'CHANNEL_ERROR';
     
     const isConnected = status === 'SUBSCRIBED';
     const hasError = status === 'CHANNEL_ERROR';
