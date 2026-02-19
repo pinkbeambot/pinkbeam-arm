@@ -249,7 +249,7 @@ export function AsyncContentLoader<T>({
   isEmpty,
 }: AsyncContentLoaderProps<T>) {
   if (loading) {
-    return <>{loadingComponent || <ContentLoader loading type="spinner" />}</>;
+    return <>{loadingComponent || <ContentLoader loading type="spinner"><div /></ContentLoader>}</>;
   }
 
   if (error) {
