@@ -85,17 +85,17 @@ describe('ChatPanel', () => {
     originalDate = global.Date;
     const mockNow = new Date('2026-02-14T00:05:00Z');
     global.Date = class extends Date {
-      constructor(...args: any[]) {
+      constructor(...args: unknown[]) {
         if (args.length === 0) {
           super(mockNow);
         } else {
-          super(...args as [any]);
+          super(...args as [string | number | Date]);
         }
       }
       static now() {
         return mockNow.getTime();
       }
-    } as any;
+    } as typeof global.Date;
   });
 
   afterEach(() => {
