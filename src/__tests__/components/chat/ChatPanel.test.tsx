@@ -25,6 +25,9 @@ describe('ChatPanel', () => {
     onOpenChange: vi.fn(),
   };
 
+  // Store original Date to restore after tests
+  let originalDate: typeof global.Date;
+
   const mockChat = {
     id: 'chat-123',
     tenant_id: 'tenant-123',
@@ -77,6 +80,26 @@ describe('ChatPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseChat.mockReturnValue(defaultMockReturn);
+    
+    // Mock the current date to ensure relative timestamps are consistent
+    originalDate = global.Date;
+    const mockNow = new Date('2026-02-14T00:05:00Z');
+    global.Date = class extends Date {
+      constructor(...args: any[]) {
+        if (args.length === 0) {
+          super(mockNow);
+        } else {
+          super(...args as [any]);
+        }
+      }
+      static now() {
+        return mockNow.getTime();
+      }
+    } as any;
+  });
+
+  afterEach(() => {
+    global.Date = originalDate;
   });
 
   it('renders without crashing', () => {
