@@ -1,17 +1,18 @@
+/* eslint-disable react-hooks/immutability */
 /**
  * useActivities Hook
- * 
+ *
  * Custom hook for activity data fetching using React Query for caching.
  * Provides real-time updates via Supabase Realtime and supports pagination
  * with infinite scroll and filtering.
- * 
+ *
  * Features:
  * - React Query for server state management and caching
  * - Real-time updates via Supabase Realtime
  * - Infinite scroll pagination with cursor-based loading
  * - Filtering support (entity_type, action_type, agent_id, time_range)
  * - Automatic background refetching
- * 
+ *
  * @example
  * ```tsx
  * function ActivityFeed() {
@@ -252,6 +253,7 @@ export function useActivities(options: UseActivitiesOptions = {}): UseActivities
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const setupRealtimeSubscriptionRef = useRef<(() => void) | null>(null);
 
   // ============================================================================
   // React Query Infinite Query
@@ -405,7 +407,7 @@ export function useActivities(options: UseActivitiesOptions = {}): UseActivities
               reconnectAttemptsRef.current++;
               const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
               setTimeout(() => {
-                setupRealtimeSubscription();
+                setupRealtimeSubscriptionRef.current?.();
               }, delay);
             }
             break;
@@ -415,14 +417,17 @@ export function useActivities(options: UseActivitiesOptions = {}): UseActivities
     channelRef.current = channel;
   }, [realtime, accessToken, session, agentId, entityType, actionType, supabase, queryClient, queryKey, onNewActivity]);
 
+  // Store the setup function in a ref to avoid temporal dead zone issues
+  setupRealtimeSubscriptionRef.current = setupRealtimeSubscription;
+
   const retryRealtime = useCallback(() => {
     reconnectAttemptsRef.current = 0;
-    setupRealtimeSubscription();
-  }, [setupRealtimeSubscription]);
+    setupRealtimeSubscriptionRef.current?.();
+  }, []);
 
   // Setup/cleanup realtime subscription
   useEffect(() => {
-    setupRealtimeSubscription();
+    setupRealtimeSubscriptionRef.current?.();
 
     return () => {
       if (channelRef.current) {

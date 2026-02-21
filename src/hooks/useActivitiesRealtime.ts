@@ -73,6 +73,7 @@ export function useActivitiesRealtime({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const setupSubscriptionRef = useRef<(() => void) | null>(null);
 
   const clear = useCallback(() => {
     setActivities([]);
@@ -147,7 +148,7 @@ export function useActivitiesRealtime({
               reconnectAttemptsRef.current++;
               const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
               setTimeout(() => {
-                setupSubscription();
+                setupSubscriptionRef.current?.();
               }, delay);
             }
             break;
@@ -157,13 +158,16 @@ export function useActivitiesRealtime({
     channelRef.current = channel;
   }, [supabase, tenantId, agentId, category, type, maxActivities, enableReconnection]);
 
+  // Store the setup function in a ref to avoid temporal dead zone issues
+  setupSubscriptionRef.current = setupSubscription;
+
   const reconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
-    setupSubscription();
-  }, [setupSubscription]);
+    setupSubscriptionRef.current?.();
+  }, []);
 
   useEffect(() => {
-    setupSubscription();
+    setupSubscriptionRef.current?.();
 
     return () => {
       if (channelRef.current) {

@@ -166,6 +166,7 @@ export function useRealtime(
   const channelRef = useRef<RealtimeChannel | null>(null);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isDestroyedRef = useRef(false);
+  const connectRef = useRef<(() => void) | null>(null);
 
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [error, setError] = useState<Error | null>(null);
@@ -203,7 +204,7 @@ export function useRealtime(
     
     retryTimerRef.current = setTimeout(() => {
       if (!isDestroyedRef.current) {
-        connect();
+        connectRef.current?.();
       }
     }, delay);
   }, [retryCount, retryConfig, enabled, handleError, setState]);

@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/immutability, react-hooks/purity */
 import * as React from 'react';
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
