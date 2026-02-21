@@ -53,6 +53,7 @@ export async function cleanupTestData(): Promise<void> {
  * isolated but authenticated page.
  */
 export const test = base.extend<TestFixtures>({
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   authenticatedPage: async ({ browser }, use) => {
     const storageStatePath = '.playwright/.auth/user.json';
     if (!existsSync(storageStatePath)) {
@@ -70,6 +71,7 @@ export const test = base.extend<TestFixtures>({
     await context.close();
   },
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   cleanup: async ({}, use) => {
     await use(cleanupTestData);
   },

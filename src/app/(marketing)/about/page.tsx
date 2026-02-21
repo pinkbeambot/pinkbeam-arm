@@ -127,7 +127,7 @@ export default function AboutPage() {
                 </p>
                 <p>
                   Today, we power over 100 companies with 500+ AI employees
-                  working around the clock. But we're just getting started. Our
+                  working around the clock. But we&apos;re just getting started. Our
                   vision is a world where every founder can run a 50-person
                   company as a 1-person operation.
                 </p>

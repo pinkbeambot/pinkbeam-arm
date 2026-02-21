@@ -714,7 +714,8 @@ describe('useEscalations Hook Logic', () => {
 });
 
 // Helper for testing filter logic
-function matchesFiltersTest(escalation: any, options: any): boolean {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function matchesFiltersTest(escalation: Record<string, unknown>, options: Record<string, unknown>): boolean {
   if (options.status && options.status !== 'all' && escalation.status !== options.status) {
     return false;
   }
