@@ -404,7 +404,7 @@ export function ActivityFeedPageClient({ initialAgentId }: ActivityFeedPageClien
                         {/* End of feed */}
                         {!hasNextPage && activities.length > 0 && (
                           <div className="p-4 text-center text-sm text-muted-foreground">
-                            You've reached the end of the feed
+                            You&apos;ve reached the end of the feed
                           </div>
                         )}
                       </div>

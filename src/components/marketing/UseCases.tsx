@@ -48,7 +48,7 @@ export function UseCases() {
             </span>
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Whether you're a solo founder or a growing team, AI employees adapt to your needs.
+            Whether you&apos;re a solo founder or a growing team, AI employees adapt to your needs.
           </p>
         </FadeIn>
 

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+import createBundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = createBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true'
 });
 
@@ -17,7 +19,6 @@ if (isVercelProd && process.env.DEV_AUTH_BYPASS === 'true') {
 const isDev = process.env.NODE_ENV === 'development';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://*.supabase.co';
 const supabaseWss = supabaseUrl.replace('https://', 'wss://');
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 const cspDirectives = [
   // Only allow resources from own origin by default

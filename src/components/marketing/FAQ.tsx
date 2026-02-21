@@ -99,7 +99,7 @@ export function FAQ() {
             <a href="/contact" className="text-primary hover:text-primary/80 font-medium">
               Book a demo
             </a>{" "}
-            and we'll answer everything.
+            and we&apos;ll answer everything.
           </p>
         </FadeIn>
       </div>

@@ -50,7 +50,7 @@ export function OfflineBanner() {
           <>
             <WifiOff className="h-4 w-4" />
             <span>
-              You're offline. Some features may not be available until you reconnect.
+              You&apos;re offline. Some features may not be available until you reconnect.
             </span>
           </>
         ) : (

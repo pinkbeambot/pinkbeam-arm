@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // Mock @/lib/api/auth BEFORE importing the route (prevents service-role.ts from throwing)
 vi.mock('@/lib/api/auth', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   authenticateRequest: vi.fn(async (request: any) => {
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -34,6 +35,7 @@ vi.mock('@/lib/api/auth', () => ({
       },
     };
   }),
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   isErrorResponse: vi.fn((result: any) => result instanceof NextResponse),
 }));
 
