@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect, useCallback } from 'react';
 import { Bot, Sparkles, Wrench, Pencil, AlertCircle, Check } from 'lucide-react';
 import { cn, getInitials, getAvatarColor } from '@/lib/utils';

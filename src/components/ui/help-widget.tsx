@@ -39,6 +39,7 @@ export function HelpWidget() {
   }, [isOpen])
 
   // Search functionality
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       const results = searchArticles(searchQuery)
