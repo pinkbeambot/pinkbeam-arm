@@ -63,7 +63,7 @@ describe('Activities API', () => {
         pagination: mockPagination,
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -88,7 +88,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -110,7 +110,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -132,7 +132,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -154,7 +154,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -176,7 +176,7 @@ describe('Activities API', () => {
         pagination: mockPagination,
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -201,7 +201,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -223,7 +223,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, offset: 40, currentPage: 3 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -245,7 +245,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -260,7 +260,7 @@ describe('Activities API', () => {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      const callUrl = (fetch as any).mock.calls[0][0];
+      const callUrl = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
       expect(callUrl).toContain('category=task');
       expect(callUrl).toContain('agent_id=agent-001');
       expect(callUrl).toContain('from=');
@@ -268,7 +268,7 @@ describe('Activities API', () => {
     });
 
     it('should return validation error for invalid limit', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -289,7 +289,7 @@ describe('Activities API', () => {
     });
 
     it('should return validation error for invalid UUID', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -310,7 +310,7 @@ describe('Activities API', () => {
     });
 
     it('should return validation error for invalid date format', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -336,7 +336,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 0, hasMore: false },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -354,7 +354,7 @@ describe('Activities API', () => {
     });
 
     it('should handle server errors', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({
@@ -379,7 +379,7 @@ describe('Activities API', () => {
         pagination: mockPagination,
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -414,7 +414,7 @@ describe('Activities API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => mockResponse,
@@ -461,7 +461,7 @@ describe('Activities API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => mockResponse,
@@ -487,7 +487,7 @@ describe('Activities API', () => {
         description: 'Missing required fields',
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -526,7 +526,7 @@ describe('Activities API', () => {
         title: 'Test',
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -559,7 +559,7 @@ describe('Activities API', () => {
         title: 'a'.repeat(501),
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -592,7 +592,7 @@ describe('Activities API', () => {
         title: 'Error occurred',
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({
@@ -631,7 +631,7 @@ describe('Activities API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -658,7 +658,7 @@ describe('Activities API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -686,7 +686,7 @@ describe('Activities API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -708,7 +708,7 @@ describe('Activities API', () => {
         pagination: mockPagination,
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -732,7 +732,7 @@ describe('Activities API', () => {
         pagination: mockPagination,
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -747,7 +747,7 @@ describe('Activities API', () => {
     });
 
     it('should reject negative offset', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -766,7 +766,7 @@ describe('Activities API', () => {
     });
 
     it('should reject limit of 0', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -792,7 +792,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -812,7 +812,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -832,7 +832,7 @@ describe('Activities API', () => {
         pagination: { ...mockPagination, total: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
