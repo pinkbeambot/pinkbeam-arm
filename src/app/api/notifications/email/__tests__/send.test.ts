@@ -37,7 +37,7 @@ describe('Send Email API', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authenticateRequest).mockResolvedValue(mockAuth as any);
+    vi.mocked(authenticateRequest).mockResolvedValue(mockAuth as unknown as Awaited<ReturnType<typeof authenticateRequest>>);
   });
 
   describe('POST /api/notifications/email/send', () => {

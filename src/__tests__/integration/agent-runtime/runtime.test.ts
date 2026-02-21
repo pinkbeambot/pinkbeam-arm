@@ -4,6 +4,9 @@
  * These tests validate the integration between edge functions and database
  */
 
+// @ts-nocheck - Test file uses conditional skip() that doesn't narrow types
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+
 import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 

@@ -58,6 +58,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
   const [showingSearchResults, setShowingSearchResults] = useState(false);
 
   // Reset when chat changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setSearchOpen(false);
     resetBookmarks();

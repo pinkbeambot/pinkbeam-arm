@@ -96,6 +96,7 @@ export function EditAgentModal({ agent, open, onOpenChange, onSave, loading }: E
   const [hasChanges, setHasChanges] = useState(false);
 
   // Reset form when agent changes or modal opens
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (open && agent) {
       const initial = getInitialFormState(agent);
@@ -107,6 +108,7 @@ export function EditAgentModal({ agent, open, onOpenChange, onSave, loading }: E
   }, [agent, open]);
 
   // Track changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     const changed = JSON.stringify(formState) !== JSON.stringify(originalState);
     setHasChanges(changed);

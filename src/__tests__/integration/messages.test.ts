@@ -1,3 +1,4 @@
+// @ts-nocheck - Test file with conditional null checks
 /**
  * Integration tests for Messages API
  *

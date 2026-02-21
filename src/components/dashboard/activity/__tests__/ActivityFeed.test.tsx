@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * ActivityFeed Component Tests
- * 
+ *
  * Tests for the ActivityFeed component including:
  * - Rendering with mock data
  * - Filter functionality
@@ -597,16 +598,20 @@ describe('ActivityFeedPage', () => {
 // ============================================================================
 
 describe('useActivities', () => {
-  it('should be properly exported from hooks module', () => {
+  it('should be properly exported from hooks module', async () => {
     // This test verifies the export is working
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useActivities } = require('@/hooks/useActivities');
     expect(typeof useActivities).toBe('function');
   });
 
-  it('should export correct types', () => {
+  it('should export correct types', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const {
       EntityType,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       TimeRange,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       ActionType,
     } = require('@/hooks/useActivities');
     

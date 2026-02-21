@@ -81,13 +81,13 @@ export function FormField({
       
       <div className="relative">
         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-        {React.cloneElement(children as React.ReactElement<any>, {
+        {React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
           id: name,
           name,
           'aria-invalid': !!error,
           'aria-describedby': describedBy,
           'aria-required': required,
-        } as any)}
+        } as Record<string, unknown>)}
         
         {/* Async validation indicator */}
         {isValidating && (

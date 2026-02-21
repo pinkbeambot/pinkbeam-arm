@@ -100,7 +100,7 @@ export class CostTracker {
 
       return data as string;
     } catch (error) {
-      logger.error('Error recording cost', error, { agent_id: task_id: params.task_id });
+      logger.error('Error recording cost', error, { agent_id, task_id: params.task_id });
       return null;
     }
   }

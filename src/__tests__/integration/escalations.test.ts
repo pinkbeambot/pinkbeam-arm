@@ -1,3 +1,4 @@
+// @ts-nocheck - Test file with complex type narrowing
 /**
  * Integration tests for Escalations API (#100)
  * 

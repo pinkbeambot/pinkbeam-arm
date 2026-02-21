@@ -22,13 +22,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { tenantId, supabase } = auth;
 
     // Fetch template
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: template, error } = await supabase
-      .from('agent_templates' as never)
+      .from('agent_templates')
       .select('*')
       .eq('id', id)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
-      .single() as { data: any; error: any };
+      .single();
 
     if (error) {
       if (error.code === 'PGRST116') {
@@ -106,9 +105,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete template
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase
-      .from('agent_templates' as never) as any)
+    const { error } = await supabase
+      .from('agent_templates')
       .delete()
       .eq('id', id)
       .eq('tenant_id', tenantId);

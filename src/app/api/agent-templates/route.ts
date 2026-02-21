@@ -61,13 +61,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get unique categories for filtering
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: categories } = await supabase
-      .from('agent_templates' as never)
+      .from('agent_templates')
       .select('category')
       .eq('is_active', true)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
-      .neq('category', '') as { data: any[] | null };
+      .neq('category', '');
 
     const uniqueCategories = [...new Set(categories?.map(c => c.category) || [])];
 
@@ -154,13 +153,12 @@ export async function POST(request: NextRequest) {
     const validatedData = templateSchema.parse(body);
 
     // Check if slug already exists for this tenant
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: existing } = await supabase
-      .from('agent_templates' as never)
+      .from('agent_templates')
       .select('id')
       .eq('slug', validatedData.slug)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
-      .single() as { data: any };
+      .single();
 
     if (existing) {
       return NextResponse.json(
@@ -170,9 +168,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Create template
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: template, error } = await (supabase
-      .from('agent_templates' as never) as any)
+    const { data: template, error } = await supabase
+      .from('agent_templates')
       .insert({
         tenant_id: tenantId,
         name: validatedData.name,

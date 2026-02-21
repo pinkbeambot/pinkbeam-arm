@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Plus, Users, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';

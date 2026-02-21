@@ -78,8 +78,9 @@ function observeWebVitals() {
       const clsObserver = new PerformanceObserver((list) => {
         let clsValue = 0;
         for (const entry of list.getEntries()) {
-          if (!(entry as any).hadRecentInput) {
-            clsValue += (entry as any).value;
+          const layoutShiftEntry = entry as PerformanceEntry & { hadRecentInput?: boolean; value?: number };
+          if (!layoutShiftEntry.hadRecentInput) {
+            clsValue += layoutShiftEntry.value ?? 0;
           }
         }
         reportMetric({
@@ -98,9 +99,9 @@ function observeWebVitals() {
     try {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1] as any;
+        const lastEntry = entries[entries.length - 1] as PerformanceEntry & { startTime?: number };
         if (lastEntry) {
-          const value = lastEntry.startTime;
+          const value = lastEntry.startTime ?? 0;
           reportMetric({
             name: 'LCP',
             value,
@@ -118,7 +119,8 @@ function observeWebVitals() {
     try {
       const fidObserver = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          const value = (entry as any).processingStart - entry.startTime;
+          const firstInputEntry = entry as PerformanceEntry & { processingStart?: number };
+          const value = (firstInputEntry.processingStart ?? 0) - entry.startTime;
           reportMetric({
             name: 'FID',
             value,
