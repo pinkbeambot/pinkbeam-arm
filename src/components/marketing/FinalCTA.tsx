@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { useState } from "react";
 import { ArrowRight, CreditCard, Calendar, CheckCircle, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";

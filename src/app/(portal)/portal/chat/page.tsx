@@ -157,14 +157,14 @@ export default function ChatPage() {
 
         {/* Global Search Bar */}
         <Card className="mb-6">
-          <CardContent className="py-4">
-            <div className="flex items-center gap-3">
+          <CardContent className="py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={searchQuery}
                   onChange={(e) => handleSearchChange(e.target.value)}
-                  placeholder="Search across all conversations..."
+                  placeholder="Search conversations..."
                   className="pl-10 pr-10"
                 />
                 {searchQuery && (
@@ -177,7 +177,7 @@ export default function ChatPage() {
                 )}
               </div>
               <Select value={searchAgentFilter} onValueChange={handleAgentFilterChange}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px]">
                   <SelectValue placeholder="All agents" />
                 </SelectTrigger>
                 <SelectContent>

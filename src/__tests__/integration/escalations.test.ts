@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - Test file with complex type narrowing
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /**
  * Integration tests for Escalations API (#100)
  * 

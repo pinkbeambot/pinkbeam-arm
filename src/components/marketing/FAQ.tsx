@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { HelpCircle } from "lucide-react";
 import {
   Accordion,

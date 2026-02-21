@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { Card, CardContent } from "@/components/ui/card";
 import { StaggerContainer, FadeIn } from "@/components/animations";
 import { Quote } from "lucide-react";

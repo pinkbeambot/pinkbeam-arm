@@ -316,15 +316,15 @@ function TasksPageContent() {
           title="Task Pipeline"
           description="Track and manage work across your AI workforce"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             {/* View Toggle */}
-            <div className="flex items-center bg-muted rounded-lg p-0.5">
+            <div className="flex items-center bg-muted rounded-lg p-0.5 self-start sm:self-auto">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setViewMode('kanban')}
                 className={cn(
-                  'h-8 px-3 gap-1.5 rounded-md',
+                  'h-8 px-2 sm:px-3 gap-1.5 rounded-md',
                   viewMode === 'kanban' && 'bg-background shadow-sm'
                 )}
               >
@@ -336,7 +336,7 @@ function TasksPageContent() {
                 size="sm"
                 onClick={() => setViewMode('graph')}
                 className={cn(
-                  'h-8 px-3 gap-1.5 rounded-md',
+                  'h-8 px-2 sm:px-3 gap-1.5 rounded-md',
                   viewMode === 'graph' && 'bg-background shadow-sm'
                 )}
               >
@@ -346,16 +346,18 @@ function TasksPageContent() {
             </div>
 
             {canCreateTasks && (
-              <>
-                <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import CSV
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setImportDialogOpen(true)} size="sm" className="sm:size-default">
+                  <Upload className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Import CSV</span>
+                  <span className="sm:hidden">Import</span>
                 </Button>
-                <Button onClick={() => setCreateModalOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Task
+                <Button onClick={() => setCreateModalOpen(true)} size="sm" className="sm:size-default">
+                  <Plus className="h-4 w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Create Task</span>
+                  <span className="sm:hidden">Create</span>
                 </Button>
-              </>
+              </div>
             )}
           </div>
         </PageHeader>

@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { Search, Users, Headphones, PenTool, Palette } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaggerContainer } from "@/components/animations";

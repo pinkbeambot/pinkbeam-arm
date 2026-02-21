@@ -1,5 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - Test file with conditional null checks
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
 /**
  * Integration tests for Messages API
  *

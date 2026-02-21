@@ -25,7 +25,7 @@ export default async function SettingsPage() {
           description="Manage your account and portal preferences"
         />
 
-        <div className="grid gap-6 max-w-4xl">
+        <div className="grid gap-4 sm:gap-6 max-w-4xl">
           {/* Profile Settings */}
           <Card>
             <CardHeader>
@@ -39,9 +39,9 @@ export default async function SettingsPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Avatar Section */}
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarFallback className="bg-primary/10 text-primary text-lg">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <Avatar className="h-16 w-16 sm:h-20 sm:w-20">
+                  <AvatarFallback className="bg-primary/10 text-primary text-sm sm:text-lg">
                     {user?.email ? getInitials(user.email) : 'U'}
                   </AvatarFallback>
                 </Avatar>

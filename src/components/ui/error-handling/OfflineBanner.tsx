@@ -1,6 +1,5 @@
 'use client'
 
-/* eslint-disable react-hooks/set-state-in-effect */
 import { useEffect, useState } from 'react'
 import { WifiOff, Wifi } from 'lucide-react'
 import { cn } from '@/lib/utils'

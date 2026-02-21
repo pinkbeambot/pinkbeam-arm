@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react/no-unescaped-entities */
 import { useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';

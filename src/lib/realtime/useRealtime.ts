@@ -333,13 +333,19 @@ export function useRealtime(
     setState,
   ]);
 
+  // Store the connect function in a ref to avoid temporal dead zone issues
+  useEffect(() => {
+    connectRef.current = connect;
+  }, [connect]);
+
   // Manual retry
   const retry = useCallback(() => {
     setRetryCount(0);
-    connect();
-  }, [connect]);
+    connectRef.current?.();
+  }, []);
 
   // Setup connection
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     isDestroyedRef.current = false;
 

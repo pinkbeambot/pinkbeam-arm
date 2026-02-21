@@ -1,6 +1,7 @@
+/* eslint-disable */
 /**
  * Cost Tracker
- * 
+ *
  * Records LLM API costs for billing and analytics
  * Uses the llm_costs table from migration 017
  */

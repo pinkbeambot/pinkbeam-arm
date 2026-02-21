@@ -417,13 +417,15 @@ export function useActivities(options: UseActivitiesOptions = {}): UseActivities
     channelRef.current = channel;
   }, [realtime, accessToken, session, agentId, entityType, actionType, supabase, queryClient, queryKey, onNewActivity]);
 
-  // Store the setup function in a ref to avoid temporal dead zone issues
-  setupRealtimeSubscriptionRef.current = setupRealtimeSubscription;
-
   const retryRealtime = useCallback(() => {
     reconnectAttemptsRef.current = 0;
     setupRealtimeSubscriptionRef.current?.();
   }, []);
+
+  // Store the setup function in a ref to avoid temporal dead zone issues
+  useEffect(() => {
+    setupRealtimeSubscriptionRef.current = setupRealtimeSubscription;
+  }, [setupRealtimeSubscription]);
 
   // Setup/cleanup realtime subscription
   useEffect(() => {

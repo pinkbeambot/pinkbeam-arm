@@ -246,20 +246,22 @@ export default function AgentsPage() {
           description={`Manage your AI workforce. ${stats.total} agent${stats.total !== 1 ? 's' : ''} total.`}
         >
           {canCreateAgents && (
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)} size="sm" className="sm:size-default">
                 <Upload className="mr-2 h-4 w-4" />
-                Import CSV
+                <span className="hidden sm:inline">Import CSV</span>
+                <span className="sm:hidden">Import</span>
               </Button>
-              <Button onClick={() => setCreateModalOpen(true)}>
+              <Button onClick={() => setCreateModalOpen(true)} size="sm" className="sm:size-default">
                 <Plus className="mr-2 h-4 w-4" />
-                Create Agent
+                <span className="hidden sm:inline">Create Agent</span>
+                <span className="sm:hidden">Create</span>
               </Button>
             </div>
           )}
         </PageHeader>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <StatCard label="Total" value={stats.total} icon={Users} />
           <StatCard label="Active" value={stats.active} color="emerald" />
           <StatCard label="Idle" value={stats.idle} color="amber" />
