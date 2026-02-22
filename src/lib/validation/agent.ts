@@ -80,8 +80,12 @@ export const updateAgentSchema = z.object({
     .max(255)
     .optional(),
   description: z.string().max(2000).optional(),
+  role: AgentRoleEnum.optional(),
   status: AgentStatusEnum.optional(),
   status_reason: z.string().max(500).optional(),
+  parent_id: z.string().uuid().nullable().optional(),
+  root_id: z.string().uuid().nullable().optional(),
+  depth: z.number().int().nonnegative().optional(),
   capabilities: z.array(z.string()).optional(),
   llm_config: llmConfigSchema.partial().optional(),
   limits: limitsSchema.optional(),
@@ -154,14 +158,3 @@ export const agentActionSchema = z.object({
 });
 
 export type AgentActionInput = z.infer<typeof agentActionSchema>;
-
-// ============================================================================
-// Re-export from main validation file for consistency
-// ============================================================================
-
-// These are the canonical schemas used in the API routes
-export {
-  createAgentSchema as createAgentSchemaCanonical,
-  updateAgentSchema as updateAgentSchemaCanonical,
-  listAgentsQuerySchema as listAgentsQuerySchemaCanonical,
-} from '@/lib/validation';

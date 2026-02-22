@@ -76,13 +76,12 @@ test.describe('Authentication Flows', () => {
 
       const otp = linkData?.properties?.email_otp;
       expect(otp).toBeTruthy();
-      if (!otp) throw new Error('No OTP returned');
 
       // Fill OTP digits
       const otpInputs = page.locator('input[inputmode="numeric"]');
       await otpInputs.first().waitFor({ state: 'visible' });
       for (let i = 0; i < 6; i++) {
-        await otpInputs.nth(i).fill(otp[i]);
+        await otpInputs.nth(i).fill(otp?.[i] ?? '');
       }
 
       // Submit

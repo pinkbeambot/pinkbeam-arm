@@ -6,17 +6,14 @@ This directory contains end-to-end tests for the Pink Beam ARM platform using Pl
 
 ```
 src/__tests__/e2e/
-├── auth.setup.ts          # Playwright setup project — authenticates via real OTP flow
-├── fixtures.ts            # Test fixtures (authenticatedPage, cleanup)
-├── index.ts               # Public exports
-├── auth.spec.ts           # Authentication flows (signup, login, logout, password reset)
-├── agents.spec.ts         # Agent management (create, edit, delete, view)
-├── tasks.spec.ts          # Task management (create, edit, move, delete)
-├── decisions.spec.ts      # Decision log
-├── navigation.spec.ts     # Sidebar, breadcrumbs, mobile navigation
-├── critical/              # Critical path tests
-│   └── user-journey.spec.ts  # Full user journey tests
-└── README.md              # This file
+├── auth.setup.ts     # Playwright setup project — authenticates via real OTP flow
+├── fixtures.ts       # Test fixtures (authenticatedPage, cleanup)
+├── index.ts          # Public exports
+├── auth.spec.ts      # Authentication flows (unauthenticated + OTP login)
+├── agents.spec.ts    # Agent management
+├── tasks.spec.ts     # Task management
+├── decisions.spec.ts # Decision log
+└── README.md         # This file
 ```
 
 ## Test Coverage
@@ -151,7 +148,6 @@ pattern. No `DEV_AUTH_BYPASS` is needed.
 
 ```
 NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
 SUPABASE_SERVICE_ROLE_KEY=...
 ```
 

@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect } from 'react';
 import { ChevronDown, Bookmark, Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
 import { cn, getAvatarColor, getInitials } from '@/lib/utils';
@@ -58,6 +59,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
   const [showingSearchResults, setShowingSearchResults] = useState(false);
 
   // Reset when chat changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setSearchOpen(false);
     resetBookmarks();

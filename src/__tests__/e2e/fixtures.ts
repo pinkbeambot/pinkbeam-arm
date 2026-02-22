@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 import { test as base, expect, Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { existsSync } from 'fs';

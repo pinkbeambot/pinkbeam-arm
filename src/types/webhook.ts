@@ -10,35 +10,51 @@
 // ============================================================================
 
 export type WebhookEventType =
+  // Agent events
   | 'agent.created'
+  | 'agent.updated'
+  | 'agent.deleted'
   | 'agent.status_changed'
   | 'agent.terminated'
+  // Task events
   | 'task.created'
+  | 'task.updated'
+  | 'task.completed'
   | 'task.assigned'
   | 'task.status_changed'
-  | 'task.completed'
   | 'task.failed'
-  | 'escalation.created'
-  | 'escalation.resolved'
+  // Decision events
   | 'decision.proposed'
   | 'decision.approved'
   | 'decision.rejected'
+  // Escalation events
+  | 'escalation.created'
+  | 'escalation.resolved'
+  // System events
   | 'system.alert';
 
 export const WEBHOOK_EVENT_TYPES: WebhookEventType[] = [
+  // Agent events
   'agent.created',
+  'agent.updated',
+  'agent.deleted',
   'agent.status_changed',
   'agent.terminated',
+  // Task events
   'task.created',
+  'task.updated',
+  'task.completed',
   'task.assigned',
   'task.status_changed',
-  'task.completed',
   'task.failed',
-  'escalation.created',
-  'escalation.resolved',
+  // Decision events
   'decision.proposed',
   'decision.approved',
   'decision.rejected',
+  // Escalation events
+  'escalation.created',
+  'escalation.resolved',
+  // System events
   'system.alert',
 ];
 

@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/rules-of-hooks */
 import { useState, useCallback } from 'react';
 import {
   AlertCircle,

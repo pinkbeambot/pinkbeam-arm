@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { ArrowRight, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FadeIn, FadeInOnMount } from "@/components/animations";
@@ -63,7 +64,7 @@ export function Hero() {
             <FadeInOnMount delay={0.2}>
               <div className="mx-auto max-w-2xl mb-10 p-6 rounded-xl border border-pink-500/30 bg-pink-500/5">
                 <p className="text-lg text-pink-400 italic mb-3">
-                  "The future of work isn't humans vs. AI. It's humans with AI."
+                  &ldquo;The future of work isn&apos;t humans vs. AI. It&apos;s humans with AI.&rdquo;
                 </p>
                 <p className="text-sm text-gray-500">
                   — VALIS

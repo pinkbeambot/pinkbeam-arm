@@ -24,9 +24,7 @@ export {
   AgentConfigFormLazy,
   SwaggerUILazy,
   ReactFlowLazy,
-  TipTapEditorLazy,
-  AnimatedHeroLazy,
-  FeatureShowcaseLazy,
+  HeroLazy,
 } from './lazy-components';
 
 // Hooks

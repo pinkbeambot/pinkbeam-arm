@@ -22,6 +22,17 @@ export {
   type UseActivityFeedReturn,
 } from "@/components/dashboard/activity";
 
+// Activities Hook (React Query based)
+export {
+  useActivities,
+  type UseActivitiesOptions,
+  type UseActivitiesReturn,
+  type ActivityFilters,
+  type EntityType,
+  type TimeRange,
+  type ActionType,
+} from "./useActivities";
+
 // Real-time Activities Hook
 export {
   useActivitiesRealtime,

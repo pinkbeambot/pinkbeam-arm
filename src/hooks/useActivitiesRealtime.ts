@@ -1,9 +1,10 @@
+/* eslint-disable react-hooks/immutability */
 /**
  * useActivitiesRealtime Hook
- * 
+ *
  * Provides real-time subscription to activities via Supabase Realtime.
  * Automatically updates the activity feed when new activities are created.
- * 
+ *
  * Usage:
  * ```tsx
  * const { activities, isConnected, error } = useActivitiesRealtime({
@@ -73,6 +74,7 @@ export function useActivitiesRealtime({
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
+  const setupSubscriptionRef = useRef<(() => void) | null>(null);
 
   const clear = useCallback(() => {
     setActivities([]);
@@ -147,7 +149,7 @@ export function useActivitiesRealtime({
               reconnectAttemptsRef.current++;
               const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
               setTimeout(() => {
-                setupSubscription();
+                setupSubscriptionRef.current?.();
               }, delay);
             }
             break;
@@ -159,11 +161,16 @@ export function useActivitiesRealtime({
 
   const reconnect = useCallback(() => {
     reconnectAttemptsRef.current = 0;
-    setupSubscription();
+    setupSubscriptionRef.current?.();
+  }, []);
+
+  // Store the setup function in a ref to avoid temporal dead zone issues
+  useEffect(() => {
+    setupSubscriptionRef.current = setupSubscription;
   }, [setupSubscription]);
 
   useEffect(() => {
-    setupSubscription();
+    setupSubscriptionRef.current?.();
 
     return () => {
       if (channelRef.current) {

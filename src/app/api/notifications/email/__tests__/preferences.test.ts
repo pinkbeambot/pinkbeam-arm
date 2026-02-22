@@ -32,7 +32,7 @@ describe('Email Preferences API', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(authenticateRequest).mockResolvedValue(mockAuth as any);
+    vi.mocked(authenticateRequest).mockResolvedValue(mockAuth as unknown as Awaited<ReturnType<typeof authenticateRequest>>);
   });
 
   describe('GET /api/notifications/email/preferences', () => {

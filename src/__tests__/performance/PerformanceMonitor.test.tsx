@@ -27,7 +27,7 @@ describe('PerformanceMonitor', () => {
       mark: vi.fn(),
       measure: vi.fn(),
       now: vi.fn().mockReturnValue(Date.now()),
-    } as any;
+    } as unknown as typeof global.performance;
 
     // Mock PerformanceObserver
     global.PerformanceObserver = class MockPerformanceObserver {
@@ -35,7 +35,7 @@ describe('PerformanceMonitor', () => {
       disconnect = vi.fn();
       takeRecords = vi.fn().mockReturnValue([]);
       constructor(public callback: PerformanceObserverCallback) {}
-    } as any;
+    } as unknown as typeof global.PerformanceObserver;
 
     // Mock navigator.sendBeacon
     Object.defineProperty(global, 'navigator', {

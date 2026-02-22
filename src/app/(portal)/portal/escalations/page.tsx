@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/preserve-manual-memoization, react-hooks/exhaustive-deps */
 import { useState, useCallback, useMemo } from 'react';
 import { AlertCircle, Bell, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';

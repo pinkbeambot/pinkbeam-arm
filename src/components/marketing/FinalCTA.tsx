@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { useState } from "react";
 import { ArrowRight, CreditCard, Calendar, CheckCircle, Quote } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -126,7 +127,7 @@ export function FinalCTA() {
                 <Quote className="w-4 h-4 text-primary" />
               </div>
               <blockquote className="text-muted-foreground italic mb-3">
-                "I've already hired Sarah and Mike. Best decision I made this year."
+                &ldquo;I&apos;ve already hired Sarah and Mike. Best decision I made this year.&rdquo;
               </blockquote>
               <cite className="text-sm text-muted-foreground not-italic">
                 — David Chen, CEO at Nexus AI

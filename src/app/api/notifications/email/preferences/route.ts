@@ -44,7 +44,7 @@ const updatePreferencesSchema = z.object({
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
     timezone: z.string(),
   }).optional(),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.string(), z.unknown()).optional(),
 });
 
 const bulkUpdateSchema = z.object({

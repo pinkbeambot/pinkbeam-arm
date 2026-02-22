@@ -5,7 +5,7 @@
  */
 
 import { render, screen, waitFor } from '@testing-library/react';
-import { vi } from 'vitest';
+import { vi, expect } from 'vitest';
 import React from 'react';
 
 /**

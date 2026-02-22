@@ -1,45 +1,45 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { listActivitiesQuerySchema } from '@/lib/validation';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-// Query parameter validation schema
-const activitiesQuerySchema = z.object({
-  type: z.string().optional(),
-  agent_id: z.string().uuid().optional(),
-  category: z.enum(['agent', 'task', 'decision', 'escalation', 'system', 'message']).optional(),
-  actor_type: z.enum(['agent', 'user', 'system']).optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
-  search: z.string().min(1).max(100).optional(),
-  limit: z.coerce.number().min(1).max(100).default(20),
-  offset: z.coerce.number().min(0).default(0),
-});
-
-export type ActivitiesQueryParams = z.infer<typeof activitiesQuerySchema>;
+export type ActivitiesQueryParams = z.infer<typeof listActivitiesQuerySchema>;
 
 /**
  * GET /api/activities
  * 
  * Fetch activities with optional filters:
- * - type: Filter by activity type (e.g., 'task.created', 'agent.spawned')
- * - agent_id: Filter by specific agent
- * - category: Filter by category ('agent', 'task', 'decision', 'escalation', 'system', 'message')
- * - actor_type: Filter by actor type ('agent', 'user', 'system')
- * - from: Start date (ISO 8601)
- * - to: End date (ISO 8601)
+ * - agent_id: Filter by specific agent (actor or related agent)
+ * - entity_type: Filter by category ('all', 'tasks', 'decisions', 'escalations', 'agents', 'system')
+ * - action_type: Filter by specific action type (e.g., 'task.created', 'agent.spawned')
+ * - time_range: Time shortcut ('1h', '24h', '7d', '30d', 'all')
+ * - date_from/date_to: Explicit date range (ISO 8601)
  * - search: Search in title and description
- * - limit: Number of results (1-100, default 20)
- * - offset: Pagination offset (default 0)
+ * - cursor: Cursor-based pagination (sequence_number)
+ * - limit: Number of results (1-100, default 50)
+ * 
+ * Response format:
+ * {
+ *   data: [activity records],
+ *   pagination: {
+ *     has_more: boolean,
+ *     next_cursor: string | null
+ *   }
+ * }
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerSupabaseClient();
     const { searchParams } = new URL(request.url);
 
-    // Validate query parameters
-    const validationResult = activitiesQuerySchema.safeParse(
-      Object.fromEntries(searchParams)
-    );
+    // Convert URLSearchParams to object
+    const queryParams: Record<string, string | undefined> = {};
+    searchParams.forEach((value, key) => {
+      queryParams[key] = value;
+    });
+
+    // Validate query parameters using the schema from validation.ts
+    const validationResult = listActivitiesQuerySchema.safeParse(queryParams);
 
     if (!validationResult.success) {
       return NextResponse.json(
@@ -53,15 +53,18 @@ export async function GET(request: NextRequest) {
     }
 
     const {
-      type,
       agent_id,
-      category,
-      actor_type,
-      from,
-      to,
+      entity_type,
+      action_type,
+      time_range,
+      date_from,
+      date_to,
       search,
+      cursor,
       limit,
-      offset,
+      // Legacy params for backward compatibility
+      type: legacyType,
+      category: legacyCategory,
     } = validationResult.data;
 
     // Build the query with joined agent data
@@ -73,28 +76,61 @@ export async function GET(request: NextRequest) {
       );
 
     // Apply filters
-    if (type) {
-      query = query.eq('type', type);
+    
+    // Filter by action_type (new) or legacy type
+    const effectiveType = action_type || legacyType;
+    if (effectiveType) {
+      query = query.eq('type', effectiveType);
     }
 
+    // Filter by agent_id (actor or related agent)
     if (agent_id) {
-      query = query.eq('agent_id', agent_id);
+      query = query.or(`agent_id.eq.${agent_id},actor_id.eq.${agent_id}`);
     }
 
-    if (category) {
-      query = query.eq('category', category);
+    // Filter by entity_type (new) or legacy category
+    const effectiveCategory = entity_type && entity_type !== 'all' 
+      ? entity_type.replace(/s$/, '') // Remove trailing 's' for singular form
+      : legacyCategory;
+    if (effectiveCategory) {
+      query = query.eq('category', effectiveCategory);
     }
 
-    if (actor_type) {
-      query = query.eq('actor_type', actor_type);
+    // Apply time range filters
+    const now = new Date();
+    let fromDate: Date | undefined;
+    let toDate: Date | undefined;
+
+    if (time_range && time_range !== 'all') {
+      fromDate = new Date();
+      switch (time_range) {
+        case '1h':
+          fromDate.setHours(now.getHours() - 1);
+          break;
+        case '24h':
+          fromDate.setDate(now.getDate() - 1);
+          break;
+        case '7d':
+          fromDate.setDate(now.getDate() - 7);
+          break;
+        case '30d':
+          fromDate.setDate(now.getDate() - 30);
+          break;
+      }
+    } else if (date_from) {
+      fromDate = new Date(date_from);
     }
 
-    if (from) {
-      query = query.gte('created_at', from);
+    if (date_to) {
+      toDate = new Date(date_to);
     }
 
-    if (to) {
-      query = query.lte('created_at', to);
+    if (fromDate) {
+      query = query.gte('created_at', fromDate.toISOString());
+    }
+
+    if (toDate) {
+      query = query.lte('created_at', toDate.toISOString());
     }
 
     // Full-text search on title and description
@@ -103,10 +139,19 @@ export async function GET(request: NextRequest) {
       query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%`);
     }
 
-    // Execute query with pagination
+    // Apply cursor-based pagination
+    if (cursor) {
+      const cursorNum = parseInt(cursor, 10);
+      if (!isNaN(cursorNum)) {
+        query = query.lt('sequence_number', cursorNum);
+      }
+    }
+
+    // Execute query with cursor-based pagination ordering
+    // Order by sequence_number DESC for consistent cursor pagination
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('sequence_number', { ascending: false })
+      .limit(limit + 1); // Fetch one extra to determine has_more
 
     if (error) {
       console.error('Activities GET error:', error);
@@ -120,20 +165,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Calculate pagination metadata
-    const total = count || 0;
-    const totalPages = Math.ceil(total / limit);
-    const currentPage = Math.floor(offset / limit) + 1;
+    // Process results for cursor-based pagination
+    const hasMore = data && data.length > limit;
+    const activities = hasMore ? data.slice(0, limit) : (data || []);
+    
+    // Determine next cursor
+    let nextCursor: string | null = null;
+    if (hasMore && activities.length > 0) {
+      const lastActivity = activities[activities.length - 1];
+      if (lastActivity?.sequence_number) {
+        nextCursor = String(lastActivity.sequence_number);
+      }
+    }
 
     return NextResponse.json({
-      data: data || [],
+      data: activities,
       pagination: {
-        total,
-        limit,
-        offset,
-        currentPage,
-        totalPages,
-        hasMore: offset + limit < total,
+        has_more: hasMore,
+        next_cursor: nextCursor,
       },
     });
   } catch (err) {

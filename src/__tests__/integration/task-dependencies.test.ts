@@ -65,7 +65,7 @@ describe('Task Dependencies API', () => {
     it('should fetch all dependencies with correct authorization', async () => {
       const mockResponse = { data: [mockDependency] };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -85,7 +85,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
@@ -97,7 +97,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return empty array when no dependencies exist', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ data: [] }),
       });
@@ -123,7 +123,7 @@ describe('Task Dependencies API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -140,7 +140,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return 404 for non-existent task', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 404,
         json: async () => ({ error: 'Task not found' }),
@@ -170,7 +170,7 @@ describe('Task Dependencies API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -190,7 +190,7 @@ describe('Task Dependencies API', () => {
 
   describe('POST /api/v1/tasks/:id/dependencies', () => {
     it('should create a blocking dependency', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => ({
@@ -221,7 +221,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should reject self-dependency', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'A task cannot depend on itself' }),
@@ -245,7 +245,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should reject circular dependencies', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Circular dependency detected' }),
@@ -270,7 +270,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should reject duplicate dependencies with 409', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 409,
         json: async () => ({ error: 'Dependency already exists' }),
@@ -292,7 +292,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return 404 when dependency task does not exist', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 404,
         json: async () => ({ error: 'Dependency task not found' }),
@@ -314,7 +314,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should accept optional dependency type', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => ({
@@ -342,7 +342,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return 400 for invalid dependency_type', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [] }),
@@ -368,7 +368,7 @@ describe('Task Dependencies API', () => {
 
   describe('DELETE /api/v1/tasks/:id/dependencies', () => {
     it('should remove a dependency by dependency_id', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ message: 'Dependency removed successfully', count: 1 }),
       });
@@ -387,7 +387,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should remove a dependency by depends_on_task_id', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ message: 'Dependency removed successfully', count: 1 }),
       });
@@ -404,7 +404,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return 400 when neither identifier is provided', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({
@@ -429,7 +429,7 @@ describe('Task Dependencies API', () => {
       // The trigger fires and: locks B FOR UPDATE, takes advisory lock, checks all blockers done, unblocks.
 
       // 1. Complete Task A
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskA, status: 'completed' },
@@ -446,7 +446,7 @@ describe('Task Dependencies API', () => {
       });
 
       // 2. Verify Task B is now queued (unblocked by trigger)
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskB, status: 'queued' },
@@ -464,7 +464,7 @@ describe('Task Dependencies API', () => {
     it('should keep task blocked when not all dependencies are completed', async () => {
       // Task C depends on both A and B. A completes but B is still in_progress → C stays blocked.
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskC, status: 'blocked' },
@@ -483,7 +483,7 @@ describe('Task Dependencies API', () => {
       // Task C depends on A (completed) and B (just completed) → C unblocks
 
       // Complete B
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskB, status: 'completed' },
@@ -500,7 +500,7 @@ describe('Task Dependencies API', () => {
       });
 
       // Now C should be unblocked
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskC, status: 'queued' },
@@ -532,7 +532,7 @@ describe('Task Dependencies API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           activities: [mockActivity],
@@ -558,7 +558,7 @@ describe('Task Dependencies API', () => {
       // We simulate this by verifying the final task state is consistent.
 
       // First concurrent trigger → unblocks successfully
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskB, status: 'queued' },
@@ -567,7 +567,7 @@ describe('Task Dependencies API', () => {
 
       // Second concurrent trigger → no-op (task already queued)
       // The status should still be 'queued', not an error
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskB, status: 'queued' },
@@ -595,7 +595,7 @@ describe('Task Dependencies API', () => {
       // The trigger should block D because E is not completed
       const taskD = { id: 'task-ddd-004', status: 'queued', title: 'Task D' };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => ({
@@ -621,7 +621,7 @@ describe('Task Dependencies API', () => {
       });
 
       // Verify D is now blocked
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskD, status: 'blocked' },
@@ -640,7 +640,7 @@ describe('Task Dependencies API', () => {
       // Add a dependency on a completed task → should NOT block
       const taskD = { id: 'task-ddd-004', status: 'queued', title: 'Task D' };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         status: 201,
         json: async () => ({
@@ -666,7 +666,7 @@ describe('Task Dependencies API', () => {
       });
 
       // D should remain queued since A is already completed
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskD, status: 'queued' },
@@ -683,7 +683,7 @@ describe('Task Dependencies API', () => {
 
     it('should unblock task when last blocking dependency is removed', async () => {
       // Task B is blocked by A. Delete the dependency → B should unblock.
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({ message: 'Dependency removed successfully', count: 1 }),
       });
@@ -697,7 +697,7 @@ describe('Task Dependencies API', () => {
       );
 
       // Verify B is now queued
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: { ...taskB, status: 'queued' },
@@ -718,7 +718,7 @@ describe('Task Dependencies API', () => {
   describe('Multi-tenant isolation', () => {
     it('should only return dependencies for the authenticated tenant', async () => {
       // Tenant A sees only their dependencies
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: [{ ...mockDependency, tenant_id: 'tenant-001' }],
@@ -734,7 +734,7 @@ describe('Task Dependencies API', () => {
     });
 
     it('should return 404 when accessing another tenant task dependencies', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 404,
         json: async () => ({ error: 'Task not found' }),

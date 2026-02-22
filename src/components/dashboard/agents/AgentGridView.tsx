@@ -43,7 +43,7 @@ export function AgentGridView({
   const selectionEnabled = !!selectedIds && !!onToggleSelect;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
       {agents.map((agent) => (
         <AgentCard
           key={agent.id}

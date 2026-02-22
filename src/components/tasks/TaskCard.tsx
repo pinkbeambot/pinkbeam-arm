@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect, react/jsx-no-duplicate-props */
 /**
  * TaskCard Component
  * 

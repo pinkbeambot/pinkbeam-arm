@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { Search, Users, Headphones, PenTool, Palette } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaggerContainer } from "@/components/animations";
@@ -50,15 +51,15 @@ export function ProblemSection() {
         {/* Section Header */}
         <FadeIn className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-            You're Doing Work You{" "}
+            You&apos;re Doing Work You{" "}
             <span className="bg-gradient-to-r from-primary to-pink-600 bg-clip-text text-transparent">
-              Shouldn't
+              Shouldn&apos;t
             </span>{" "}
             Be Doing
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Most founders spend 60% of their time on tasks that don't move the needle. 
-            Here's what's actually eating your days:
+            Most founders spend 60% of their time on tasks that don&apos;t move the needle.
+            Here&apos;s what&apos;s actually eating your days:
           </p>
         </FadeIn>
 

@@ -46,7 +46,7 @@ describe('Stripe Webhook Handler', () => {
   const mockCustomerId = 'cus_test123';
   const mockSubscriptionId = 'sub_test456';
   
-  const mockConstructEvent = stripe.webhooks.constructEvent as ReturnType<typeof vi.fn>;
+  const mockConstructEvent = stripe!.webhooks.constructEvent as ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     vi.clearAllMocks();

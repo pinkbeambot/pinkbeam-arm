@@ -28,7 +28,7 @@ describe('useChat', () => {
         ok: true,
         json: () => Promise.resolve({ chats: [], messages: [], has_more: false }),
       })
-    ) as any;
+    ) as unknown as typeof global.fetch;
   });
 
   it('initializes with correct default state', () => {
@@ -71,7 +71,7 @@ describe('useChats', () => {
         ok: true,
         json: () => Promise.resolve({ chats: [] }),
       })
-    ) as any;
+    ) as unknown as typeof global.fetch;
   });
 
   it('initializes with correct default state', () => {
