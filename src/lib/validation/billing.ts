@@ -102,14 +102,14 @@ export const recordUsageSchema = z.object({
   metricName: z.string().min(1).max(100),
   usageCount: z.number().int().min(0),
   usageCostCents: z.number().int().min(0).default(0),
-  periodStart: z.string().datetime().optional(),
-  periodEnd: z.string().datetime().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  periodStart: z.string().optional(),
+  periodEnd: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const usageQuerySchema = z.object({
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
   metricType: z.enum(['agent', 'task', 'storage', 'llm_tokens', 'api_calls', 'compute']).optional(),
 });
 
