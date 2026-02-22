@@ -2,45 +2,10 @@ import Link from "next/link";
 import { Mail, MapPin, Twitter, Linkedin, Github } from "lucide-react";
 
 const footerLinks = {
-<<<<<<< HEAD
-  product: {
-    title: "Product",
-    links: [
-      { href: "/agents", label: "AI Employees" },
-      { href: "/features", label: "Features" },
-      { href: "/pricing", label: "Pricing" },
-      { href: "/portal", label: "Portal" },
-    ],
-  },
-  company: {
-    title: "Company",
-    links: [
-      { href: "/about", label: "About" },
-      { href: "/contact", label: "Contact" },
-    ],
-  },
-  resources: {
-    title: "Resources",
-    links: [
-      { href: "#", label: "Documentation" },
-      { href: "#", label: "API Reference" },
-      { href: "#", label: "Blog" },
-    ],
-  },
-  legal: {
-    title: "Legal",
-    links: [
-      { href: "#", label: "Privacy Policy" },
-      { href: "#", label: "Terms of Service" },
-      { href: "#", label: "Security" },
-    ],
-  },
-=======
   product: { title: "Product", links: [{ href: "/agents", label: "AI Employees" }, { href: "/features", label: "Features" }, { href: "/pricing", label: "Pricing" }, { href: "/portal", label: "Portal" }] },
   company: { title: "Company", links: [{ href: "/about", label: "About" }, { href: "/contact", label: "Contact" }] },
   resources: { title: "Resources", links: [{ href: "#", label: "Documentation" }, { href: "#", label: "API Reference" }, { href: "#", label: "Blog" }] },
   legal: { title: "Legal", links: [{ href: "#", label: "Privacy Policy" }, { href: "#", label: "Terms of Service" }, { href: "#", label: "Security" }] },
->>>>>>> eng-ai/llm-improvements
 };
 
 const socialLinks = [
@@ -55,10 +20,6 @@ export function MarketingFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-12 lg:py-16">
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8 lg:gap-12">
-<<<<<<< HEAD
-            {/* Brand Column */}
-=======
->>>>>>> eng-ai/llm-improvements
             <div className="col-span-2">
               <Link href="/" className="flex items-center gap-2 mb-4 group">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600 group-hover:shadow-lg group-hover:shadow-pink-500/25 transition-all duration-300">
@@ -92,29 +53,12 @@ export function MarketingFooter() {
 
         <div className="py-6 border-t border-border">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-<<<<<<< HEAD
-            <p className="text-sm text-muted-foreground text-center sm:text-left">
-              © {new Date().getFullYear()} Pink Beam. All rights reserved.
-            </p>
-=======
             <p className="text-sm text-muted-foreground text-center sm:text-left">© {new Date().getFullYear()} Pink Beam. All rights reserved.</p>
->>>>>>> eng-ai/llm-improvements
             <div className="flex items-center gap-4">
               {socialLinks.map((social) => {
                 const Icon = social.icon;
                 return (
-<<<<<<< HEAD
-                  <a
-                    key={social.label}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
-                    aria-label={social.label}
-                  >
-=======
                   <a key={social.label} href={social.href} target="_blank" rel="noopener noreferrer" className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors" aria-label={social.label}>
->>>>>>> eng-ai/llm-improvements
                     <Icon className="w-4 h-4" />
                   </a>
                 );
