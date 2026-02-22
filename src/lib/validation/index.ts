@@ -37,3 +37,12 @@ export * from './message';
 
 // Webhook validation
 export * from './webhook';
+
+// Batch operations validation
+export * from './batch';
+
+// Export operations validation
+export * from './export';
+
+// Filter validation
+export * from './filter';

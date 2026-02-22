@@ -5,19 +5,19 @@
  */
 
 import { z } from 'zod';
-import { WEBHOOK_EVENT_TYPES } from '@/types/webhook';
+import { WEBHOOK_EVENT_FILTERS } from '@/types/webhook';
 
 export const createWebhookEndpointSchema = z.object({
   url: z.string().url(),
   description: z.string().max(500).optional(),
-  events: z.array(z.enum(WEBHOOK_EVENT_TYPES as [string, ...string[]])).min(1),
+  events: z.array(z.enum(WEBHOOK_EVENT_FILTERS as [string, ...string[]])).min(1),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const updateWebhookEndpointSchema = z.object({
   url: z.string().url().optional(),
   description: z.string().max(500).optional(),
-  events: z.array(z.enum(WEBHOOK_EVENT_TYPES as [string, ...string[]])).min(1).optional(),
+  events: z.array(z.enum(WEBHOOK_EVENT_FILTERS as [string, ...string[]])).min(1).optional(),
   is_active: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });

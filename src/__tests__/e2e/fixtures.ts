@@ -3,8 +3,9 @@ import { test as base, expect, Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { existsSync } from 'fs';
 
-// Re-export constants from auth setup
-export { TEST_EMAIL, STORAGE_STATE } from './auth.setup';
+// Import and re-export constants from shared constants file
+import { TEST_EMAIL, STORAGE_STATE } from './constants';
+export { TEST_EMAIL, STORAGE_STATE };
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://localhost:54321';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';

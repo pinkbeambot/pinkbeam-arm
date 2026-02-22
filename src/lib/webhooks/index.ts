@@ -1,6 +1,14 @@
 export { signPayload, verifySignature, generateHeaders } from './signature';
 export { dispatchWebhookEvent, processWebhookRetries, sendTestWebhook } from './delivery';
 export {
+  shouldDeliverEvent,
+  validateEventFilters,
+  expandEventFilters,
+  buildEventFilterSummary,
+  EVENT_CATEGORIES,
+  type EventCategory,
+} from './filtering';
+export {
   triggerAgentCreated,
   triggerAgentUpdated,
   triggerAgentDeleted,

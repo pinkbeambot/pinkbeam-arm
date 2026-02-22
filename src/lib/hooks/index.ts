@@ -64,3 +64,14 @@ export {
   type BottlenecksData,
   type ROIData
 } from './use-analytics';
+
+// Optimized query hooks
+export {
+  useOptimizedQuery,
+  useOptimisticMutation,
+  usePrefetch,
+  useDebouncedQuery,
+  useDeduplicatedRequest,
+  useBackgroundRefresh,
+  cachePresets,
+} from './use-optimized-queries';
