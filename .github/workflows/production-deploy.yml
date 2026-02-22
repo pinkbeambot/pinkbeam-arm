@@ -1,0 +1,271 @@
+name: Production Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  NODE_VERSION: '20'
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  SENTRY_ORG: pinkbeam
+  SENTRY_PROJECT: arm-production
+
+jobs:
+  # Pre-deployment checks
+  pre-deploy-checks:
+    name: Pre-Deployment Checks
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Security check - DEV_AUTH_BYPASS
+        id: check
+        run: |
+          # Check that DEV_AUTH_BYPASS is not set in production
+          if [ "${{ github.event.inputs.environment }}" = "production" ] || [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "Checking for DEV_AUTH_BYPASS..."
+            if grep -r "DEV_AUTH_BYPASS=true" . --include="*.env*" --include="vercel.json" 2>/dev/null; then
+              echo "❌ DEV_AUTH_BYPASS found! Aborting deployment."
+              exit 1
+            fi
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_deploy=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Deploy database migrations first
+  deploy-migrations:
+    name: Deploy Database Migrations
+    runs-on: ubuntu-latest
+    needs: [pre-deploy-checks]
+    if: needs.pre-deploy-checks.outputs.should_deploy == 'true'
+    environment:
+      name: production
+      url: https://pinkbeam.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase Project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy Database Migrations (Dry Run)
+        run: supabase db push --dry-run
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy Database Migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Verify migrations
+        run: |
+          supabase migration list
+          echo "✅ Migrations deployed successfully"
+
+      - name: Deploy Edge Functions
+        run: |
+          if [ -d "supabase/functions" ] && [ "$(ls -A supabase/functions)" ]; then
+            supabase functions deploy
+          else
+            echo "No edge functions to deploy"
+          fi
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+  # Create Sentry release
+  sentry-release:
+    name: Create Sentry Release
+    runs-on: ubuntu-latest
+    needs: [pre-deploy-checks]
+    if: needs.pre-deploy-checks.outputs.should_deploy == 'true'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ env.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ env.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          sourcemaps: './.next'
+
+  # Deploy to Vercel
+  deploy-production:
+    name: Deploy to Vercel Production
+    runs-on: ubuntu-latest
+    needs: [pre-deploy-checks, deploy-migrations]
+    if: needs.pre-deploy-checks.outputs.should_deploy == 'true'
+    environment:
+      name: production
+      url: https://pinkbeam.io
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Pull Vercel Environment Information
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build Project Artifacts
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          NEXT_PUBLIC_APP_URL: https://pinkbeam.io
+          NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.NEXT_PUBLIC_SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      - name: Deploy Project Artifacts to Vercel
+        id: deploy
+        run: |
+          DEPLOYMENT_URL=$(vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          echo "deployment_url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployed to: $DEPLOYMENT_URL"
+
+  # Post-deployment verification
+  post-deploy-verify:
+    name: Post-Deployment Verification
+    runs-on: ubuntu-latest
+    needs: [deploy-production]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Wait for deployment
+        run: sleep 30
+
+      - name: Verify health endpoint
+        run: |
+          for i in {1..5}; do
+            echo "Attempt $i: Checking health endpoint..."
+            if curl -sf https://pinkbeam.io/api/health | grep -q '"status":"healthy"'; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
+
+      - name: Run smoke tests
+        run: |
+          curl -sf https://pinkbeam.io/ > /dev/null && echo "✅ Homepage OK"
+          curl -sf https://pinkbeam.io/login > /dev/null && echo "✅ Login page OK"
+          curl -sf https://pinkbeam.io/api/health > /dev/null && echo "✅ Health endpoint OK"
+
+      - name: Notify deployment success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "✅ Production deployment successful!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "✅ *Production deployment successful*\n• Commit: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n• Branch: ${{ github.ref_name }}\n• URL: https://pinkbeam.io"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
+
+      - name: Notify deployment failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: |
+            {
+              "text": "🚨 Production deployment failed!",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "🚨 *Production deployment failed*\n• Commit: <https://github.com/${{ github.repository }}/commit/${{ github.sha }}|${{ github.sha }}>\n• Branch: ${{ github.ref_name }}\n• Check: <https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}|GitHub Actions>"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_DEPLOY_WEBHOOK_URL }}
+
+  # Performance monitoring
+  performance-check:
+    name: Performance Check
+    runs-on: ubuntu-latest
+    needs: [post-deploy-verify]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Lighthouse CI
+        run: npm install -g @lhci/cli@0.14.x
+
+      - name: Run Lighthouse on production
+        run: |
+          lhci autorun --config=lighthouserc.prod.json || true
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+        continue-on-error: true

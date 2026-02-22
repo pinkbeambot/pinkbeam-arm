@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import createBundleAnalyzer from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const withBundleAnalyzer = createBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true'
@@ -360,4 +361,19 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+// Sentry configuration
+const sentryWebpackPluginOptions = {
+  org: 'pinkbeam',
+  project: 'arm-production',
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+  automaticVercelMonitors: true,
+};
+
+// Export with both Sentry and Bundle Analyzer
+module.exports = withSentryConfig(
+  withBundleAnalyzer(nextConfig),
+  sentryWebpackPluginOptions
+);

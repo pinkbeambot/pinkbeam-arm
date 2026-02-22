@@ -1,0 +1,38 @@
+name: Sentry Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  create-release:
+    name: Create Sentry Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: pinkbeam
+          SENTRY_PROJECT: arm-production
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          set_commits: auto
+
+      - name: Upload source maps
+        uses: getsentry/action-release@v1
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: pinkbeam
+          SENTRY_PROJECT: arm-production
+        with:
+          version: ${{ github.sha }}
+          sourcemaps: './.next'
+        continue-on-error: true
