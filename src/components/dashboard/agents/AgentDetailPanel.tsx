@@ -98,7 +98,7 @@ export function AgentDetailPanel({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-xl p-0">
+        <SheetContent data-testid="agent-detail-panel" className="w-full sm:max-w-xl p-0">
           {loading || !agent ? (
             <AgentDetailSkeleton />
           ) : (

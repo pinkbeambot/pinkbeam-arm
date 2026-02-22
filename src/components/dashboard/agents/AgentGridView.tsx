@@ -77,6 +77,9 @@ interface AgentCardProps {
 function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEdit, onToggleStatus, onDelete, onClone }: AgentCardProps) {
   return (
     <Card
+      data-testid="agent-card"
+      data-agent-id={agent.id}
+      data-agent-name={agent.name}
       className={cn(
         'cursor-pointer transition-all hover:shadow-md relative',
         isSelected && 'ring-2 ring-primary',

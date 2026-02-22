@@ -181,7 +181,7 @@ export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: Crea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-modal="true" aria-labelledby="create-agent-title" className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent data-testid="create-agent-modal" aria-modal="true" aria-labelledby="create-agent-title" className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle id="create-agent-title">Create New Agent</DialogTitle>
           <DialogDescription>
@@ -257,6 +257,7 @@ function TemplateStep({ onSelect }: { onSelect: (template: AgentTemplate) => voi
         return (
           <button
             key={template.id}
+            data-testid={`template-${template.id}`}
             onClick={() => onSelect(template)}
             className={cn(
               'flex flex-col items-start p-4 rounded-lg border-2 text-left transition-all',
