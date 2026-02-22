@@ -270,10 +270,10 @@ const nextConfig: NextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains; preload',
           },
-          // Restrict browser features/APIs the app doesn't need
+          // Updated Permissions-Policy for PWA support
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=(), display-capture=(), fullscreen=(self)',
           },
           // Legacy XSS protection header (still useful for older browsers)
           {
@@ -284,6 +284,11 @@ const nextConfig: NextConfig = {
           {
             key: 'X-DNS-Prefetch-Control',
             value: 'on',
+          },
+          // Service Worker allowed
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
           },
         ],
       },
@@ -304,6 +309,44 @@ const nextConfig: NextConfig = {
           {
             key: 'Cache-Control',
             value: 'public, max-age=86400, stale-while-revalidate=31536000',
+          },
+        ],
+      },
+      // Service Worker headers - don't cache
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      // Manifest headers
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/manifest+json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600',
+          },
+        ],
+      },
+      // PWA Icon headers
+      {
+        source: '/icons/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, immutable',
           },
         ],
       },
