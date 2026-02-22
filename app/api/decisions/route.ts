@@ -107,7 +107,8 @@ export async function GET(request: NextRequest) {
     // Full-text search
     if (params.q) {
       const searchFields = params.search_fields?.split(',').filter(Boolean) || ['title', 'description'];
-      query = applyFullTextSearch(query, params.q, searchFields, params.search_operator || 'and');
+      const searchOperator = ('search_operator' in params ? params.search_operator : 'and') as 'and' | 'or';
+      query = applyFullTextSearch(query, params.q, searchFields, searchOperator || 'and');
     }
 
     // Apply advanced filter conditions

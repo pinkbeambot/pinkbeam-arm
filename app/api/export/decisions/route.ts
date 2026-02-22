@@ -105,7 +105,7 @@ export async function GET(request: NextRequest) {
       return apiError('Failed to fetch decisions', 500, error.message);
     }
 
-    const decisionList = decisions || [];
+    const decisionList = (decisions || []) as Record<string, unknown>[];
 
     // Sanitize data for export
     const fieldsToRemove: string[] = [];

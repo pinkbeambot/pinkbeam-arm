@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
       return apiError('Failed to fetch agents', 500, error.message);
     }
 
-    const agentList = agents || [];
+    const agentList = (agents || []) as Record<string, unknown>[];
 
     // Sanitize data for export
     let exportData = sanitizeForExport(agentList, ['session_id']);

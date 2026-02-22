@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
       return apiError('Failed to fetch tasks', 500, error.message);
     }
 
-    const taskList = tasks || [];
+    const taskList = (tasks || []) as Record<string, unknown>[];
 
     // Sanitize data for export
     const fieldsToRemove = include_outputs ? [] : ['outputs', 'inputs', 'expected_outputs'];
