@@ -184,7 +184,8 @@ async function initializeUserAndTenant(authUser: { id: string; email?: string; u
     // Create new tenant and user (NEW SIGNUP FLOW)
     // ============================================================================
     
-    console.log('Creating new tenant and user for:', authUser.email);
+    // Security: User email intentionally not logged to prevent PII exposure in logs
+    console.log('Creating new tenant and user for new signup');
 
     // Generate tenant details
     const tenantName = authUser.email 
