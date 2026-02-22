@@ -20,6 +20,7 @@ interface ExportButtonProps {
   agentIds?: string[];
   categories?: string[];
   className?: string;
+  disabled?: boolean;
 }
 
 export function ExportButton({
@@ -27,6 +28,7 @@ export function ExportButton({
   agentIds,
   categories,
   className,
+  disabled = false,
 }: ExportButtonProps) {
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState<ExportFormat | null>(null);
@@ -67,7 +69,7 @@ export function ExportButton({
     }
   };
 
-  const exportAsCSV = async (data: unknown) => {
+  const exportAsCSV = async (_data: unknown) => {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     const csvContent = [
@@ -81,7 +83,7 @@ export function ExportButton({
     downloadFile(csvContent, `analytics-${formatDate(dateRange.from)}.csv`, 'text/csv');
   };
 
-  const exportAsPDF = async (data: unknown) => {
+  const exportAsPDF = async (_data: unknown) => {
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     const htmlContent = `
@@ -114,7 +116,7 @@ export function ExportButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={cn('gap-2', className)}>
+        <Button variant="outline" size="sm" className={cn('gap-2', className)} disabled={disabled}>
           {isExporting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
