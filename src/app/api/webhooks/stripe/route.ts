@@ -18,6 +18,28 @@ import {
 } from '@/lib/billing/service';
 import type { SubscriptionTier } from '@/types/billing';
 
+// Helper to safely get subscription ID from invoice
+function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
+  return (invoice as unknown as { subscription?: string }).subscription ?? null;
+}
+
+// Helper to safely get payment intent from invoice
+function getInvoicePaymentIntentId(invoice: Stripe.Invoice): string | null {
+  return (invoice as unknown as { payment_intent?: string }).payment_intent ?? null;
+}
+
+// Helper to safely get subscription period dates
+function getSubscriptionPeriodDates(subscription: Stripe.Subscription) {
+  const sub = subscription as unknown as {
+    current_period_start?: number;
+    current_period_end?: number;
+  };
+  return {
+    currentPeriodStart: sub.current_period_start,
+    currentPeriodEnd: sub.current_period_end,
+  };
+}
+
 /**
  * POST /api/webhooks/stripe
  * Production-hardened Stripe webhook handler with idempotency, retry logic, and comprehensive error handling.
@@ -165,7 +187,7 @@ function createInvoicePaidHandler(supabase: ReturnType<typeof createServiceRoleC
     await saveInvoice(supabase, tenantId, {
       stripe_invoice_id: invoice.id,
       stripe_customer_id: invoice.customer as string,
-      stripe_subscription_id: invoice.subscription as string | null,
+      stripe_subscription_id: getInvoiceSubscriptionId(invoice),
       amount_due: invoice.amount_due,
       amount_paid: invoice.amount_paid,
       currency: invoice.currency ?? 'usd',
@@ -196,7 +218,7 @@ function createInvoicePaidHandler(supabase: ReturnType<typeof createServiceRoleC
     );
 
     // Update subscription status if applicable
-    if (invoice.subscription) {
+    if (getInvoiceSubscriptionId(invoice)) {
       await updateTenantBilling(supabase, tenantId, {
         subscription_status: 'active',
       });
@@ -221,7 +243,7 @@ function createInvoicePaymentFailedHandler(supabase: ReturnType<typeof createSer
     await saveInvoice(supabase, tenantId, {
       stripe_invoice_id: invoice.id,
       stripe_customer_id: invoice.customer as string,
-      stripe_subscription_id: invoice.subscription as string | null,
+      stripe_subscription_id: getInvoiceSubscriptionId(invoice),
       amount_due: invoice.amount_due,
       amount_paid: invoice.amount_paid,
       currency: invoice.currency ?? 'usd',
@@ -253,7 +275,7 @@ function createInvoicePaymentFailedHandler(supabase: ReturnType<typeof createSer
     );
 
     // Update subscription status
-    if (invoice.subscription) {
+    if (getInvoiceSubscriptionId(invoice)) {
       await updateTenantBilling(supabase, tenantId, {
         subscription_status: 'past_due',
       });
@@ -263,7 +285,7 @@ function createInvoicePaymentFailedHandler(supabase: ReturnType<typeof createSer
     await createFailedPayment(supabase, {
       tenant_id: tenantId,
       stripe_invoice_id: invoice.id,
-      stripe_payment_intent_id: invoice.payment_intent as string | null,
+      stripe_payment_intent_id: getInvoicePaymentIntentId(invoice),
       stripe_payment_method_id: typeof invoice.default_payment_method === 'string' 
         ? invoice.default_payment_method 
         : null,
@@ -298,11 +320,11 @@ function createSubscriptionCreatedHandler(supabase: ReturnType<typeof createServ
     await updateTenantBilling(supabase, tenantId, {
       stripe_subscription_id: subscription.id,
       subscription_status: subscription.status,
-      current_period_starts_at: subscription.current_period_start
-        ? new Date(subscription.current_period_start * 1000).toISOString()
+      current_period_starts_at: getSubscriptionPeriodDates(subscription).currentPeriodStart
+        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodStart * 1000).toISOString()
         : null,
-      current_period_ends_at: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toISOString()
+      current_period_ends_at: getSubscriptionPeriodDates(subscription).currentPeriodEnd
+        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodEnd * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(tier ? { current_tier: tier } : {}),
@@ -341,11 +363,11 @@ function createSubscriptionUpdatedHandler(supabase: ReturnType<typeof createServ
     await updateTenantBilling(supabase, tenantId, {
       stripe_subscription_id: subscription.id,
       subscription_status: subscription.status,
-      current_period_starts_at: subscription.current_period_start
-        ? new Date(subscription.current_period_start * 1000).toISOString()
+      current_period_starts_at: getSubscriptionPeriodDates(subscription).currentPeriodStart
+        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodStart * 1000).toISOString()
         : null,
-      current_period_ends_at: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000).toISOString()
+      current_period_ends_at: getSubscriptionPeriodDates(subscription).currentPeriodEnd
+        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodEnd * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(tier ? { current_tier: tier } : {}),

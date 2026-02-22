@@ -160,7 +160,11 @@ export function TimeSeriesChart({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis {...commonAxisProps.xAxis} />
             <YAxis {...commonAxisProps.yAxis} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [valueFormatter(value), 'Value']} />
+            <Tooltip 
+              contentStyle={tooltipStyle} 
+              formatter={(value: number) => [valueFormatter(value), 'Value']}
+              labelFormatter={(label) => new Date(label).toLocaleDateString()}
+            />
             {showTrendLine && (
               <Line 
                 type="monotone" 
@@ -188,7 +192,11 @@ export function TimeSeriesChart({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis {...commonAxisProps.xAxis} />
             <YAxis {...commonAxisProps.yAxis} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [valueFormatter(value), 'Value']} />
+            <Tooltip 
+              contentStyle={tooltipStyle} 
+              formatter={(value: number) => [valueFormatter(value), 'Value']}
+              labelFormatter={(label) => new Date(label).toLocaleDateString()}
+            />
             <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>
         );
@@ -212,7 +220,11 @@ export function TimeSeriesChart({
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
             <XAxis {...commonAxisProps.xAxis} />
             <YAxis {...commonAxisProps.yAxis} />
-            <Tooltip contentStyle={tooltipStyle} formatter={(value: number) => [valueFormatter(value), 'Value']} />
+            <Tooltip 
+              contentStyle={tooltipStyle} 
+              formatter={(value: number) => [valueFormatter(value), 'Value']}
+              labelFormatter={(label) => new Date(label).toLocaleDateString()}
+            />
             {showTrendLine && (
               <Line 
                 type="monotone" 

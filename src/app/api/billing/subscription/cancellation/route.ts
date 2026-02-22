@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { stripe } from '@/lib/billing/stripe';
+import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import {
   getTenantBilling,
   updateTenantBilling,
@@ -218,10 +219,10 @@ export async function PATCH(request: NextRequest) {
       // Apply the appropriate retention action
       switch (offerType) {
         case 'discount': {
-          // Apply discount coupon to subscription
+          // Apply discount coupon to subscription using discounts array
           if (billing.stripeSubscriptionId) {
             await stripe.subscriptions.update(billing.stripeSubscriptionId, {
-              coupon: 'retention_discount', // This would be a real coupon ID
+              discounts: [{ coupon: 'retention_discount' }], // This would be a real coupon ID
             });
           }
           break;
