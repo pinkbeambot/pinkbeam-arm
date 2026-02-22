@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
       previous_tier: currentTier,
       new_tier: targetTier,
       initiated_by: userId,
-      reason: reason ?? null,
+      reason: reason || undefined,
       status: 'pending',
     });
 
@@ -196,8 +196,8 @@ export async function POST(request: NextRequest) {
           status: 'applied',
           applied_at: new Date().toISOString(),
           proration_date: new Date().toISOString(),
-          proration_credit_cents: proration?.proration_credit_cents ?? null,
-          proration_charge_cents: proration?.proration_charge_cents ?? null,
+          proration_credit_cents: proration?.proration_credit_cents,
+          proration_charge_cents: proration?.proration_charge_cents,
           stripe_subscription_id: updatedSubscription.id,
         })
         .eq('id', changeRecordId);
@@ -237,11 +237,11 @@ export async function POST(request: NextRequest) {
             id: updatedSubscription.id,
             status: updatedSubscription.status,
             tier: targetTier,
-            currentPeriodStart: updatedSubscription.current_period_start
-              ? new Date(updatedSubscription.current_period_start * 1000).toISOString()
+            currentPeriodStart: (updatedSubscription as unknown as { current_period_start?: number }).current_period_start
+              ? new Date((updatedSubscription as unknown as { current_period_start?: number }).current_period_start! * 1000).toISOString()
               : null,
-            currentPeriodEnd: updatedSubscription.current_period_end
-              ? new Date(updatedSubscription.current_period_end * 1000).toISOString()
+            currentPeriodEnd: (updatedSubscription as unknown as { current_period_end?: number }).current_period_end
+              ? new Date((updatedSubscription as unknown as { current_period_end?: number }).current_period_end! * 1000).toISOString()
               : null,
           },
           proration: proration

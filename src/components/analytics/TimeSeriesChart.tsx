@@ -162,7 +162,7 @@ export function TimeSeriesChart({
             <YAxis {...commonAxisProps.yAxis} />
             <Tooltip 
               contentStyle={tooltipStyle} 
-              formatter={(value: number) => [valueFormatter(value), 'Value']}
+              formatter={(value) => [valueFormatter(value as number), "Value"]}
               labelFormatter={(label) => new Date(label).toLocaleDateString()}
             />
             {showTrendLine && (
@@ -194,7 +194,7 @@ export function TimeSeriesChart({
             <YAxis {...commonAxisProps.yAxis} />
             <Tooltip 
               contentStyle={tooltipStyle} 
-              formatter={(value: number) => [valueFormatter(value), 'Value']}
+              formatter={(value) => [valueFormatter(value as number), "Value"]}
               labelFormatter={(label) => new Date(label).toLocaleDateString()}
             />
             <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
@@ -222,7 +222,7 @@ export function TimeSeriesChart({
             <YAxis {...commonAxisProps.yAxis} />
             <Tooltip 
               contentStyle={tooltipStyle} 
-              formatter={(value: number) => [valueFormatter(value), 'Value']}
+              formatter={(value) => [valueFormatter(value as number), "Value"]}
               labelFormatter={(label) => new Date(label).toLocaleDateString()}
             />
             {showTrendLine && (

@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   // Process the event with idempotency and retry logic
   try {
-    const result = await processor.processEvent(event.id, event.type, event.data.object as Record<string, unknown>);
+    const result = await processor.processEvent(event.id, event.type, event.data.object as unknown as Record<string, unknown>);
 
     if (result.success) {
       if (result.processed) {
@@ -211,7 +211,7 @@ function createInvoicePaidHandler(supabase: ReturnType<typeof createServiceRoleC
       {
         invoice_id: invoice.id,
         amount: invoice.amount_due,
-        subscription_id: invoice.subscription,
+        subscription_id: getInvoiceSubscriptionId(invoice),
       },
       invoice.id,
       'invoice.paid'
@@ -317,14 +317,16 @@ function createSubscriptionCreatedHandler(supabase: ReturnType<typeof createServ
 
     const tier = subscription.metadata?.tier as SubscriptionTier | undefined;
 
+    const periodDates = getSubscriptionPeriodDates(subscription);
+
     await updateTenantBilling(supabase, tenantId, {
       stripe_subscription_id: subscription.id,
       subscription_status: subscription.status,
-      current_period_starts_at: getSubscriptionPeriodDates(subscription).currentPeriodStart
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodStart * 1000).toISOString()
+      current_period_starts_at: periodDates.currentPeriodStart
+        ? new Date(periodDates.currentPeriodStart * 1000).toISOString()
         : null,
-      current_period_ends_at: getSubscriptionPeriodDates(subscription).currentPeriodEnd
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodEnd * 1000).toISOString()
+      current_period_ends_at: periodDates.currentPeriodEnd
+        ? new Date(periodDates.currentPeriodEnd * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(tier ? { current_tier: tier } : {}),
@@ -359,15 +361,16 @@ function createSubscriptionUpdatedHandler(supabase: ReturnType<typeof createServ
     }
 
     const tier = subscription.metadata?.tier as SubscriptionTier | undefined;
+    const periodDates = getSubscriptionPeriodDates(subscription);
 
     await updateTenantBilling(supabase, tenantId, {
       stripe_subscription_id: subscription.id,
       subscription_status: subscription.status,
-      current_period_starts_at: getSubscriptionPeriodDates(subscription).currentPeriodStart
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodStart * 1000).toISOString()
+      current_period_starts_at: periodDates.currentPeriodStart
+        ? new Date(periodDates.currentPeriodStart * 1000).toISOString()
         : null,
-      current_period_ends_at: getSubscriptionPeriodDates(subscription).currentPeriodEnd
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodEnd * 1000).toISOString()
+      current_period_ends_at: periodDates.currentPeriodEnd
+        ? new Date(periodDates.currentPeriodEnd * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(tier ? { current_tier: tier } : {}),
@@ -488,7 +491,7 @@ function createPaymentMethodAttachedHandler(supabase: ReturnType<typeof createSe
       card_last4: paymentMethod.card?.last4 ?? null,
       card_exp_month: paymentMethod.card?.exp_month ?? null,
       card_exp_year: paymentMethod.card?.exp_year ?? null,
-      billing_details: paymentMethod.billing_details ?? {},
+      billing_details: (paymentMethod.billing_details ?? {}) as unknown as Record<string, unknown>,
     });
 
     await logBillingEvent(
@@ -565,17 +568,29 @@ function createPaymentIntentFailedHandler(supabase: ReturnType<typeof createServ
     );
 
     // Update payment method status if available
-    if (paymentIntent.payment_method) {
-      await recordPaymentMethodEvent(supabase, {
-        tenant_id: tenantId,
-        stripe_payment_method_id: paymentIntent.payment_method as string,
-        event_type: 'failed',
-        event_data: {
-          payment_intent_id: paymentIntent.id,
-          failure_code: paymentIntent.last_payment_error?.code,
-          failure_message: paymentIntent.last_payment_error?.message,
-        },
-      });
+    if (paymentIntent.payment_method && stripe) {
+      try {
+        const paymentMethod = await stripe.paymentMethods.retrieve(paymentIntent.payment_method as string);
+        await recordPaymentMethodEvent(supabase, {
+          tenant_id: tenantId,
+          stripe_payment_method_id: paymentMethod.id,
+          stripe_customer_id: paymentMethod.customer as string,
+          type: paymentMethod.type,
+          card_brand: paymentMethod.card?.brand ?? null,
+          card_last4: paymentMethod.card?.last4 ?? null,
+          card_exp_month: paymentMethod.card?.exp_month ?? null,
+          card_exp_year: paymentMethod.card?.exp_year ?? null,
+          billing_details: (paymentMethod.billing_details ?? {}) as Record<string, unknown>,
+          event_type: 'failed',
+          event_data: {
+            payment_intent_id: paymentIntent.id,
+            failure_code: paymentIntent.last_payment_error?.code,
+            failure_message: paymentIntent.last_payment_error?.message,
+          },
+        });
+      } catch (pmError) {
+        console.error('Failed to retrieve payment method for event logging:', pmError);
+      }
     }
   };
 }

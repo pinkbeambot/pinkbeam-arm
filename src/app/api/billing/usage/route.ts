@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by metric type if specified
     const filteredSummary = metricType
-      ? summary.filter((s) => s.metric_type === metricType)
+      ? summary.filter((s: { metric_type?: string }) => s.metric_type === metricType)
       : summary;
 
     // Get daily trends
@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
         alerts: alerts || [],
         costs: {
           subscriptionCents: 0, // Would be populated from actual subscription
-          usageCents: filteredSummary.reduce((sum, s) => sum + (s.total_cost_cents || 0), 0),
-          totalCents: filteredSummary.reduce((sum, s) => sum + (s.total_cost_cents || 0), 0),
+          usageCents: filteredSummary.reduce((sum: number, s: { total_cost_cents?: number }) => sum + (s.total_cost_cents || 0), 0),
+          totalCents: filteredSummary.reduce((sum: number, s: { total_cost_cents?: number }) => sum + (s.total_cost_cents || 0), 0),
         },
       },
     });

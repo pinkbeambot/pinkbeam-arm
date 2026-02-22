@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
     const regionCode = tenant?.billing_region;
 
     // Get applicable tax rate
-    const taxRate = getTaxRate(countryCode, regionCode);
+    const taxRate = await getTaxRate(countryCode, regionCode);
 
     return NextResponse.json({
       data: {
@@ -280,8 +280,8 @@ async function calculateTax(
   };
 }
 
-function getTaxRate(countryCode: string, regionCode?: string): { rate: number; type: string } {
-  const calculation = calculateTax(10000, countryCode, regionCode);
+async function getTaxRate(countryCode: string, regionCode?: string): Promise<{ rate: number; type: string }> {
+  const calculation = await calculateTax(10000, countryCode, regionCode);
   return {
     rate: calculation.taxRate,
     type: calculation.taxType,
