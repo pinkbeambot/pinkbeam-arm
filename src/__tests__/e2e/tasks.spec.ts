@@ -50,7 +50,7 @@ test.describe('Task Management', () => {
     }
     
     // Save task
-    await page.click('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').last().catch(async () => {
+    await page.locator('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').last().click().catch(async () => {
       // Try to find any primary button
       await page.locator('button.variant-primary, button.bg-primary').first().click();
     });
@@ -129,8 +129,8 @@ test.describe('Task Management', () => {
       await expect(page.locator('[role="dialog"]').first()).toBeVisible();
       
       // Close modal
-      await page.click('button[aria-label="Close"], button:has([data-lucide="x"])').first().catch(() => {
-        page.keyboard.press('Escape');
+      await page.locator('button[aria-label="Close"], button:has([data-lucide="x"])').first().click().catch(async () => {
+        await page.keyboard.press('Escape');
       });
     }
   });
@@ -182,8 +182,8 @@ test.describe('Task Management', () => {
       }
       
       // Close modal
-      await page.click('button[aria-label="Close"], button:has([data-lucide="x"])').first().catch(() => {
-        page.keyboard.press('Escape');
+      await page.locator('button[aria-label="Close"], button:has([data-lucide="x"])').first().click().catch(async () => {
+        await page.keyboard.press('Escape');
       });
     }
   });
@@ -215,8 +215,8 @@ test.describe('Task Management', () => {
       await expect(page.locator('text=Import').first()).toBeVisible();
       
       // Close dialog
-      await page.click('button:has-text("Cancel"), button[aria-label="Close"]').first().catch(() => {
-        page.keyboard.press('Escape');
+      await page.locator('button:has-text("Cancel"), button[aria-label="Close"]').first().click().catch(async () => {
+        await page.keyboard.press('Escape');
       });
     }
   });

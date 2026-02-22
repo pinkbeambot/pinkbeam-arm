@@ -2,6 +2,8 @@ import { test as setup, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 import { TEST_EMAIL, STORAGE_STATE } from './constants';
 
+export { TEST_EMAIL, STORAGE_STATE };
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 

@@ -171,8 +171,8 @@ test.describe('Critical Path - Full User Journey', () => {
         await page.waitForTimeout(500);
 
         // Close modal
-        await page.click('button[aria-label="Close"], button:has([data-lucide="x"])').first().catch(() => {
-          page.keyboard.press('Escape');
+        await page.locator('button[aria-label="Close"], button:has([data-lucide="x"])').first().click().catch(async () => {
+          await page.keyboard.press('Escape');
         });
       }
     });
@@ -195,8 +195,8 @@ test.describe('Critical Path - Full User Journey', () => {
       await page.waitForTimeout(500);
 
       // Close modal
-      await page.click('button[aria-label="Close"], button:has([data-lucide="x"])').first().catch(() => {
-        page.keyboard.press('Escape');
+      await page.locator('button[aria-label="Close"], button:has([data-lucide="x"])').first().click().catch(async () => {
+        await page.keyboard.press('Escape');
       });
     });
 

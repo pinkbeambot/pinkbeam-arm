@@ -2,7 +2,7 @@
  * Enhanced LLM Router
  */
 
-import { LLMProvider, LLMRequest, LLMResponse, LLMModel, RouterConfig, RoutingDecision, LLMError, AgentLLMPreferences } from './types';
+import { LLMProvider, LLMRequest, LLMResponse, LLMModel, RouterConfig, RoutingDecision, LLMError, AgentLLMPreferences, LLMRequestConfig } from './types';
 import { ALL_MODELS, createProvider, ProviderConfig, OpenAIProvider, OllamaProvider } from './providers';
 import { withRetry, CircuitBreakerRegistry, RetryableError, DEFAULT_RETRY_CONFIG } from './retry';
 import { CostTrackingService, selectModelWithCostOptimization, calculateEstimatedCost, CostLimitExceededError, ModelSelectionConfig } from './cost-tracking';
@@ -112,7 +112,23 @@ export class EnhancedLLMRouter {
   getConfig(): EnhancedRouterConfig { return { ...this.config }; }
   getCostTrackingService(): CostTrackingService { return this.costTracking; }
   setCostLimit(tenantId: string, limitType: 'monthly_spend' | 'daily_spend' | 'monthly_tokens' | 'daily_tokens', limitValue: number, options?: { warningThreshold?: number; hardLimit?: boolean }): void {
-    this.costTracking.setLimit({ id: `${tenantId}:${limitType}`, tenantId, limitType, limitValue, currentValue: 0, periodStart: new Date(), periodEnd: new Date(), warningThreshold: options?.warningThreshold ?? 80, hardLimit: options?.hardLimit ?? false, alertsEnabled: true });
+    this.costTracking.setLimit({ id: `${tenantId}:${limitType}`, tenantId, limitType, limitValue, periodStart: new Date(), periodEnd: new Date(), warningThreshold: options?.warningThreshold ?? 80, hardLimit: options?.hardLimit ?? false, alertsEnabled: true });
+  }
+
+  selectOptimalModel(requirements: { contextLength?: number; requiresVision?: boolean; requiresFunctions?: boolean }): LLMModel | null {
+    let candidates = this.getAvailableModels();
+    if (requirements.contextLength) candidates = candidates.filter(m => m.contextWindow >= requirements.contextLength!);
+    if (requirements.requiresVision) candidates = candidates.filter(m => m.supportsVision);
+    if (requirements.requiresFunctions) candidates = candidates.filter(m => m.supportsFunctions);
+    return candidates[0] || null;
+  }
+
+  createConfigFromPreferences(preferences: AgentLLMPreferences): LLMRequestConfig {
+    return {
+      model: preferences.preferredModel || this.config.defaultModel,
+      temperature: preferences.temperature,
+      maxTokens: preferences.maxTokens,
+    };
   }
   renderPrompt(promptId: string, variables: Record<string, unknown>) {
     const template = globalPromptRegistry.getTemplate(promptId);
@@ -132,5 +148,11 @@ export * from './retry';
 export * from './cost-tracking';
 export * from './streaming';
 export * from './prompts';
-export * from './providers';
+// Re-export from providers except OpenAIConfig which is defined in types
+export { 
+  createOpenAIProvider, OpenAIProvider, OPENAI_MODELS, 
+  createOllamaProvider, OllamaProvider, OLLAMA_MODELS, 
+  GOOGLE_MODELS, ALL_MODELS,
+  type OllamaConfig, type ProviderConfig 
+} from './providers';
 export { createClaudeProvider } from './claude';

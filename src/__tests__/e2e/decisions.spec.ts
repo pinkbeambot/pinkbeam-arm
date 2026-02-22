@@ -110,8 +110,8 @@ test.describe('Decision Management', () => {
       await expect(page.locator('[role="dialog"], [data-testid="decision-detail"]').first()).toBeVisible();
       
       // Close panel
-      await page.click('button[aria-label="Close"], button:has([data-lucide="x"])').first().catch(() => {
-        page.keyboard.press('Escape');
+      await page.locator('button[aria-label="Close"], button:has([data-lucide="x"])').first().click().catch(async () => {
+        await page.keyboard.press('Escape');
       });
     } else {
       // If no decisions, show appropriate message

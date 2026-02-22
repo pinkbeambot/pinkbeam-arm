@@ -54,6 +54,11 @@ export function isRetryableError(error: unknown, config: RetryConfig = DEFAULT_R
   return false;
 }
 
+export function getRetryAfterMs(error: unknown): number | undefined {
+  if (error instanceof RetryableError) return error.retryAfterMs;
+  return undefined;
+}
+
 export async function withRetry<T>(fn: (context: RetryContext) => Promise<T>, config: Partial<RetryConfig> = {}, onRetry?: (context: RetryContext, nextDelayMs: number) => void): Promise<T> {
   const fullConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
   const context: RetryContext = { attempt: 0, totalDelayMs: 0 };
@@ -173,10 +178,15 @@ export class CircuitBreaker {
 
 export class CircuitBreakerRegistry {
   private breakers = new Map<string, CircuitBreaker>();
+  private defaultConfig?: Partial<CircuitBreakerConfig>;
+
+  constructor(config?: Partial<CircuitBreakerConfig>) {
+    this.defaultConfig = config;
+  }
 
   getBreaker(providerId: string): CircuitBreaker {
     if (!this.breakers.has(providerId)) {
-      this.breakers.set(providerId, new CircuitBreaker());
+      this.breakers.set(providerId, new CircuitBreaker(this.defaultConfig));
     }
     return this.breakers.get(providerId)!;
   }

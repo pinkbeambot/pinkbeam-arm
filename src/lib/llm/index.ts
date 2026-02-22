@@ -13,7 +13,8 @@ export { withRetry, CircuitBreaker, CircuitBreakerRegistry, RetryableError, type
 export { CostTrackingService, globalCostTrackingService, selectModelWithCostOptimization, calculateEstimatedCost, estimateLatency, estimateTokenCount, formatCost, formatTokenCount, type TokenUsageEntry, type UsageLimit, type UsageAlert, type ModelSelectionConfig, CostLimitExceededError } from './cost-tracking';
 export { StreamHandler, TypingIndicatorManager, globalTypingIndicatorManager, type StreamConfig, type StreamError, type StreamCallbacks, type StreamedResponse, type TypingIndicator } from './streaming';
 export { globalPromptRegistry, globalABTestEngine, renderPrompt, type PromptVersion, type PromptVariable, type PromptMetadata, type PromptTemplate, type PromptCategory, type RenderedPrompt, type ABTest, type ABTestConfig, PromptRenderError } from './prompts';
-export { createOpenAIProvider, OpenAIProvider, OPENAI_MODELS, createOllamaProvider, OllamaProvider, OLLAMA_MODELS, GOOGLE_MODELS, ALL_MODELS, type OpenAIConfig, type OllamaConfig, type ProviderConfig } from './providers';
+// OpenAIConfig is defined in types.ts, not re-exported from providers
+export { createOpenAIProvider, OpenAIProvider, OPENAI_MODELS, createOllamaProvider, OllamaProvider, OLLAMA_MODELS, GOOGLE_MODELS, ALL_MODELS, type OllamaConfig, type ProviderConfig } from './providers';
 export { ALL_MODELS as MODEL_CATALOG } from './providers';
 export { createClaudeProvider, CLAUDE_MODELS } from './claude';
 

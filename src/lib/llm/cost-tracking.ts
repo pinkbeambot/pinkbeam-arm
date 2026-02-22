@@ -52,9 +52,18 @@ export class CostLimitExceededError extends Error {
   }
 }
 
+export interface CostTrackingOptions {
+  enableBuffering?: boolean;
+}
+
 export class CostTrackingService {
   private usageLimits = new Map<string, UsageLimit>();
   private alertCallbacks: ((alert: UsageAlert) => void)[] = [];
+  private options: CostTrackingOptions;
+
+  constructor(options: CostTrackingOptions = {}) {
+    this.options = options;
+  }
 
   track(entry: Omit<TokenUsageEntry, 'id' | 'timestamp'>): TokenUsageEntry {
     const fullEntry: TokenUsageEntry = { ...entry, id: crypto.randomUUID(), timestamp: new Date() };
@@ -97,8 +106,8 @@ export class CostTrackingService {
     }
   }
 
-  setLimit(limit: Omit<UsageLimit, 'currentValue'>): UsageLimit {
-    const fullLimit: UsageLimit = { ...limit, currentValue: 0 };
+  setLimit(limit: Omit<UsageLimit, 'currentValue'> & { currentValue?: number }): UsageLimit {
+    const fullLimit: UsageLimit = { ...limit, currentValue: limit.currentValue ?? 0 };
     this.setPeriodDates(fullLimit, new Date());
     this.usageLimits.set(limit.id, fullLimit);
     return fullLimit;
@@ -158,6 +167,11 @@ export function estimateLatency(model: LLMModel): number {
 
 export function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+export function estimateMessageTokens(messages: Array<{ role: string; content: string }>): number {
+  // Base overhead per message (4 tokens) + content tokens + completion tokens estimate (3)
+  return messages.reduce((total, msg) => total + 4 + Math.ceil(msg.content.length / 4), 0) + 3;
 }
 
 export function formatCost(costUsd: number): string {
