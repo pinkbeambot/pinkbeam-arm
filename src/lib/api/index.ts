@@ -12,6 +12,33 @@
 export { useAgents, useAgent, type UseAgentsOptions, type UseAgentsReturn } from './useAgents';
 export { useActivities, useLatestActivities, type UseActivitiesOptions, type UseActivitiesReturn } from './useActivities';
 export { useTasks, useTask, type UseTasksOptions, type UseTasksReturn, type CreateTaskInput, type UpdateTaskInput } from './useTasks';
+<<<<<<< HEAD
+=======
+<<<<<<< Updated upstream
+=======
+
+// API utilities
+export {
+  applyFilter,
+  applyFilters,
+  applyFullTextSearch,
+  parseFilters,
+  getPrioritySortValue,
+  PRIORITY_ORDER,
+  type FilterCondition,
+  type FilterOperator,
+} from './filtering';
+
+export {
+  toCsv,
+  toJsonl,
+  formatForExport,
+  generateExportFilename,
+  getExportContentType,
+  sanitizeForExport,
+  flattenForCsv,
+} from './export';
+>>>>>>> eng-be/api-extensions
 
 // API utilities
 export {
@@ -37,3 +64,7 @@ export {
   sanitizeForExport,
   flattenForCsv,
 } from './export';
+<<<<<<< HEAD
+=======
+>>>>>>> Stashed changes
+>>>>>>> eng-be/api-extensions

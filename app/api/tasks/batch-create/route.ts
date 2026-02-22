@@ -2,23 +2,6 @@
  * POST /api/tasks/batch-create
  * 
  * Bulk create multiple tasks at once.
- * 
- * Body: {
- *   tasks: CreateTaskInput[],
- *   options?: {
- *     skip_validation?: boolean,
- *     continue_on_error?: boolean,
- *   }
- * }
- * 
- * Response: {
- *   success: boolean,
- *   processed: number,
- *   succeeded: number,
- *   failed: number,
- *   errors: [{ index, message, code }],
- *   data: Task[]
- * }
  */
 
 import { NextRequest } from 'next/server';
@@ -39,7 +22,6 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate request body
     const validationResult = batchCreateTasksSchema.safeParse(body);
     if (!validationResult.success) {
       return apiError('Validation failed', 400, validationResult.error.format());
@@ -51,10 +33,9 @@ export async function POST(request: NextRequest) {
     const results: Task[] = [];
     const errors: Array<{ index: number; message: string; code?: string }> = [];
 
-    // Collect all assignee IDs for validation
+    // Validate all assignees belong to tenant
     const assigneeIds = [...new Set(tasks.map(t => t.assignee_id).filter(Boolean))];
     
-    // Validate all assignees belong to tenant (if any)
     if (assigneeIds.length > 0) {
       const { data: validAgents, error: agentsError } = await supabase
         .from('agents')
@@ -71,50 +52,7 @@ export async function POST(request: NextRequest) {
       const invalidAssignees = assigneeIds.filter(id => !validAgentIds.has(id));
 
       if (invalidAssignees.length > 0) {
-        return apiError(
-          'Invalid assignee IDs',
-          400,
-          { invalidAssignees }
-        );
-      }
-    }
-
-    // Collect all parent task IDs for validation
-    const parentIds = [...new Set(tasks.map(t => t.parent_task_id).filter(Boolean))];
-    const parentDepthMap = new Map<string, number>();
-
-    if (parentIds.length > 0) {
-      const { data: validParents, error: parentsError } = await supabase
-        .from('tasks')
-        .select('id, depth, status')
-        .eq('tenant_id', tenantId)
-        .in('id', parentIds);
-
-      if (parentsError) {
-        return apiError('Failed to validate parent tasks', 500, parentsError.message);
-      }
-
-      const validParentIds = new Set(validParents?.map(t => t.id) || []);
-      const invalidParents = parentIds.filter(id => !validParentIds.has(id));
-
-      if (invalidParents.length > 0) {
-        return apiError(
-          'Invalid parent task IDs',
-          400,
-          { invalidParents }
-        );
-      }
-
-      // Build depth map and check for completed parents
-      for (const parent of validParents || []) {
-        parentDepthMap.set(parent.id, parent.depth || 0);
-        
-        if (['completed', 'cancelled', 'failed'].includes(parent.status)) {
-          return apiError(
-            `Cannot add subtasks to a completed, cancelled, or failed task: ${parent.id}`,
-            400
-          );
-        }
+        return apiError('Invalid assignee IDs', 400, { invalidAssignees });
       }
     }
 
@@ -123,16 +61,12 @@ export async function POST(request: NextRequest) {
       const taskData = tasks[i];
 
       try {
-        const parentDepth = taskData.parent_task_id 
-          ? (parentDepthMap.get(taskData.parent_task_id) || 0)
-          : 0;
-
         const newTask = {
           ...taskData,
           tenant_id: tenantId,
           assigner_id: userId,
           status: 'queued' as TaskStatus,
-          depth: parentDepth + 1,
+          depth: 0,
         };
 
         const { data: createdTask, error: createError } = await supabase
@@ -142,32 +76,16 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (createError) {
-          errors.push({
-            index: i,
-            message: createError.message,
-            code: createError.code,
-          });
-          
-          if (!continueOnError) {
-            break;
-          }
+          errors.push({ index: i, message: createError.message, code: createError.code });
+          if (!continueOnError) break;
           continue;
         }
 
-        if (createdTask) {
-          results.push(createdTask);
-        }
+        if (createdTask) results.push(createdTask);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-        errors.push({
-          index: i,
-          message: errorMessage,
-          code: 'EXCEPTION',
-        });
-
-        if (!continueOnError) {
-          break;
-        }
+        errors.push({ index: i, message: errorMessage, code: 'EXCEPTION' });
+        if (!continueOnError) break;
       }
     }
 
