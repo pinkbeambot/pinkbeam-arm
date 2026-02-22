@@ -17,6 +17,7 @@ if (isVercelProd && process.env.DEV_AUTH_BYPASS === 'true') {
 
 // Build CSP directives based on environment
 const isDev = process.env.NODE_ENV === 'development';
+const isProd = process.env.NODE_ENV === 'production';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://*.supabase.co';
 const supabaseWss = supabaseUrl.replace('https://', 'wss://');
 
@@ -94,11 +95,20 @@ const nextConfig: NextConfig = {
       'recharts',
       'framer-motion',
       '@radix-ui/react-icons',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      'date-fns',
     ],
     // Enable server actions (already default in Next.js 15)
     serverActions: {
       bodySizeLimit: '2mb',
     },
+    // Optimize CSS
+    optimizeCss: true,
+    // Scroll restoration for better UX
+    scrollRestoration: true,
   },
 
   // Webpack configuration for bundle optimization (fallback for non-turbopack)
@@ -116,6 +126,8 @@ const nextConfig: NextConfig = {
         ...config.optimization,
         splitChunks: {
           chunks: 'all',
+          maxInitialRequests: 25,
+          minSize: 20000,
           cacheGroups: {
             // Vendor chunk for node_modules
             vendor: {
@@ -123,6 +135,7 @@ const nextConfig: NextConfig = {
               name: 'vendors',
               chunks: 'all',
               priority: 10,
+              reuseExistingChunk: true,
             },
             // Recharts is heavy - separate chunk
             recharts: {
@@ -130,6 +143,7 @@ const nextConfig: NextConfig = {
               name: 'recharts',
               chunks: 'all',
               priority: 20,
+              reuseExistingChunk: true,
             },
             // Framer Motion - separate chunk
             framerMotion: {
@@ -137,6 +151,31 @@ const nextConfig: NextConfig = {
               name: 'framer-motion',
               chunks: 'all',
               priority: 20,
+              reuseExistingChunk: true,
+            },
+            // TipTap editor - separate chunk (heavy)
+            tiptap: {
+              test: /[\\/]node_modules[\\/]@tiptap[\\/]/,
+              name: 'tiptap',
+              chunks: 'all',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // Swagger UI - separate chunk (very heavy)
+            swagger: {
+              test: /[\\/]node_modules[\\/](swagger-ui|swagger-ui-react)[\\/]/,
+              name: 'swagger',
+              chunks: 'all',
+              priority: 25,
+              reuseExistingChunk: true,
+            },
+            // React Flow - separate chunk
+            xyflow: {
+              test: /[\\/]node_modules[\\/]@xyflow[\\/]/,
+              name: 'xyflow',
+              chunks: 'all',
+              priority: 20,
+              reuseExistingChunk: true,
             },
             // UI components - separate chunk
             ui: {
@@ -144,9 +183,45 @@ const nextConfig: NextConfig = {
               name: 'ui-components',
               chunks: 'all',
               priority: 5,
+              reuseExistingChunk: true,
+            },
+            // Dashboard components - separate chunk
+            dashboard: {
+              test: /[\\/]src[\\/]components[\\/]dashboard[\\/]/,
+              name: 'dashboard',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
+            },
+            // Analytics components - separate chunk (uses recharts)
+            analytics: {
+              test: /[\\/]src[\\/]components[\\/]analytics[\\/]/,
+              name: 'analytics',
+              chunks: 'all',
+              priority: 15,
+              reuseExistingChunk: true,
+            },
+            // Performance components - separate chunk
+            performance: {
+              test: /[\\/]src[\\/]components[\\/]performance[\\/]/,
+              name: 'performance',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
             },
           },
         },
+        // Enable module concatenation for better tree shaking
+        concatenateModules: true,
+        // Enable side effects optimization
+        sideEffects: false,
+      };
+
+      // Add performance hints
+      config.performance = {
+        hints: isDev ? false : 'warning',
+        maxEntrypointSize: 250000,
+        maxAssetSize: 250000,
       };
     }
 

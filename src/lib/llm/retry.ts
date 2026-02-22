@@ -1,0 +1,412 @@
+/**
+ * Retry Logic with Exponential Backoff
+ * Implements resilient request handling for LLM calls
+ */
+
+export interface RetryConfig {
+  maxRetries: number;
+  baseDelayMs: number;
+  maxDelayMs: number;
+  backoffMultiplier: number;
+  jitter: boolean;
+  retryableErrors: string[];
+}
+
+export const DEFAULT_RETRY_CONFIG: RetryConfig = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 32000,
+  backoffMultiplier: 2,
+  jitter: true,
+  retryableErrors: [
+    'RATE_LIMITED',
+    'ANTHROPIC_429',
+    'ANTHROPIC_500',
+    'ANTHROPIC_502',
+    'ANTHROPIC_503',
+    'ANTHROPIC_504',
+    'NETWORK_ERROR',
+    'TIMEOUT',
+    'ECONNRESET',
+    'ETIMEDOUT',
+  ],
+};
+
+export interface RetryContext {
+  attempt: number;
+  lastError?: Error;
+  totalDelayMs: number;
+}
+
+export class RetryableError extends Error {
+  constructor(
+    message: string,
+    public code: string,
+    public retryable: boolean = true,
+    public retryAfterMs?: number
+  ) {
+    super(message);
+    this.name = 'RetryableError';
+  }
+}
+
+/**
+ * Calculate delay with exponential backoff and optional jitter
+ */
+export function calculateDelay(
+  attempt: number,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG
+): number {
+  // Exponential backoff: baseDelay * (multiplier ^ attempt)
+  let delay = config.baseDelayMs * Math.pow(config.backoffMultiplier, attempt);
+  
+  // Cap at max delay
+  delay = Math.min(delay, config.maxDelayMs);
+  
+  // Add jitter (±25%) to prevent thundering herd
+  if (config.jitter) {
+    const jitterFactor = 0.75 + Math.random() * 0.5;
+    delay = Math.floor(delay * jitterFactor);
+  }
+  
+  return delay;
+}
+
+/**
+ * Sleep for specified milliseconds
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Check if error is retryable based on configuration
+ */
+export function isRetryableError(
+  error: unknown,
+  config: RetryConfig = DEFAULT_RETRY_CONFIG
+): boolean {
+  if (error instanceof RetryableError) {
+    return error.retryable;
+  }
+  
+  if (error instanceof Error) {
+    // Check if error message contains any retryable error codes
+    return config.retryableErrors.some(code => 
+      error.message.includes(code) || 
+      error.name.includes(code)
+    );
+  }
+  
+  return false;
+}
+
+/**
+ * Get retry-after header value if present
+ */
+export function getRetryAfterMs(error: unknown): number | undefined {
+  if (error instanceof RetryableError && error.retryAfterMs) {
+    return error.retryAfterMs;
+  }
+  
+  // Check for rate limit reset in error
+  if (error instanceof Error) {
+    const match = error.message.match(/retry[_-]?after[:\s]*(\d+)/i);
+    if (match) {
+      return parseInt(match[1], 10) * 1000; // Convert seconds to ms
+    }
+  }
+  
+  return undefined;
+}
+
+/**
+ * Execute a function with retry logic
+ */
+export async function withRetry<T>(
+  fn: (context: RetryContext) => Promise<T>,
+  config: Partial<RetryConfig> = {},
+  onRetry?: (context: RetryContext, nextDelayMs: number) => void
+): Promise<T> {
+  const fullConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
+  const context: RetryContext = {
+    attempt: 0,
+    totalDelayMs: 0,
+  };
+
+  while (true) {
+    try {
+      return await fn(context);
+    } catch (error) {
+      context.lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Check if we should retry
+      if (context.attempt >= fullConfig.maxRetries || !isRetryableError(error, fullConfig)) {
+        throw error;
+      }
+      
+      // Calculate delay
+      let delayMs = getRetryAfterMs(error) || calculateDelay(context.attempt, fullConfig);
+      
+      // Notify retry callback if provided
+      if (onRetry) {
+        onRetry(context, delayMs);
+      }
+      
+      // Wait before retrying
+      await sleep(delayMs);
+      
+      context.attempt++;
+      context.totalDelayMs += delayMs;
+    }
+  }
+}
+
+/**
+ * Retry decorator for class methods
+ */
+export function Retryable(config: Partial<RetryConfig> = {}) {
+  return function (
+    target: unknown,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
+    const originalMethod = descriptor.value;
+    
+    descriptor.value = async function (...args: unknown[]) {
+      return withRetry(
+        () => originalMethod.apply(this, args),
+        config
+      );
+    };
+    
+    return descriptor;
+  };
+}
+
+/**
+ * Create a retry wrapper for any async function
+ */
+export function createRetryWrapper<T extends (...args: unknown[]) => Promise<unknown>>(
+  fn: T,
+  config: Partial<RetryConfig> = {}
+): T {
+  return (async (...args: unknown[]) => {
+    return withRetry(
+      () => fn(...args) as Promise<unknown>,
+      config
+    );
+  }) as T;
+}
+
+/**
+ * Circuit breaker states
+ */
+export type CircuitState = 'closed' | 'open' | 'half-open';
+
+export interface CircuitBreakerConfig {
+  failureThreshold: number;
+  successThreshold: number;
+  timeoutMs: number;
+  halfOpenMaxCalls: number;
+}
+
+export const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
+  failureThreshold: 5,
+  successThreshold: 3,
+  timeoutMs: 60000,
+  halfOpenMaxCalls: 3,
+};
+
+/**
+ * Circuit breaker for LLM providers
+ */
+export class CircuitBreaker {
+  private state: CircuitState = 'closed';
+  private failureCount = 0;
+  private successCount = 0;
+  private lastFailureTime?: number;
+  private halfOpenCalls = 0;
+  private readonly config: CircuitBreakerConfig;
+
+  constructor(config: Partial<CircuitBreakerConfig> = {}) {
+    this.config = { ...DEFAULT_CIRCUIT_BREAKER_CONFIG, ...config };
+  }
+
+  /**
+   * Get current circuit state
+   */
+  getState(): CircuitState {
+    if (this.state === 'open') {
+      // Check if timeout has passed to transition to half-open
+      if (this.lastFailureTime && Date.now() - this.lastFailureTime >= this.config.timeoutMs) {
+        this.state = 'half-open';
+        this.halfOpenCalls = 0;
+        this.successCount = 0;
+      }
+    }
+    return this.state;
+  }
+
+  /**
+   * Check if call is allowed
+   */
+  canExecute(): boolean {
+    const state = this.getState();
+    
+    if (state === 'closed') return true;
+    if (state === 'open') return false;
+    
+    // Half-open state: allow limited calls
+    return this.halfOpenCalls < this.config.halfOpenMaxCalls;
+  }
+
+  /**
+   * Record a successful call
+   */
+  recordSuccess(): void {
+    if (this.state === 'half-open') {
+      this.successCount++;
+      this.halfOpenCalls++;
+      
+      if (this.successCount >= this.config.successThreshold) {
+        // Reset to closed state
+        this.state = 'closed';
+        this.failureCount = 0;
+        this.successCount = 0;
+        this.halfOpenCalls = 0;
+      }
+    } else if (this.state === 'closed') {
+      this.failureCount = 0;
+    }
+  }
+
+  /**
+   * Record a failed call
+   */
+  recordFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    
+    if (this.state === 'half-open') {
+      // Back to open state
+      this.state = 'open';
+      this.halfOpenCalls = 0;
+      this.successCount = 0;
+    } else if (this.state === 'closed' && this.failureCount >= this.config.failureThreshold) {
+      // Trip the circuit
+      this.state = 'open';
+    }
+  }
+
+  /**
+   * Execute function with circuit breaker protection
+   */
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    if (!this.canExecute()) {
+      throw new RetryableError(
+        'Circuit breaker is open',
+        'CIRCUIT_OPEN',
+        false
+      );
+    }
+
+    try {
+      const result = await fn();
+      this.recordSuccess();
+      return result;
+    } catch (error) {
+      this.recordFailure();
+      throw error;
+    }
+  }
+
+  /**
+   * Get circuit breaker metrics
+   */
+  getMetrics() {
+    return {
+      state: this.getState(),
+      failureCount: this.failureCount,
+      successCount: this.successCount,
+      lastFailureTime: this.lastFailureTime,
+      timeUntilRetry: this.state === 'open' && this.lastFailureTime
+        ? Math.max(0, this.config.timeoutMs - (Date.now() - this.lastFailureTime))
+        : 0,
+    };
+  }
+
+  /**
+   * Manually reset circuit breaker
+   */
+  reset(): void {
+    this.state = 'closed';
+    this.failureCount = 0;
+    this.successCount = 0;
+    this.halfOpenCalls = 0;
+    this.lastFailureTime = undefined;
+  }
+}
+
+/**
+ * Provider circuit breaker registry
+ */
+export class CircuitBreakerRegistry {
+  private breakers = new Map<string, CircuitBreaker>();
+  private readonly defaultConfig: Partial<CircuitBreakerConfig>;
+
+  constructor(defaultConfig: Partial<CircuitBreakerConfig> = {}) {
+    this.defaultConfig = defaultConfig;
+  }
+
+  /**
+   * Get or create circuit breaker for a provider
+   */
+  getBreaker(providerId: string): CircuitBreaker {
+    if (!this.breakers.has(providerId)) {
+      this.breakers.set(providerId, new CircuitBreaker(this.defaultConfig));
+    }
+    return this.breakers.get(providerId)!;
+  }
+
+  /**
+   * Execute function with circuit breaker for specific provider
+   */
+  async execute<T>(providerId: string, fn: () => Promise<T>): Promise<T> {
+    const breaker = this.getBreaker(providerId);
+    return breaker.execute(fn);
+  }
+
+  /**
+   * Get all circuit breaker metrics
+   */
+  getAllMetrics(): Record<string, ReturnType<CircuitBreaker['getMetrics']>> {
+    const metrics: Record<string, ReturnType<CircuitBreaker['getMetrics']>> = {};
+    for (const [id, breaker] of this.breakers) {
+      metrics[id] = breaker.getMetrics();
+    }
+    return metrics;
+  }
+
+  /**
+   * Reset all circuit breakers
+   */
+  resetAll(): void {
+    for (const breaker of this.breakers.values()) {
+      breaker.reset();
+    }
+  }
+
+  /**
+   * Reset specific circuit breaker
+   */
+  reset(providerId: string): void {
+    const breaker = this.breakers.get(providerId);
+    if (breaker) {
+      breaker.reset();
+    }
+  }
+}
+
+// Global circuit breaker registry for LLM providers
+export const globalCircuitBreakerRegistry = new CircuitBreakerRegistry();
