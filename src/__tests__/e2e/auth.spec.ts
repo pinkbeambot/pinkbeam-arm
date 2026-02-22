@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
-import { TEST_EMAIL } from './auth.setup';
+import { TEST_EMAIL } from './constants';
 
 test.describe('Authentication Flows', () => {
   test.describe('Sign Up / Sign In', () => {
