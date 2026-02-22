@@ -4,10 +4,9 @@ import { cn } from "@/lib/utils"
 
 /**
  * Props for the Switch component.
- * @interface SwitchProps
- * @extends {React.ComponentProps<typeof SwitchPrimitive.Root>}
+ * @typedef SwitchProps
  */
-interface SwitchProps extends React.ComponentProps<typeof SwitchPrimitive.Root> {
+type SwitchProps = React.ComponentProps<typeof SwitchPrimitive.Root> & {
   /** Size variant of the switch */
   size?: "sm" | "default"
 }

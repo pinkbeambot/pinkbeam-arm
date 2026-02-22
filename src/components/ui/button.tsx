@@ -45,13 +45,13 @@ const buttonVariants = cva(
 
 /**
  * Props for the Button component.
- * @interface ButtonProps
+ * @typedef ButtonProps
  */
-export interface ButtonProps extends React.ComponentProps<"button">,
-  VariantProps<typeof buttonVariants> {
-  /** Render as a child component (e.g., a Link) */
-  asChild?: boolean
-}
+type ButtonProps = React.ComponentProps<"button"> &
+  VariantProps<typeof buttonVariants> & {
+    /** Render as a child component (e.g., a Link) */
+    asChild?: boolean
+  }
 
 /**
  * Button component with multiple variants and sizes.

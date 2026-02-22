@@ -15,6 +15,23 @@ interface ErrorBoundaryState {
   error?: Error
 }
 
+/**
+ * Error boundary component that catches JavaScript errors in child components
+ * 
+ * @example
+ * ```tsx
+ * <ErrorBoundary>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * ```
+ * 
+ * With custom fallback:
+ * ```tsx
+ * <ErrorBoundary fallback={<CustomErrorMessage />}>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * ```
+ */
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props)
@@ -41,7 +58,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       return (
         <Card className="p-12 text-center border-destructive bg-destructive/5">
-          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" aria-hidden="true" />
           <h3 className="text-lg font-semibold mb-2">Something went wrong</h3>
           <p className="text-sm text-muted-foreground mb-6">
             We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.
@@ -58,13 +75,13 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               variant="outline"
               className="gap-2"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
               Try Again
             </Button>
             <Button
               onClick={() => window.location.reload()}
               variant="default"
-              className="gap-2 bg-pink-500 hover:bg-pink-600"
+              className="gap-2"
             >
               Refresh Page
             </Button>

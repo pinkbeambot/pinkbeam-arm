@@ -13,7 +13,6 @@
 // ============================================================================
 
 export { Button, buttonVariants } from "./button";
-export type { ButtonProps } from "./button";
 
 export { Input } from "./input";
 export { Textarea } from "./textarea";
@@ -28,7 +27,6 @@ export { Slider } from "./slider";
 // ============================================================================
 
 export { Badge, badgeVariants } from "./badge";
-export type { BadgeProps } from "./badge";
 
 export { Skeleton } from "./skeleton";
 export { Progress } from "./progress";
@@ -197,7 +195,6 @@ export {
 // ============================================================================
 
 export { Alert, AlertDescription, AlertTitle } from "./alert";
-export type { AlertProps } from "./alert";
 
 export { Toaster, useToast, toast } from "./use-toast";
 
