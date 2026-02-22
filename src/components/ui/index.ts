@@ -1,8 +1,42 @@
-// shadcn/ui Components - Complete Export (52 components)
+/**
+ * ARM UI Component Library
+ * 
+ * This is the main entry point for all UI components in the ARM platform.
+ * Components follow the shadcn/ui pattern with ARM-specific customizations.
+ * 
+ * @module @/components/ui
+ * @version 1.0.0
+ */
+
+// ============================================================================
+// Core Form Components
+// ============================================================================
+
 export { Button, buttonVariants } from "./button";
+
 export { Input } from "./input";
 export { Textarea } from "./textarea";
+export { Label } from "./label";
+export { Checkbox } from "./checkbox";
+export { Switch } from "./switch";
+export type { SwitchProps } from "./switch";
+export { Slider } from "./slider";
+
+// ============================================================================
+// Display Components
+// ============================================================================
+
 export { Badge, badgeVariants } from "./badge";
+
+export { Skeleton } from "./skeleton";
+export { Progress } from "./progress";
+export { Separator } from "./separator";
+export type { SeparatorProps } from "./separator";
+
+// ============================================================================
+// Card & Container Components
+// ============================================================================
+
 export { 
   Card, 
   CardHeader, 
@@ -11,12 +45,21 @@ export {
   CardDescription, 
   CardContent 
 } from "./card";
-export { Skeleton } from "./skeleton";
+
+// ============================================================================
+// Avatar & Media Components
+// ============================================================================
+
 export { 
   Avatar, 
   AvatarImage, 
   AvatarFallback 
 } from "./avatar";
+
+// ============================================================================
+// Selection Components
+// ============================================================================
+
 export { 
   Select, 
   SelectContent, 
@@ -29,6 +72,15 @@ export {
   SelectTrigger, 
   SelectValue 
 } from "./select";
+
+export {
+  Calendar
+} from "./calendar";
+
+// ============================================================================
+// Dialog & Overlay Components
+// ============================================================================
+
 export { 
   Dialog, 
   DialogClose, 
@@ -41,6 +93,44 @@ export {
   DialogTitle, 
   DialogTrigger 
 } from "./dialog";
+
+export { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from "./alert-dialog";
+
+export { 
+  Sheet, 
+  SheetClose, 
+  SheetContent, 
+  SheetDescription, 
+  SheetFooter, 
+  SheetHeader, 
+  SheetOverlay, 
+  SheetPortal, 
+  SheetTitle, 
+  SheetTrigger 
+} from "./sheet";
+
+export {
+  Popover,
+  PopoverContent,
+  PopoverTrigger
+} from "./popover";
+
+// ============================================================================
+// Menu Components
+// ============================================================================
+
 export { 
   DropdownMenu, 
   DropdownMenuPortal, 
@@ -58,61 +148,7 @@ export {
   DropdownMenuSubTrigger, 
   DropdownMenuSubContent 
 } from "./dropdown-menu";
-export { Label } from "./label";
-export { Checkbox } from "./checkbox";
-export { 
-  Tabs, 
-  TabsContent, 
-  TabsList, 
-  TabsTrigger 
-} from "./tabs";
-export { 
-  Sheet, 
-  SheetClose, 
-  SheetContent, 
-  SheetDescription, 
-  SheetFooter, 
-  SheetHeader, 
-  SheetOverlay, 
-  SheetPortal, 
-  SheetTitle, 
-  SheetTrigger 
-} from "./sheet";
-export { 
-  ScrollArea, 
-  ScrollBar 
-} from "./scroll-area";
-export { Separator } from "./separator";
-export { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "./tooltip";
-export { Toaster, useToast, toast } from "./use-toast";
 
-// Additional shadcn/ui Components (extended set)
-export { 
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger
-} from "./accordion";
-export { Alert, AlertDescription, AlertTitle } from "./alert";
-export { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogOverlay,
-  AlertDialogPortal,
-  AlertDialogTitle,
-  AlertDialogTrigger
-} from "./alert-dialog";
-export { Calendar } from "./calendar";
 export {
   Command,
   CommandDialog,
@@ -124,6 +160,7 @@ export {
   CommandSeparator,
   CommandShortcut
 } from "./command";
+
 export {
   NavigationMenu,
   NavigationMenuContent,
@@ -134,14 +171,44 @@ export {
   NavigationMenuTrigger,
   NavigationMenuViewport
 } from "./navigation-menu";
-export {
-  Popover,
-  PopoverContent,
-  PopoverTrigger
-} from "./popover";
-export { Progress } from "./progress";
-export { Slider } from "./slider";
-export { Switch } from "./switch";
+
+// ============================================================================
+// Navigation Components
+// ============================================================================
+
+export { 
+  Tabs, 
+  TabsContent, 
+  TabsList, 
+  TabsTrigger 
+} from "./tabs";
+
+export { 
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger
+} from "./accordion";
+
+// ============================================================================
+// Feedback Components
+// ============================================================================
+
+export { Alert, AlertDescription, AlertTitle } from "./alert";
+
+export { Toaster, useToast, toast } from "./use-toast";
+
+export { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "./tooltip";
+
+// ============================================================================
+// Data Display Components
+// ============================================================================
+
 export {
   Table,
   TableBody,
@@ -153,5 +220,13 @@ export {
   TableRow
 } from "./table";
 
-// ARM-specific components
+export { 
+  ScrollArea, 
+  ScrollBar 
+} from "./scroll-area";
+
+// ============================================================================
+// ARM-Specific Components
+// ============================================================================
+
 export { HelpWidget } from "./help-widget";
