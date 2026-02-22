@@ -21,10 +21,7 @@ export function MarketingNav() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -36,6 +33,7 @@ export function MarketingNav() {
   };
 
   return (
+<<<<<<< HEAD
     <header
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
@@ -44,22 +42,28 @@ export function MarketingNav() {
           : "bg-transparent"
       )}
     >
+=======
+    <header className={cn("fixed top-0 left-0 right-0 z-50 transition-all duration-300", isScrolled ? "bg-background/90 backdrop-blur-xl border-b border-border/50 shadow-sm" : "bg-transparent")}>
+>>>>>>> eng-ai/llm-improvements
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2 group">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-pink-500 to-violet-600 group-hover:shadow-lg group-hover:shadow-pink-500/25 transition-all duration-300">
               <span className="text-white font-bold text-sm">PB</span>
             </div>
+<<<<<<< HEAD
             <span className={cn(
               "font-bold text-xl transition-colors",
               isScrolled ? "text-foreground" : "text-white"
             )}>Pink Beam</span>
+=======
+            <span className={cn("font-bold text-xl transition-colors", isScrolled ? "text-foreground" : "text-white")}>Pink Beam</span>
+>>>>>>> eng-ai/llm-improvements
           </Link>
 
-          {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-1">
             {navLinks.map((link) => (
+<<<<<<< HEAD
               <Link
                 key={link.href}
                 href={link.href}
@@ -72,11 +76,15 @@ export function MarketingNav() {
                       : "text-white/70 hover:text-white hover:bg-white/10"
                 )}
               >
+=======
+              <Link key={link.href} href={link.href} className={cn("px-4 py-2 text-sm rounded-lg transition-colors", isActive(link.href) ? "text-foreground font-medium bg-muted/80" : isScrolled ? "text-muted-foreground hover:text-foreground hover:bg-muted/50" : "text-white/70 hover:text-white hover:bg-white/10")}>
+>>>>>>> eng-ai/llm-improvements
                 {link.label}
               </Link>
             ))}
           </nav>
 
+<<<<<<< HEAD
           {/* Auth Actions */}
           <div className="flex items-center gap-3">
             {/* Desktop: Contact & Portal buttons */}
@@ -93,17 +101,26 @@ export function MarketingNav() {
               >
                 Get Started
               </Button>
+=======
+          <div className="flex items-center gap-3">
+            <Link href="/contact" className={cn("hidden sm:block text-sm transition-colors", isScrolled ? "text-muted-foreground hover:text-foreground" : "text-white/80 hover:text-white")}>Contact</Link>
+            <Link href="/auth" className="hidden sm:block">
+              <Button size="sm" className="bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30">Get Started</Button>
+>>>>>>> eng-ai/llm-improvements
             </Link>
 
-            {/* Mobile Menu */}
             <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
               <SheetTrigger asChild className="md:hidden">
+<<<<<<< HEAD
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   aria-label="Open menu"
                   className={isScrolled ? "" : "text-white hover:bg-white/10"}
                 >
+=======
+                <Button variant="ghost" size="icon" aria-label="Open menu" className={isScrolled ? "" : "text-white hover:bg-white/10"}>
+>>>>>>> eng-ai/llm-improvements
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
@@ -118,22 +135,12 @@ export function MarketingNav() {
 
                   <nav className="flex flex-col gap-2 flex-1">
                     {navLinks.map((link) => (
-                      <Link
-                        key={link.href}
-                        href={link.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={cn(
-                          "px-4 py-3 text-base rounded-lg transition-colors",
-                          isActive(link.href)
-                            ? "text-foreground font-medium bg-muted"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                        )}
-                      >
+                      <Link key={link.href} href={link.href} onClick={() => setMobileMenuOpen(false)} className={cn("px-4 py-3 text-base rounded-lg transition-colors", isActive(link.href) ? "text-foreground font-medium bg-muted" : "text-muted-foreground hover:text-foreground hover:bg-muted/50")}>
                         {link.label}
                       </Link>
                     ))}
-
                     <hr className="my-4 border-border" />
+<<<<<<< HEAD
                     
                     <Link
                       href="/contact"
@@ -142,10 +149,14 @@ export function MarketingNav() {
                     >
                       Contact
                     </Link>
+=======
+                    <Link href="/contact" onClick={() => setMobileMenuOpen(false)} className="px-4 py-3 text-base rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors">Contact</Link>
+>>>>>>> eng-ai/llm-improvements
                   </nav>
 
                   <div className="pt-4 border-t border-border space-y-3">
                     <Link href="/auth" onClick={() => setMobileMenuOpen(false)} className="block w-full">
+<<<<<<< HEAD
                       <Button
                         className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30"
                       >
@@ -155,6 +166,11 @@ export function MarketingNav() {
                     <p className="text-xs text-center text-muted-foreground">
                       Free 7-day trial • No credit card required
                     </p>
+=======
+                      <Button className="w-full bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-lg shadow-pink-500/30">Get Started</Button>
+                    </Link>
+                    <p className="text-xs text-center text-muted-foreground">Free 7-day trial • No credit card required</p>
+>>>>>>> eng-ai/llm-improvements
                   </div>
                 </div>
               </SheetContent>

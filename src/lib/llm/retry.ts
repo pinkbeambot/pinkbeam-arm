@@ -1,6 +1,9 @@
 /**
  * Retry Logic with Exponential Backoff
+<<<<<<< HEAD
  * Implements resilient request handling for LLM calls
+=======
+>>>>>>> eng-ai/llm-improvements
  */
 
 export interface RetryConfig {
@@ -18,6 +21,7 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxDelayMs: 32000,
   backoffMultiplier: 2,
   jitter: true,
+<<<<<<< HEAD
   retryableErrors: [
     'RATE_LIMITED',
     'ANTHROPIC_429',
@@ -30,6 +34,9 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
     'ECONNRESET',
     'ETIMEDOUT',
   ],
+=======
+  retryableErrors: ['RATE_LIMITED', 'ANTHROPIC_429', 'ANTHROPIC_500', 'TIMEOUT', 'ECONNRESET'],
+>>>>>>> eng-ai/llm-improvements
 };
 
 export interface RetryContext {
@@ -39,17 +46,22 @@ export interface RetryContext {
 }
 
 export class RetryableError extends Error {
+<<<<<<< HEAD
   constructor(
     message: string,
     public code: string,
     public retryable: boolean = true,
     public retryAfterMs?: number
   ) {
+=======
+  constructor(message: string, public code: string, public retryable: boolean = true, public retryAfterMs?: number) {
+>>>>>>> eng-ai/llm-improvements
     super(message);
     this.name = 'RetryableError';
   }
 }
 
+<<<<<<< HEAD
 /**
  * Calculate delay with exponential backoff and optional jitter
  */
@@ -75,10 +87,22 @@ export function calculateDelay(
 /**
  * Sleep for specified milliseconds
  */
+=======
+export function calculateDelay(attempt: number, config: RetryConfig = DEFAULT_RETRY_CONFIG): number {
+  let delay = config.baseDelayMs * Math.pow(config.backoffMultiplier, attempt);
+  delay = Math.min(delay, config.maxDelayMs);
+  if (config.jitter) {
+    delay = Math.floor(delay * (0.75 + Math.random() * 0.5));
+  }
+  return delay;
+}
+
+>>>>>>> eng-ai/llm-improvements
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+<<<<<<< HEAD
 /**
  * Check if error is retryable based on configuration
  */
@@ -134,11 +158,25 @@ export async function withRetry<T>(
     totalDelayMs: 0,
   };
 
+=======
+export function isRetryableError(error: unknown, config: RetryConfig = DEFAULT_RETRY_CONFIG): boolean {
+  if (error instanceof RetryableError) return error.retryable;
+  if (error instanceof Error) {
+    return config.retryableErrors.some(code => error.message.includes(code));
+  }
+  return false;
+}
+
+export async function withRetry<T>(fn: (context: RetryContext) => Promise<T>, config: Partial<RetryConfig> = {}, onRetry?: (context: RetryContext, nextDelayMs: number) => void): Promise<T> {
+  const fullConfig = { ...DEFAULT_RETRY_CONFIG, ...config };
+  const context: RetryContext = { attempt: 0, totalDelayMs: 0 };
+>>>>>>> eng-ai/llm-improvements
   while (true) {
     try {
       return await fn(context);
     } catch (error) {
       context.lastError = error instanceof Error ? error : new Error(String(error));
+<<<<<<< HEAD
       
       // Check if we should retry
       if (context.attempt >= fullConfig.maxRetries || !isRetryableError(error, fullConfig)) {
@@ -156,12 +194,19 @@ export async function withRetry<T>(
       // Wait before retrying
       await sleep(delayMs);
       
+=======
+      if (context.attempt >= fullConfig.maxRetries || !isRetryableError(error, fullConfig)) throw error;
+      const delayMs = calculateDelay(context.attempt, fullConfig);
+      if (onRetry) onRetry(context, delayMs);
+      await sleep(delayMs);
+>>>>>>> eng-ai/llm-improvements
       context.attempt++;
       context.totalDelayMs += delayMs;
     }
   }
 }
 
+<<<<<<< HEAD
 /**
  * Retry decorator for class methods
  */
@@ -202,6 +247,8 @@ export function createRetryWrapper<T extends (...args: unknown[]) => Promise<unk
 /**
  * Circuit breaker states
  */
+=======
+>>>>>>> eng-ai/llm-improvements
 export type CircuitState = 'closed' | 'open' | 'half-open';
 
 export interface CircuitBreakerConfig {
@@ -218,9 +265,12 @@ export const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
   halfOpenMaxCalls: 3,
 };
 
+<<<<<<< HEAD
 /**
  * Circuit breaker for LLM providers
  */
+=======
+>>>>>>> eng-ai/llm-improvements
 export class CircuitBreaker {
   private state: CircuitState = 'closed';
   private failureCount = 0;
@@ -233,6 +283,7 @@ export class CircuitBreaker {
     this.config = { ...DEFAULT_CIRCUIT_BREAKER_CONFIG, ...config };
   }
 
+<<<<<<< HEAD
   /**
    * Get current circuit state
    */
@@ -244,10 +295,18 @@ export class CircuitBreaker {
         this.halfOpenCalls = 0;
         this.successCount = 0;
       }
+=======
+  getState(): CircuitState {
+    if (this.state === 'open' && this.lastFailureTime && Date.now() - this.lastFailureTime >= this.config.timeoutMs) {
+      this.state = 'half-open';
+      this.halfOpenCalls = 0;
+      this.successCount = 0;
+>>>>>>> eng-ai/llm-improvements
     }
     return this.state;
   }
 
+<<<<<<< HEAD
   /**
    * Check if call is allowed
    */
@@ -264,10 +323,20 @@ export class CircuitBreaker {
   /**
    * Record a successful call
    */
+=======
+  canExecute(): boolean {
+    const state = this.getState();
+    if (state === 'closed') return true;
+    if (state === 'open') return false;
+    return this.halfOpenCalls < this.config.halfOpenMaxCalls;
+  }
+
+>>>>>>> eng-ai/llm-improvements
   recordSuccess(): void {
     if (this.state === 'half-open') {
       this.successCount++;
       this.halfOpenCalls++;
+<<<<<<< HEAD
       
       if (this.successCount >= this.config.successThreshold) {
         // Reset to closed state
@@ -275,12 +344,17 @@ export class CircuitBreaker {
         this.failureCount = 0;
         this.successCount = 0;
         this.halfOpenCalls = 0;
+=======
+      if (this.successCount >= this.config.successThreshold) {
+        this.reset();
+>>>>>>> eng-ai/llm-improvements
       }
     } else if (this.state === 'closed') {
       this.failureCount = 0;
     }
   }
 
+<<<<<<< HEAD
   /**
    * Record a failed call
    */
@@ -290,15 +364,25 @@ export class CircuitBreaker {
     
     if (this.state === 'half-open') {
       // Back to open state
+=======
+  recordFailure(): void {
+    this.failureCount++;
+    this.lastFailureTime = Date.now();
+    if (this.state === 'half-open') {
+>>>>>>> eng-ai/llm-improvements
       this.state = 'open';
       this.halfOpenCalls = 0;
       this.successCount = 0;
     } else if (this.state === 'closed' && this.failureCount >= this.config.failureThreshold) {
+<<<<<<< HEAD
       // Trip the circuit
+=======
+>>>>>>> eng-ai/llm-improvements
       this.state = 'open';
     }
   }
 
+<<<<<<< HEAD
   /**
    * Execute function with circuit breaker protection
    */
@@ -311,6 +395,10 @@ export class CircuitBreaker {
       );
     }
 
+=======
+  async execute<T>(fn: () => Promise<T>): Promise<T> {
+    if (!this.canExecute()) throw new RetryableError('Circuit breaker is open', 'CIRCUIT_OPEN', false);
+>>>>>>> eng-ai/llm-improvements
     try {
       const result = await fn();
       this.recordSuccess();
@@ -321,15 +409,19 @@ export class CircuitBreaker {
     }
   }
 
+<<<<<<< HEAD
   /**
    * Get circuit breaker metrics
    */
+=======
+>>>>>>> eng-ai/llm-improvements
   getMetrics() {
     return {
       state: this.getState(),
       failureCount: this.failureCount,
       successCount: this.successCount,
       lastFailureTime: this.lastFailureTime,
+<<<<<<< HEAD
       timeUntilRetry: this.state === 'open' && this.lastFailureTime
         ? Math.max(0, this.config.timeoutMs - (Date.now() - this.lastFailureTime))
         : 0,
@@ -339,6 +431,12 @@ export class CircuitBreaker {
   /**
    * Manually reset circuit breaker
    */
+=======
+      timeUntilRetry: this.state === 'open' && this.lastFailureTime ? Math.max(0, this.config.timeoutMs - (Date.now() - this.lastFailureTime)) : 0,
+    };
+  }
+
+>>>>>>> eng-ai/llm-improvements
   reset(): void {
     this.state = 'closed';
     this.failureCount = 0;
@@ -348,6 +446,7 @@ export class CircuitBreaker {
   }
 }
 
+<<<<<<< HEAD
 /**
  * Provider circuit breaker registry
  */
@@ -365,10 +464,19 @@ export class CircuitBreakerRegistry {
   getBreaker(providerId: string): CircuitBreaker {
     if (!this.breakers.has(providerId)) {
       this.breakers.set(providerId, new CircuitBreaker(this.defaultConfig));
+=======
+export class CircuitBreakerRegistry {
+  private breakers = new Map<string, CircuitBreaker>();
+
+  getBreaker(providerId: string): CircuitBreaker {
+    if (!this.breakers.has(providerId)) {
+      this.breakers.set(providerId, new CircuitBreaker());
+>>>>>>> eng-ai/llm-improvements
     }
     return this.breakers.get(providerId)!;
   }
 
+<<<<<<< HEAD
   /**
    * Execute function with circuit breaker for specific provider
    */
@@ -409,4 +517,25 @@ export class CircuitBreakerRegistry {
 }
 
 // Global circuit breaker registry for LLM providers
+=======
+  async execute<T>(providerId: string, fn: () => Promise<T>): Promise<T> {
+    return this.getBreaker(providerId).execute(fn);
+  }
+
+  getAllMetrics() {
+    const metrics: Record<string, ReturnType<CircuitBreaker['getMetrics']>> = {};
+    for (const [id, breaker] of this.breakers) metrics[id] = breaker.getMetrics();
+    return metrics;
+  }
+
+  resetAll(): void {
+    for (const breaker of this.breakers.values()) breaker.reset();
+  }
+
+  reset(providerId: string): void {
+    this.breakers.get(providerId)?.reset();
+  }
+}
+
+>>>>>>> eng-ai/llm-improvements
 export const globalCircuitBreakerRegistry = new CircuitBreakerRegistry();
