@@ -101,8 +101,8 @@ test.describe('Critical Path - Full User Journey', () => {
       await page.click('button:has-text("Next")').catch(() => {});
 
       // Create the agent
-      await page.click('button:has-text("Create Agent")').last().catch(() => {
-        return page.click('button:has-text("Create")').last();
+      await page.locator('button:has-text("Create Agent")').last().click().catch(async () => {
+        await page.locator('button:has-text("Create")').last().click();
       });
 
       // Wait for creation and verify
@@ -138,7 +138,7 @@ test.describe('Critical Path - Full User Journey', () => {
       }
 
       // Save task
-      await page.click('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').last().catch(async () => {
+      await page.locator('button:has-text("Create"), button:has-text("Save"), button[type="submit"]').last().click().catch(async () => {
         await page.locator('button.variant-primary, button.bg-primary').first().click();
       });
 
