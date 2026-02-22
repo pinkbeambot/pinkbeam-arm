@@ -278,6 +278,56 @@ function createInvoicePaymentFailedHandler(supabase: ReturnType<typeof createSer
     if (getInvoiceSubscriptionId(invoice)) {
       await updateTenantBilling(supabase, tenantId, {
         subscription_status: 'past_due',
+      });
+    }
+  };
+}
 
-  return NextResponse.json({ received: true });
+// Stub handlers for additional webhook events
+function createSubscriptionCreatedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Subscription created:', (payload as unknown as Stripe.Subscription).id);
+  };
+}
+
+function createSubscriptionUpdatedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Subscription updated:', (payload as unknown as Stripe.Subscription).id);
+  };
+}
+
+function createSubscriptionDeletedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Subscription deleted:', (payload as unknown as Stripe.Subscription).id);
+  };
+}
+
+function createCheckoutCompletedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Checkout completed:', (payload as unknown as Stripe.Checkout.Session).id);
+  };
+}
+
+function createPaymentMethodAttachedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Payment method attached:', (payload as unknown as Stripe.PaymentMethod).id);
+  };
+}
+
+function createPaymentMethodDetachedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Payment method detached:', (payload as unknown as Stripe.PaymentMethod).id);
+  };
+}
+
+function createPaymentIntentFailedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Payment intent failed:', (payload as unknown as Stripe.PaymentIntent).id);
+  };
+}
+
+function createCustomerUpdatedHandler(supabase: ReturnType<typeof createServiceRoleClient>): WebhookHandler {
+  return async (payload) => {
+    console.log('[Webhook] Customer updated:', (payload as unknown as Stripe.Customer).id);
+  };
 }

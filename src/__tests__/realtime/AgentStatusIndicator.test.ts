@@ -46,9 +46,11 @@ describe('Agent Status Configuration', () => {
       initializing: 'bg-blue-500',
       idle: 'bg-amber-500',
       active: 'bg-emerald-500',
+      busy: 'bg-yellow-500',
       paused: 'bg-slate-400',
       blocked: 'bg-pink-500',
       error: 'bg-rose-500',
+      offline: 'bg-gray-400',
       escaped: 'bg-orange-600',
       terminated: 'bg-gray-500',
     };
@@ -80,9 +82,11 @@ describe('Agent Status Configuration', () => {
       initializing: 'Initializing',
       idle: 'Idle',
       active: 'Active',
+      busy: 'Busy',
       paused: 'Paused',
       blocked: 'Blocked',
       error: 'Error',
+      offline: 'Offline',
       escaped: 'Escaped',
       terminated: 'Terminated',
     };

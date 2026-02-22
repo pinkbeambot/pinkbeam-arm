@@ -8,9 +8,11 @@ export type AgentStatus =
   | 'initializing' 
   | 'idle' 
   | 'active' 
+  | 'busy'
   | 'paused' 
   | 'blocked' 
   | 'error' 
+  | 'offline'
   | 'escaped' 
   | 'terminated';
 
