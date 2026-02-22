@@ -3,6 +3,15 @@ import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
+/**
+ * Button variant styles using class-variance-authority.
+ * 
+ * @example
+ * ```tsx
+ * <Button variant="default" size="md">Click me</Button>
+ * <Button variant="beam" size="lg">Beam Button</Button>
+ * ```
+ */
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
   {
@@ -18,7 +27,7 @@ const buttonVariants = cva(
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
         link: "text-primary underline-offset-4 hover:underline",
-        beam: "bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:opacity-90 shadow-[0_0_20px_rgba(233,30,140,0.3)] hover:shadow-[0_0_30px_rgba(233,30,140,0.4)] transition-shadow",
+        beam: "bg-gradient-to-r from-pink-500 to-pink-600 text-white hover:opacity-90 shadow-beam hover:shadow-glow-pink-md transition-shadow",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
@@ -34,16 +43,42 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * Props for the Button component.
+ * @interface ButtonProps
+ */
+export interface ButtonProps extends React.ComponentProps<"button">,
+  VariantProps<typeof buttonVariants> {
+  /** Render as a child component (e.g., a Link) */
+  asChild?: boolean
+}
+
+/**
+ * Button component with multiple variants and sizes.
+ * Supports all native button props plus variant styling.
+ * 
+ * @example
+ * ```tsx
+ * // Default button
+ * <Button>Click me</Button>
+ * 
+ * // Destructive variant
+ * <Button variant="destructive">Delete</Button>
+ * 
+ * // With icon
+ * <Button size="icon"><PlusIcon /></Button>
+ * 
+ * // As a link
+ * <Button asChild><a href="/path">Link</a></Button>
+ * ```
+ */
 function Button({
   className,
   variant,
   size,
   asChild = false,
   ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
-  }) {
+}: ButtonProps) {
   const Comp = asChild ? Slot : "button"
 
   return (
@@ -56,3 +91,4 @@ function Button({
 }
 
 export { Button, buttonVariants }
+export type { ButtonProps }
