@@ -65,6 +65,20 @@ export {
   type ROIData
 } from './use-analytics';
 
+// Advanced Analytics hooks
+export {
+  usePredictions,
+  useHeatmap,
+  useNLQuery,
+  useInsights,
+  useRealtimeMetrics,
+  type UsePredictionsResult,
+  type UseHeatmapResult,
+  type UseNLQueryResult,
+  type UseInsightsResult,
+  type UseRealtimeMetricsResult,
+} from './use-advanced-analytics';
+
 // Optimized query hooks
 export {
   useOptimizedQuery,

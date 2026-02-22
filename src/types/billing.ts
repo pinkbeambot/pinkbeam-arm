@@ -433,8 +433,10 @@ export type BillingEventType =
   | 'payment_method_added'
   | 'payment_method_updated'
   | 'payment_method_expired'
+  | 'payment_method_removed'
   | 'usage_alert_triggered'
   | 'retention_offer_accepted'
+  | 'cancellation_initiated'
   | 'cancellation_completed';
 
 export interface BillingEvent {
