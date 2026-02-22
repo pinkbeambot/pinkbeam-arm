@@ -2,16 +2,33 @@
 
 import * as React from "react"
 import * as SwitchPrimitive from "@radix-ui/react-switch"
-
 import { cn } from "@/lib/utils"
 
+/**
+ * Props for the Switch component.
+ */
+type SwitchProps = React.ComponentProps<typeof SwitchPrimitive.Root> & {
+  /** Size variant of the switch */
+  size?: "sm" | "default"
+}
+
+/**
+ * Switch component for toggling between on/off states.
+ * Supports two sizes and full keyboard accessibility.
+ *
+ * @example
+ * ```tsx
+ * <Switch id="airplane" />
+ * <Label htmlFor="airplane">Airplane Mode</Label>
+ *
+ * <Switch size="sm" />
+ * ```
+ */
 function Switch({
   className,
   size = "default",
   ...props
-}: React.ComponentProps<typeof SwitchPrimitive.Root> & {
-  size?: "sm" | "default"
-}) {
+}: SwitchProps) {
   return (
     <SwitchPrimitive.Root
       data-slot="switch"
@@ -33,3 +50,4 @@ function Switch({
 }
 
 export { Switch }
+export type { SwitchProps }
