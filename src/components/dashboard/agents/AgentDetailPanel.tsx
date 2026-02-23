@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense, lazy } from 'react';
 import { X, Bot, Calendar, Activity, MessageSquare, Play, Pause, Pencil, Copy } from 'lucide-react';
 import { cn, formatDateTime, getAgentStatusColor, getAgentStatusLabel, getRoleLabel, getRoleBadgeColor, getInitials, getAvatarColor, formatRelativeTime } from '@/lib/utils';
 import type { Agent } from '@/types';
@@ -16,8 +16,28 @@ import { EditAgentModal } from './EditAgentModal';
 import { useUpdateAgent } from '@/lib/hooks/useAgents';
 import { useToast } from '@/components/ui/use-toast';
 import { useAgentAnalytics } from '@/lib/hooks/useAgentAnalytics';
-import { PerformanceTab } from './PerformanceTab';
 import { ActivityTab } from './ActivityTab';
+
+// Lazy load PerformanceTab to reduce initial bundle size (uses recharts)
+const PerformanceTab = lazy(() => import('./PerformanceTab').then(mod => ({ 
+  default: mod.PerformanceTab 
+})));
+
+// Loading fallback for PerformanceTab
+function PerformanceTabSkeleton() {
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-24 w-full" />
+      </div>
+      <Skeleton className="h-48 w-full" />
+      <Skeleton className="h-48 w-full" />
+    </div>
+  );
+}
 
 interface AgentDetailPanelProps {
   agent: Agent | null;
@@ -78,7 +98,7 @@ export function AgentDetailPanel({
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent className="w-full sm:max-w-xl p-0">
+        <SheetContent data-testid="agent-detail-panel" className="w-full sm:max-w-xl p-0">
           {loading || !agent ? (
             <AgentDetailSkeleton />
           ) : (
@@ -221,11 +241,13 @@ function AgentDetailContent({
           </TabsContent>
 
           <TabsContent value="performance" className="m-0 px-6 py-4">
-            <PerformanceTab 
-              data={analyticsData} 
-              isLoading={analyticsLoading} 
-              error={analyticsError} 
-            />
+            <Suspense fallback={<PerformanceTabSkeleton />}>
+              <PerformanceTab 
+                data={analyticsData} 
+                isLoading={analyticsLoading} 
+                error={analyticsError} 
+              />
+            </Suspense>
           </TabsContent>
 
           <TabsContent value="activity" className="m-0 px-6 py-4">

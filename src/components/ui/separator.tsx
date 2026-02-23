@@ -2,12 +2,27 @@ import * as React from "react"
 import * as SeparatorPrimitive from "@radix-ui/react-separator"
 import { cn } from "@/lib/utils"
 
+/**
+ * Props for the Separator component.
+ */
+type SeparatorProps = React.ComponentProps<typeof SeparatorPrimitive.Root>
+
+/**
+ * Separator component for dividing content.
+ * Can be horizontal or vertical and is purely decorative by default.
+ *
+ * @example
+ * ```tsx
+ * <Separator />
+ * <Separator orientation="vertical" className="h-4" />
+ * ```
+ */
 function Separator({
   className,
   orientation = "horizontal",
   decorative = true,
   ...props
-}: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
+}: SeparatorProps) {
   return (
     <SeparatorPrimitive.Root
       data-slot="separator"
@@ -23,3 +38,4 @@ function Separator({
 }
 
 export { Separator }
+export type { SeparatorProps }

@@ -126,6 +126,37 @@ export class ClaudeProvider {
   }
 
   /**
+   * Estimate tokens in text
+   */
+  estimateTokens(text: string): number {
+    return Math.ceil(text.length / 4);
+  }
+
+  /**
+   * Health check
+   */
+  async healthCheck(): Promise<{ healthy: boolean; latency: number }> {
+    const startTime = Date.now();
+    try {
+      const response = await fetch(`${this.baseUrl}/models`, {
+        headers: {
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+      });
+      return {
+        healthy: response.ok,
+        latency: Date.now() - startTime,
+      };
+    } catch {
+      return {
+        healthy: false,
+        latency: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
    * Convert generic messages to Anthropic format
    */
   private convertMessages(messages: LLMMessage[]): { system?: string; messages: AnthropicMessage[] } {
@@ -319,41 +350,6 @@ export class ClaudeProvider {
     }));
   }
 
-  /**
-   * Count tokens in text (approximate)
-   * Note: This is a rough estimate. For accurate counts, use the API.
-   */
-  estimateTokens(text: string): number {
-    // Rough approximation: ~4 characters per token for English text
-    return Math.ceil(text.length / 4);
-  }
-
-  /**
-   * Check if provider is healthy
-   */
-  async healthCheck(): Promise<{ healthy: boolean; latency: number }> {
-    const startTime = Date.now();
-    
-    try {
-      const response = await fetch(`${this.baseUrl}/models`, {
-        method: 'GET',
-        headers: {
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-      });
-
-      return {
-        healthy: response.ok,
-        latency: Date.now() - startTime,
-      };
-    } catch {
-      return {
-        healthy: false,
-        latency: Date.now() - startTime,
-      };
-    }
-  }
 }
 
 // Factory function to create Claude provider

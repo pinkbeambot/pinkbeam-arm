@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { updateDecisionSchema, overrideDecisionSchema } from '@/lib/validation';
+import { apiDeleted, apiError } from '@/lib/api/response';
 import { z } from 'zod';
 
 interface RouteParams {
@@ -271,5 +272,98 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  }
+}
+
+/**
+ * @openapi
+ * /decisions/{id}:
+ *   delete:
+ *     summary: Soft delete a decision
+ *     description: Soft delete a decision by setting deleted_at timestamp. Immutable decisions cannot be deleted.
+ *     tags:
+ *       - Decisions
+ *     security:
+ *       - BearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: Decision ID
+ *     responses:
+ *       200:
+ *         description: Decision deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *       400:
+ *         description: Decision is immutable and cannot be deleted
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Decision not found
+ *       500:
+ *         description: Internal server error
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
+
+    // Check if decision exists and belongs to tenant
+    const { data: existingDecision, error: fetchError } = await supabase
+      .from('decisions')
+      .select('id, status, immutable')
+      .eq('id', id)
+      .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
+      .single();
+
+    if (fetchError || !existingDecision) {
+      return NextResponse.json({ error: 'Decision not found' }, { status: 404 });
+    }
+
+    // Check if decision is immutable
+    if (existingDecision.immutable) {
+      return NextResponse.json(
+        { error: 'Decision is immutable and cannot be deleted' },
+        { status: 400 }
+      );
+    }
+
+    // Soft delete by setting deleted_at
+    const { error } = await supabase
+      .from('decisions')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('tenant_id', tenantId);
+
+    if (error) {
+      console.error('Error deleting decision:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete decision' },
+        { status: 500 }
+      );
+    }
+
+    return apiDeleted({ id });
+  } catch (error) {
+    console.error('Unexpected error in DELETE /api/decisions/:id:', error);
+    return apiError('Internal server error', 500);
   }
 }

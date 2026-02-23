@@ -3,7 +3,7 @@ title: "Map of Content"
 type: reference
 status: active
 created: 2026-02-15
-updated: 2026-02-15
+updated: 2026-02-21
 owner: CTO
 tags: [reference, core]
 aliases: ["MOC", "Table of Contents", "Index"]
@@ -38,13 +38,20 @@ Central navigation hub for the Pink Beam ARM documentation vault.
 ### DevOps / Operations
 - [[CICD]] — GitHub Actions, Vercel deployment pipeline
 - [[DEPLOYMENT]] — Deploy schedule, environments, hotfix process
+- [[PRODUCTION-DEPLOYMENT]] — Complete production deployment guide
 - [[INCIDENT-RESPONSE]] — Severity levels, rollback procedures, runbooks
+- [[ENVIRONMENT]] — Environment variables reference
+- [[DATABASE]] — Database setup and management guide
 
 ### Process & Standards
 - [[DEVELOPMENT-PROCESS]] — Engineering workflow and process fixes
+- [[DEVELOPER-GUIDE]] — Contributing guidelines, code style, testing guide
 - [[REPORTING]] — Event-driven signal protocol (DONE/BLOCKED/PROGRESS)
 - [[AGENT-ROLES]] — Testing enforcement per role
 - [[TESTING-STANDARDS]] — Testing types, coverage thresholds, CI integration
+
+### User Documentation
+- [[USER-GUIDE]] — Getting started, feature walkthroughs, FAQ, troubleshooting
 
 ---
 
@@ -76,17 +83,28 @@ Central navigation hub for the Pink Beam ARM documentation vault.
 |----------|-------------|
 | [[CICD]] | GitHub Actions + Vercel deployment pipeline |
 | [[DEPLOYMENT]] | Environments, deploy schedule, hotfix process |
+| [[PRODUCTION-DEPLOYMENT]] | Complete production deployment guide |
 | [[INCIDENT-RESPONSE]] | Severity levels, rollback, post-mortems |
+| [[ENVIRONMENT]] | Environment variables reference |
+| [[DATABASE]] | Database setup and management guide |
 
 ### Product & Planning
 | Document | Description |
 |----------|-------------|
 | [[PRD]] | Full product requirements with user stories and wireframes |
+| [[USER-GUIDE]] | Getting started, feature walkthroughs, FAQ, troubleshooting |
 | [[future/00-index\|Future Features]] | Post-MVP roadmap — VALIS universal NL interface, multi-channel, mobile, integrations |
 | [[MASTER-TASK-LIST]] | 61 tasks across 8 phases with status tracking |
 | [[ENGINEERING]] | Engineering status, assignments, MVP timeline |
 | [[STATUS]] | Weekly development snapshot |
 | [[E2E-TEST-PLAN]] | Playwright E2E test strategy for critical flows |
+
+### Developer Documentation
+| Document | Description |
+|----------|-------------|
+| [[DEVELOPER-GUIDE]] | Contributing guidelines, code style, testing guide |
+| [[ENVIRONMENT]] | Environment variables reference |
+| [[DATABASE]] | Database setup and management guide |
 
 ---
 
@@ -153,12 +171,14 @@ PRD (product vision)
 |-----|-----------|
 | `#architecture` | [[ARCHITECTURE]], [[AGENT-PROTOCOL]] |
 | `#implementation` | [[AUTH_IMPLEMENTATION]], [[ACTIVITY_FEED_IMPLEMENTATION]] |
-| `#testing` | [[TESTING-STANDARDS]], [[AGENT-ROLES]], [[E2E-TEST-PLAN]] |
-| `#process` | [[DEVELOPMENT-PROCESS]], [[REPORTING]], [[AGENT-ROLES]], [[TESTING-STANDARDS]] |
-| `#operations` | [[CICD]], [[DEPLOYMENT]], [[INCIDENT-RESPONSE]] |
+| `#testing` | [[TESTING-STANDARDS]], [[AGENT-ROLES]], [[E2E-TEST-PLAN]], [[DEVELOPER-GUIDE]] |
+| `#process` | [[DEVELOPMENT-PROCESS]], [[REPORTING]], [[AGENT-ROLES]], [[TESTING-STANDARDS]], [[DEVELOPER-GUIDE]] |
+| `#operations` | [[CICD]], [[DEPLOYMENT]], [[INCIDENT-RESPONSE]], [[PRODUCTION-DEPLOYMENT]], [[ENVIRONMENT]], [[DATABASE]] |
 | `#planning` | [[MASTER-TASK-LIST]], [[ENGINEERING]], [[STATUS]], [[E2E-TEST-PLAN]], [[future/00-index\|Future Features]] |
-| `#product` | [[PRD]], [[future/00-index\|Future Features]] |
+| `#product` | [[PRD]], [[USER-GUIDE]], [[future/00-index\|Future Features]] |
 | `#future` | All 7 feature docs in `docs/future/` — see [[future/00-index\|Future Index]] |
+| `#user-guide` | [[USER-GUIDE]] |
+| `#developer-guide` | [[DEVELOPER-GUIDE]], [[ENVIRONMENT]], [[DATABASE]] |
 
 ### By Domain
 | Tag | Documents |

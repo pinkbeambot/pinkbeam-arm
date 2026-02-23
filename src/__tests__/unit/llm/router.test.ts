@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { LLMRouter, getLLMRouter, resetLLMRouter } from '@/lib/llm/router';
+import { EnhancedLLMRouter, getLLMRouter, resetLLMRouter } from '@/lib/llm/router';
 import { LLMError } from '@/lib/llm/types';
 
 // Mock the Claude provider
@@ -63,7 +63,7 @@ describe('LLMRouter', () => {
   describe('initialization', () => {
     it('should initialize with default config', () => {
       const router = getLLMRouter();
-      expect(router).toBeInstanceOf(LLMRouter);
+      expect(router).toBeInstanceOf(EnhancedLLMRouter);
       expect(router.getConfig().defaultProvider).toBe('anthropic');
     });
 

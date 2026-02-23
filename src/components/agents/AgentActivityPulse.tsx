@@ -63,6 +63,13 @@ const pulseConfig: Record<AgentStatus, {
     label: "Working...",
     intensity: "strong",
   },
+  busy: {
+    shouldPulse: true,
+    color: "bg-yellow-500",
+    ringColor: "ring-yellow-500/50",
+    label: "Busy",
+    intensity: "strong",
+  },
   paused: {
     shouldPulse: false,
     color: "bg-blue-400",
@@ -95,6 +102,13 @@ const pulseConfig: Record<AgentStatus, {
     shouldPulse: false,
     color: "bg-gray-500",
     ringColor: "ring-gray-500/30",
+    label: "Terminated",
+    intensity: "subtle",
+  },
+  offline: {
+    shouldPulse: false,
+    color: "bg-slate-400",
+    ringColor: "ring-slate-400/30",
     label: "Offline",
     intensity: "subtle",
   },
@@ -329,11 +343,13 @@ export function AgentActivityBar({
     initializing: "Starting",
     idle: "Idle",
     active: "Processing",
+    busy: "Busy",
     paused: "Paused",
     blocked: "Blocked",
     error: "Error",
+    offline: "Offline",
     escaped: "⚠️ Escaped",
-    terminated: "Offline",
+    terminated: "Terminated",
   };
 
   return (

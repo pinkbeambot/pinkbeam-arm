@@ -170,16 +170,118 @@ test.describe('Agent Management', () => {
   test('user can sort agents', async ({ authenticatedPage: page }) => {
     // Look for sort controls
     const sortButton = page.locator('button:has-text("Sort"), [data-testid="sort-select"]').first();
-    
+
     if (await sortButton.isVisible().catch(() => false)) {
       await sortButton.click();
-      
+
       // Select different sort option
       await page.click('text=Name').catch(() => {});
       await page.click('text=Created').catch(() => {});
-      
+
       // Verify page is still functional
       await expect(page.locator('text=Agent Roster')).toBeVisible();
+    }
+  });
+
+  test('user can edit agent details', async ({ authenticatedPage: page }) => {
+    // Create a test agent first
+    await page.click('button:has-text("Create Agent")');
+    await expect(page.locator('text=Create New Agent')).toBeVisible();
+
+    const agentName = `Edit Test Agent ${Date.now()}`;
+    const updatedName = `Updated Agent ${Date.now()}`;
+
+    await page.click('button:has-text("Start from Scratch")');
+    await page.fill('input#name', agentName);
+    await page.fill('textarea#description', 'Agent for edit testing');
+    await page.click('button:has-text("Next")');
+    await page.click('button:has-text("Next")');
+    await page.click('button:has-text("Create Agent")');
+
+    await page.waitForTimeout(1000);
+    await expect(page.locator(`text=${agentName}`)).toBeVisible();
+
+    // Open agent details
+    await page.locator(`text=${agentName}`).first().click();
+    await expect(page.locator('text=Agent Details').or(page.locator('text=Details'))).toBeVisible();
+
+    // Click edit
+    const editButton = page.locator('button:has-text("Edit"), button[aria-label="Edit"]').first();
+
+    if (await editButton.isVisible().catch(() => false)) {
+      await editButton.click();
+
+      // Update name
+      const nameInput = page.locator('input#name, input[name="name"]').first();
+      await nameInput.fill(updatedName);
+
+      // Save
+      await page.click('button:has-text("Save"), button:has-text("Update")').catch(() => {});
+      await page.waitForTimeout(500);
+
+      // Verify update
+      await expect(page.locator(`text=${updatedName}`)).toBeVisible();
+    }
+
+    // Close panel
+    await page.click('button:has-text("Close"), button[aria-label="Close"]').catch(() => {
+      page.keyboard.press('Escape');
+    });
+  });
+
+  test('user can delete agent', async ({ authenticatedPage: page }) => {
+    // Create a test agent
+    await page.click('button:has-text("Create Agent")');
+    await expect(page.locator('text=Create New Agent')).toBeVisible();
+
+    const agentName = `Delete Test Agent ${Date.now()}`;
+
+    await page.click('button:has-text("Start from Scratch")');
+    await page.fill('input#name', agentName);
+    await page.fill('textarea#description', 'Agent for delete testing');
+    await page.click('button:has-text("Next")');
+    await page.click('button:has-text("Next")');
+    await page.click('button:has-text("Create Agent")');
+
+    await page.waitForTimeout(1000);
+    await expect(page.locator(`text=${agentName}`)).toBeVisible();
+
+    // Open agent details
+    await page.locator(`text=${agentName}`).first().click();
+    await expect(page.locator('text=Agent Details').or(page.locator('text=Details'))).toBeVisible();
+
+    // Click delete
+    const deleteButton = page.locator('button:has-text("Delete"), button:has-text("Remove"), button[aria-label="Delete"]').first();
+
+    if (await deleteButton.isVisible().catch(() => false)) {
+      await deleteButton.click();
+
+      // Confirm deletion
+      const confirmButton = page.locator('button:has-text("Confirm"), button:has-text("Yes"), button:has-text("Delete")').first();
+      await confirmButton.click().catch(() => {});
+
+      await page.waitForTimeout(1000);
+
+      // Verify agent is deleted
+      await expect(page.locator(`text=${agentName}`)).not.toBeVisible();
+    }
+  });
+
+  test('user can view agent configuration page', async ({ authenticatedPage: page }) => {
+    // Find first agent
+    const firstAgent = page.locator('[data-testid="agent-card"], [data-testid="agent-row"], .agent-card').first();
+
+    if (await firstAgent.isVisible().catch(() => false)) {
+      // Look for configure/settings link
+      const configureLink = firstAgent.locator('a:has-text("Configure"), a:has-text("Settings"), button:has-text("Configure")').first();
+
+      if (await configureLink.isVisible().catch(() => false)) {
+        await configureLink.click();
+
+        // Should navigate to configuration page
+        await expect(page).toHaveURL(/\/portal\/agents\/.*\/configure/);
+        await expect(page.locator('text=Configuration').or(page.locator('h1'))).toBeVisible();
+      }
     }
   });
 });

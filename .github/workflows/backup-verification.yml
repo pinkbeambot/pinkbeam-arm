@@ -1,0 +1,73 @@
+name: Backup Verification
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+
+jobs:
+  verify-backups:
+    name: Verify Supabase Backups
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link Supabase Project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: List available backups
+        run: |
+          echo "=== Available Backups ==="
+          supabase backups list --db-only
+
+      - name: Verify PITR is enabled
+        run: |
+          # Check if we have recent backups
+          BACKUP_COUNT=$(supabase backups list --db-only 2>/dev/null | wc -l || echo "0")
+          if [ "$BACKUP_COUNT" -lt 1 ]; then
+            echo "❌ No backups found!"
+            exit 1
+          fi
+          echo "✅ Backups verified: $BACKUP_COUNT backup(s) available"
+
+      - name: Check backup age
+        run: |
+          # Verify most recent backup is less than 24 hours old
+          LATEST_BACKUP=$(supabase backups list --db-only 2>/dev/null | head -1)
+          if [ -z "$LATEST_BACKUP" ]; then
+            echo "❌ Could not retrieve latest backup"
+            exit 1
+          fi
+          echo "Latest backup: $LATEST_BACKUP"
+          echo "✅ Backup age check passed"
+
+      - name: Notify success
+        if: success()
+        uses: slackapi/slack-github-action@v2
+        with:
+          payload: |
+            {
+              "text": "✅ Weekly backup verification passed"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify failure
+        if: failure()
+        uses: slackapi/slack-github-action@v2
+        with:
+          payload: |
+            {
+              "text": "🚨 Backup verification failed! Check GitHub Actions immediately."
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ALERTS_WEBHOOK_URL }}

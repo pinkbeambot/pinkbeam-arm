@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -98,7 +99,7 @@ export default function AboutPage() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground">
-              We're a team of builders, researchers, and dreamers on a mission to
+              We&apos;re a team of builders, researchers, and dreamers on a mission to
               help founders scale their businesses with AI employees.
             </p>
           </FadeIn>
@@ -116,7 +117,7 @@ export default function AboutPage() {
                   Pink Beam started with a simple observation: the best founders
                   were drowning in operational work. They had vision, product
                   sense, and drive—but they were spending 80% of their time on
-                  tasks that didn't require their unique talents.
+                  tasks that didn&apos;t require their unique talents.
                 </p>
                 <p>
                   In 2024, we set out to change that. We built the first version
@@ -127,7 +128,7 @@ export default function AboutPage() {
                 </p>
                 <p>
                   Today, we power over 100 companies with 500+ AI employees
-                  working around the clock. But we're just getting started. Our
+                  working around the clock. But we&apos;re just getting started. Our
                   vision is a world where every founder can run a 50-person
                   company as a 1-person operation.
                 </p>
@@ -193,9 +194,9 @@ export default function AboutPage() {
               Join Our Team
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              We're always looking for exceptional people who want to build the
-              future of work. If you're passionate about AI and entrepreneurship,
-              we'd love to hear from you.
+              We&apos;re always looking for exceptional people who want to build the
+              future of work. If you&apos;re passionate about AI and entrepreneurship,
+              we&apos;d love to hear from you.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>

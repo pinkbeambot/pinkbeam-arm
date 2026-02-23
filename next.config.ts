@@ -1,5 +1,8 @@
 import type { NextConfig } from "next";
-const withBundleAnalyzer = require('@next/bundle-analyzer')({
+import createBundleAnalyzer from '@next/bundle-analyzer';
+import { withSentryConfig } from '@sentry/nextjs';
+
+const withBundleAnalyzer = createBundleAnalyzer({
   enabled: process.env.ANALYZE === 'true'
 });
 
@@ -15,9 +18,9 @@ if (isVercelProd && process.env.DEV_AUTH_BYPASS === 'true') {
 
 // Build CSP directives based on environment
 const isDev = process.env.NODE_ENV === 'development';
+const isProd = process.env.NODE_ENV === 'production';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://*.supabase.co';
 const supabaseWss = supabaseUrl.replace('https://', 'wss://');
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
 const cspDirectives = [
   // Only allow resources from own origin by default
@@ -65,6 +68,167 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
   },
 
+  // Image optimization configuration
+  images: {
+    formats: ['image/webp', 'image/avif'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
+    dangerouslyAllowSVG: true,
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+  },
+
+  // Turbopack configuration
+  turbopack: {
+    // Module resolution
+    resolveAlias: {
+      'date-fns': 'date-fns/esm',
+    },
+    // Root directories
+    root: process.cwd(),
+  },
+
+  // Experimental features for performance
+  experimental: {
+    // Optimize package imports for tree shaking
+    optimizePackageImports: [
+      'lucide-react',
+      'recharts',
+      'framer-motion',
+      '@radix-ui/react-icons',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-tabs',
+      'date-fns',
+    ],
+    // Enable server actions (already default in Next.js 15)
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
+    // Optimize CSS
+    optimizeCss: true,
+    // Scroll restoration for better UX
+    scrollRestoration: true,
+  },
+
+  // Webpack configuration for bundle optimization (fallback for non-turbopack)
+  webpack: (config, { isServer }) => {
+    // Tree shaking for heavy libraries
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        // Use lighter date-fns entry point
+        'date-fns': 'date-fns/esm',
+      };
+
+      // Split chunks optimization
+      config.optimization = {
+        ...config.optimization,
+        splitChunks: {
+          chunks: 'all',
+          maxInitialRequests: 25,
+          minSize: 20000,
+          cacheGroups: {
+            // Vendor chunk for node_modules
+            vendor: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'all',
+              priority: 10,
+              reuseExistingChunk: true,
+            },
+            // Recharts is heavy - separate chunk
+            recharts: {
+              test: /[\\/]node_modules[\\/](recharts|victory-vendor|d3-)[\\/]/,
+              name: 'recharts',
+              chunks: 'all',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // Framer Motion - separate chunk
+            framerMotion: {
+              test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+              name: 'framer-motion',
+              chunks: 'all',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // TipTap editor - separate chunk (heavy)
+            tiptap: {
+              test: /[\\/]node_modules[\\/]@tiptap[\\/]/,
+              name: 'tiptap',
+              chunks: 'all',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // Swagger UI - separate chunk (very heavy)
+            swagger: {
+              test: /[\\/]node_modules[\\/](swagger-ui|swagger-ui-react)[\\/]/,
+              name: 'swagger',
+              chunks: 'all',
+              priority: 25,
+              reuseExistingChunk: true,
+            },
+            // React Flow - separate chunk
+            xyflow: {
+              test: /[\\/]node_modules[\\/]@xyflow[\\/]/,
+              name: 'xyflow',
+              chunks: 'all',
+              priority: 20,
+              reuseExistingChunk: true,
+            },
+            // UI components - separate chunk
+            ui: {
+              test: /[\\/]src[\\/]components[\\/]ui[\\/]/,
+              name: 'ui-components',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
+            },
+            // Dashboard components - separate chunk
+            dashboard: {
+              test: /[\\/]src[\\/]components[\\/]dashboard[\\/]/,
+              name: 'dashboard',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
+            },
+            // Analytics components - separate chunk (uses recharts)
+            analytics: {
+              test: /[\\/]src[\\/]components[\\/]analytics[\\/]/,
+              name: 'analytics',
+              chunks: 'all',
+              priority: 15,
+              reuseExistingChunk: true,
+            },
+            // Performance components - separate chunk
+            performance: {
+              test: /[\\/]src[\\/]components[\\/]performance[\\/]/,
+              name: 'performance',
+              chunks: 'all',
+              priority: 5,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+        // Enable module concatenation for better tree shaking
+        concatenateModules: true,
+        // Enable side effects optimization
+        sideEffects: false,
+      };
+
+      // Add performance hints
+      config.performance = {
+        hints: isDev ? false : 'warning',
+        maxEntrypointSize: 250000,
+        maxAssetSize: 250000,
+      };
+    }
+
+    return config;
+  },
+
   // API versioning: route /api/v1/* to physical /api/* route files
   async rewrites() {
     return {
@@ -107,10 +271,10 @@ const nextConfig: NextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=31536000; includeSubDomains; preload',
           },
-          // Restrict browser features/APIs the app doesn't need
+          // Updated Permissions-Policy for PWA support
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+            value: 'camera=(), microphone=(), geolocation=(), interest-cohort=(), display-capture=(), fullscreen=(self)',
           },
           // Legacy XSS protection header (still useful for older browsers)
           {
@@ -122,10 +286,94 @@ const nextConfig: NextConfig = {
             key: 'X-DNS-Prefetch-Control',
             value: 'on',
           },
+          // Service Worker allowed
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      // Cache static assets aggressively
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      // Cache images
+      {
+        source: '/images/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, stale-while-revalidate=31536000',
+          },
+        ],
+      },
+      // Service Worker headers - don't cache
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+          {
+            key: 'Service-Worker-Allowed',
+            value: '/',
+          },
+        ],
+      },
+      // Manifest headers
+      {
+        source: '/manifest.json',
+        headers: [
+          {
+            key: 'Content-Type',
+            value: 'application/manifest+json',
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=3600',
+          },
+        ],
+      },
+      // PWA Icon headers
+      {
+        source: '/icons/(.*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, immutable',
+          },
         ],
       },
     ];
   },
+
+  // Compression
+  compress: true,
+
+  // Powered by header
+  poweredByHeader: false,
 };
 
-module.exports = withBundleAnalyzer(nextConfig);
+// Sentry configuration
+const sentryWebpackPluginOptions = {
+  org: 'pinkbeam',
+  project: 'arm-production',
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+  automaticVercelMonitors: true,
+};
+
+// Export with both Sentry and Bundle Analyzer
+module.exports = withSentryConfig(
+  withBundleAnalyzer(nextConfig),
+  sentryWebpackPluginOptions
+);

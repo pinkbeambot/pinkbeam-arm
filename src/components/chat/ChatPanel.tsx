@@ -1,13 +1,14 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect } from 'react';
-import { ChevronDown, Bookmark, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronDown, Bookmark, Loader2, AlertCircle, RefreshCw, X } from 'lucide-react';
 import { cn, getAvatarColor, getInitials } from '@/lib/utils';
 import { useChat } from '@/lib/hooks/useChat';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { useAutoScroll, useBookmarks, useExport } from './hooks';
 import { ChatHeader } from './ChatHeader';
 import { ChatSearch } from './ChatSearch';
@@ -58,6 +59,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
   const [showingSearchResults, setShowingSearchResults] = useState(false);
 
   // Reset when chat changes
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     setSearchOpen(false);
     resetBookmarks();
@@ -86,7 +88,11 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-md p-0 flex flex-col" side="right">
+      <SheetContent 
+        className="w-full sm:max-w-md md:max-w-lg p-0 flex flex-col" 
+        side="right"
+      >
+        <SheetTitle className="sr-only">Chat with {agentName}</SheetTitle>
         <ChatHeader
           agentName={agentName}
           agentAvatar={agentAvatar}
@@ -114,7 +120,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
             <ScrollArea
               ref={scrollRef}
               onScroll={handleScroll}
-              className="flex-1 px-4 py-4"
+              className="flex-1 px-3 sm:px-4 py-4"
             >
               {loading && messages.length === 0 ? (
                 <ChatLoadingSkeleton />
@@ -170,7 +176,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
               <Button
                 variant="secondary"
                 size="sm"
-                className="absolute bottom-20 left-1/2 -translate-x-1/2 rounded-full shadow-lg"
+                className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full shadow-lg z-10"
                 onClick={scrollToBottom}
               >
                 <ChevronDown className="h-4 w-4 mr-1" />
@@ -180,7 +186,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
           </>
         )}
 
-        <div className="border-t p-4 flex-shrink-0">
+        <div className="border-t p-3 sm:p-4 flex-shrink-0 bg-background">
           <ChatInput
             onSend={handleSendMessage}
             disabled={sending || loading}
@@ -193,7 +199,7 @@ export function ChatPanel({ chatId, agentId, open, onOpenChange }: ChatPanelProp
 }
 
 // ============================================================================
-// Small Helper Components (kept inline — each <25 lines)
+// Helper Components
 // ============================================================================
 
 function ChatLoadingSkeleton() {
@@ -214,9 +220,13 @@ function ChatLoadingSkeleton() {
 function ChatError({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-4">
-      <p className="text-sm text-destructive mb-2">Failed to load chat</p>
+      <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center mb-3">
+        <AlertCircle className="h-6 w-6 text-destructive" />
+      </div>
+      <p className="text-sm font-medium mb-2">Failed to load chat</p>
       <p className="text-xs text-muted-foreground mb-4">{error.message}</p>
       <Button size="sm" onClick={onRetry}>
+        <RefreshCw className="h-4 w-4 mr-2" />
         Retry
       </Button>
     </div>
@@ -226,6 +236,11 @@ function ChatError({ error, onRetry }: { error: Error; onRetry: () => void }) {
 function ChatEmptyState({ agentName }: { agentName: string }) {
   return (
     <div className="flex flex-col items-center justify-center h-full text-center p-4">
+      <Avatar className="h-12 w-12 mb-3">
+        <AvatarFallback className={cn('text-white', getAvatarColor(agentName))}>
+          {getInitials(agentName)}
+        </AvatarFallback>
+      </Avatar>
       <p className="text-sm font-medium mb-1">Start a conversation</p>
       <p className="text-xs text-muted-foreground">
         Send a message to {agentName} to begin chatting.
@@ -242,22 +257,22 @@ function AgentTypingIndicator({
   agentAvatar?: string;
 }) {
   return (
-    <div className="flex gap-3 flex-row">
-      <div className="flex-shrink-0 w-8">
-        <Avatar className="h-8 w-8">
+    <div className="flex gap-2 sm:gap-3 flex-row">
+      <div className="flex-shrink-0 w-7 sm:w-8">
+        <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
           <AvatarImage src={agentAvatar} />
           <AvatarFallback
-            className={cn('text-white text-xs', getAvatarColor(agentName))}
+            className={cn('text-white text-[10px] sm:text-xs', getAvatarColor(agentName))}
           >
             {getInitials(agentName)}
           </AvatarFallback>
         </Avatar>
       </div>
-      <div className="flex flex-col items-start max-w-[75%]">
-        <div className="rounded-2xl px-4 py-3 text-sm bg-muted text-foreground rounded-bl-md">
+      <div className="flex flex-col items-start max-w-[80%] sm:max-w-[75%]">
+        <div className="rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-sm bg-muted text-foreground rounded-bl-md">
           <div className="flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <span className="text-muted-foreground">{agentName} is thinking...</span>
+            <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin text-muted-foreground" />
+            <span className="text-xs sm:text-sm text-muted-foreground">{agentName} is thinking...</span>
           </div>
         </div>
       </div>
@@ -273,19 +288,19 @@ function AgentResponseError({
   onRetry: () => void;
 }) {
   return (
-    <div className="flex gap-3 flex-row">
-      <div className="flex-shrink-0 w-8" />
-      <div className="flex flex-col items-start max-w-[75%]">
-        <div className="rounded-2xl px-4 py-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-bl-md">
+    <div className="flex gap-2 sm:gap-3 flex-row">
+      <div className="flex-shrink-0 w-7 sm:w-8" />
+      <div className="flex flex-col items-start max-w-[85%] sm:max-w-[75%]">
+        <div className="rounded-2xl px-3 sm:px-4 py-2 sm:py-3 text-sm bg-destructive/10 text-destructive border border-destructive/20 rounded-bl-md">
           <div className="flex items-start gap-2">
-            <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mt-0.5 flex-shrink-0" />
             <div className="flex flex-col gap-2">
-              <span className="text-sm">Failed to get response: {error.message}</span>
+              <span className="text-xs sm:text-sm">Failed to get response: {error.message}</span>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onRetry}
-                className="h-8 gap-1 self-start"
+                className="h-7 sm:h-8 gap-1 self-start text-xs"
               >
                 <RefreshCw className="h-3 w-3" />
                 Retry

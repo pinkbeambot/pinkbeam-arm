@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react/no-unescaped-entities */
 import { useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -274,7 +275,7 @@ function AuthForm() {
                   <Sparkles className="w-4 h-4 text-primary shrink-0 mt-0.5" />
                   <div>
                     <p className="font-medium text-foreground mb-0.5">No passwords to remember</p>
-                    <p>We&apos;ll email you a 6-digit code. Enter it here and you&apos;re in — whether you're signing up or logging in.</p>
+                    <p>We&apos;ll email you a 6-digit code. Enter it here and you&apos;re in — whether you&apos;re signing up or logging in.</p>
                   </div>
                 </div>
               </>

@@ -1,6 +1,8 @@
 'use client';
 
+/* eslint-disable react-hooks/immutability, react-hooks/purity */
 import * as React from 'react';
+import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   PartyPopper,
@@ -54,9 +56,16 @@ const NEXT_ACTIONS = [
 ] as const;
 
 export function CompleteStep({ onNext, data }: OnboardingStepProps) {
+  // eslint-disable-next-line react-hooks/immutability
   const handleAction = (href: string) => {
     window.location.href = href;
   };
+
+  // Generate random offsets once for the animation
+  const randomOffsets = useMemo(() => 
+    [...Array(8)].map(() => Math.random() * 30), 
+    []
+  );
 
   return (
     <div className="space-y-6 text-center">
@@ -78,7 +87,7 @@ export function CompleteStep({ onNext, data }: OnboardingStepProps) {
               opacity: [0, 1, 0],
               scale: [0.5, 1, 0.5],
               x: [0, (i - 4) * 35],
-              y: [0, -50 - Math.random() * 30, -80],
+              y: [0, -50 - randomOffsets[i], -80],
             }}
             transition={{
               duration: 1.2,

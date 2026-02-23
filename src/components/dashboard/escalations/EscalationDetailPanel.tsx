@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/rules-of-hooks */
 import { useState, useCallback } from 'react';
 import {
   AlertCircle,
@@ -421,6 +422,10 @@ function getTypeConfig(type: EscalationType) {
     edge_case: {
       label: 'Edge Case',
       icon: <Brain className="h-3 w-3" />,
+    },
+    policy_violation: {
+      label: 'Policy Violation',
+      icon: <XCircle className="h-3 w-3" />,
     },
   };
 

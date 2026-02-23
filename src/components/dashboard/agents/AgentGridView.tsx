@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock, Copy, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Copy, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatRelativeTime, getAgentStatusColor, getAgentStatusLabel, getRoleBadgeColor, getRoleLabel, getInitials, getAvatarColor } from '@/lib/utils';
 import type { Agent, AgentStatus } from '@/types';
@@ -43,7 +43,7 @@ export function AgentGridView({
   const selectionEnabled = !!selectedIds && !!onToggleSelect;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
       {agents.map((agent) => (
         <AgentCard
           key={agent.id}
@@ -77,6 +77,9 @@ interface AgentCardProps {
 function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEdit, onToggleStatus, onDelete, onClone }: AgentCardProps) {
   return (
     <Card
+      data-testid="agent-card"
+      data-agent-id={agent.id}
+      data-agent-name={agent.name}
       className={cn(
         'cursor-pointer transition-all hover:shadow-md relative',
         isSelected && 'ring-2 ring-primary',
@@ -208,22 +211,26 @@ function AgentCard({ agent, isSelected, isChecked, onToggleSelect, onClick, onEd
 function StatusBadge({ status }: { status: AgentStatus }) {
   const icons = {
     active: CheckCircle2,
+    busy: Zap,
     idle: Clock,
     paused: Pause,
     initializing: Clock,
     blocked: AlertCircle,
     error: AlertCircle,
+    offline: Clock,
     escaped: AlertCircle,
     terminated: Clock,
   };
 
   const colors = {
     active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+    busy: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
     idle: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
     paused: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
     initializing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     blocked: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
     error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    offline: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     escaped: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
     terminated: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
   };

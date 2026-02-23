@@ -12,6 +12,7 @@
 import { randomUUID } from 'crypto';
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
 import { generateHeaders } from './signature';
+import { shouldDeliverEvent } from './filtering';
 import type { WebhookEventType, WebhookPayload } from '@/types/webhook';
 
 const MAX_ATTEMPTS = 3;
@@ -50,7 +51,7 @@ export async function dispatchWebhookEvent(
 
   const matchingEndpoints = endpoints.filter((ep) => {
     const events = ep.events as string[];
-    return events.includes(eventType) || events.includes('*');
+    return shouldDeliverEvent(eventType, events);
   });
 
   if (matchingEndpoints.length === 0) {

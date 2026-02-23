@@ -141,7 +141,7 @@ function PreferenceCard({
         {/* Channel toggles */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Delivery Channels</Label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {CHANNELS.map((channel) => (
               <div
                 key={channel.id}

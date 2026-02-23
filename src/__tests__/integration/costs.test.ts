@@ -59,16 +59,16 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/costs', {
+      const response = await fetch('/api/costs', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/v1/costs', {
+      expect(fetch).toHaveBeenCalledWith('/api/costs', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -84,18 +84,18 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
       const params = new URLSearchParams({ model: 'claude-3-5-sonnet' });
-      await fetch(`/api/v1/costs?${params.toString()}`, {
+      await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/v1/costs?model=claude-3-5-sonnet',
+        '/api/costs?model=claude-3-5-sonnet',
         expect.any(Object)
       );
     });
@@ -106,18 +106,18 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
       const params = new URLSearchParams({ provider: 'openai' });
-      await fetch(`/api/v1/costs?${params.toString()}`, {
+      await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/v1/costs?provider=openai',
+        '/api/costs?provider=openai',
         expect.any(Object)
       );
     });
@@ -128,18 +128,18 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
       const params = new URLSearchParams({ status: 'error' });
-      await fetch(`/api/v1/costs?${params.toString()}`, {
+      await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/v1/costs?status=error',
+        '/api/costs?status=error',
         expect.any(Object)
       );
     });
@@ -150,18 +150,18 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
       const params = new URLSearchParams({ agent_id: 'agent-001' });
-      await fetch(`/api/v1/costs?${params.toString()}`, {
+      await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
       expect(fetch).toHaveBeenCalledWith(
-        '/api/v1/costs?agent_id=agent-001',
+        '/api/costs?agent_id=agent-001',
         expect.any(Object)
       );
     });
@@ -172,7 +172,7 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -181,7 +181,7 @@ describe('Costs API', () => {
         date_from: '2026-02-01T00:00:00Z',
         date_to: '2026-02-14T23:59:59Z',
       });
-      await fetch(`/api/v1/costs?${params.toString()}`, {
+      await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -197,13 +197,13 @@ describe('Costs API', () => {
         pagination: { page: 2, limit: 10, total: 25, totalPages: 3 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
       const params = new URLSearchParams({ page: '2', limit: '10' });
-      const response = await fetch(`/api/v1/costs?${params.toString()}`, {
+      const response = await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -214,25 +214,25 @@ describe('Costs API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/v1/costs');
+      const response = await fetch('/api/costs');
 
       expect(response.status).toBe(401);
     });
 
     it('should return 401 with invalid token', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/v1/costs', {
+      const response = await fetch('/api/costs', {
         headers: { Authorization: 'Bearer invalid-token' },
       });
 
@@ -240,14 +240,14 @@ describe('Costs API', () => {
     });
 
     it('should return 400 for invalid query parameters', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [] }),
       });
 
       const params = new URLSearchParams({ page: 'invalid' });
-      const response = await fetch(`/api/v1/costs?${params.toString()}`, {
+      const response = await fetch(`/api/costs?${params.toString()}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -260,12 +260,12 @@ describe('Costs API', () => {
         pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/costs', {
+      const response = await fetch('/api/costs', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -294,16 +294,16 @@ describe('Costs API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/costs/summary', {
+      const response = await fetch('/api/costs/summary', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/v1/costs/summary', {
+      expect(fetch).toHaveBeenCalledWith('/api/costs/summary', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -330,7 +330,7 @@ describe('Costs API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -349,13 +349,13 @@ describe('Costs API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/v1/costs/summary');
+      const response = await fetch('/api/costs/summary');
 
       expect(response.status).toBe(401);
     });
@@ -373,12 +373,12 @@ describe('Costs API', () => {
         },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/costs/summary', {
+      const response = await fetch('/api/costs/summary', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
@@ -399,16 +399,16 @@ describe('Costs API', () => {
         meta: { days: 30, tenant_id: 'tenant-001' },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/costs/daily', {
+      const response = await fetch('/api/costs/daily', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 
-      expect(fetch).toHaveBeenCalledWith('/api/v1/costs/daily', {
+      expect(fetch).toHaveBeenCalledWith('/api/costs/daily', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       expect(response.ok).toBe(true);
@@ -426,7 +426,7 @@ describe('Costs API', () => {
         meta: { days: 7, tenant_id: 'tenant-001' },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
@@ -441,19 +441,19 @@ describe('Costs API', () => {
     });
 
     it('should return 401 without authorization', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 401,
         json: async () => ({ error: 'Unauthorized' }),
       });
 
-      const response = await fetch('/api/v1/costs/daily');
+      const response = await fetch('/api/costs/daily');
 
       expect(response.status).toBe(401);
     });
 
     it('should return 400 for invalid days parameter', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [] }),
@@ -468,7 +468,7 @@ describe('Costs API', () => {
     });
 
     it('should enforce maximum days limit', async () => {
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: false,
         status: 400,
         json: async () => ({ error: 'Validation error', details: [{ message: 'Number must be less than or equal to 90' }] }),
@@ -488,12 +488,12 @@ describe('Costs API', () => {
         meta: { days: 30, tenant_id: 'tenant-001' },
       };
 
-      (fetch as any).mockResolvedValueOnce({
+      (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const response = await fetch('/api/v1/costs/daily', {
+      const response = await fetch('/api/costs/daily', {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
 

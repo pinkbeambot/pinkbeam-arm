@@ -6,7 +6,7 @@
  */
 
 import { createServiceRoleClient } from '@/lib/supabase/service-role';
-import { sendEscalationEmail, sendTaskCompleteEmail } from './send';
+import { sendEscalationEmail, sendTaskCompleteEmail, sendWelcomeEmail, sendDecisionEmail } from './send';
 import type { Notification, NotificationPriority } from '@/types/notification';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -218,7 +218,22 @@ export async function processNotificationEmail(notification: Notification): Prom
       return { sent: false, error: 'Missing task metadata' };
     }
 
-    case 'decision_required':
+    case 'decision_required': {
+      const result = await sendDecisionEmail({
+        to: userInfo.email,
+        userName: userInfo.name,
+        agentName: notification.metadata?.agent_name as string || 'An agent',
+        decisionTitle: notification.title,
+        proposedAction: notification.metadata?.proposed_action as string || 'View the portal for details',
+        reasoning: notification.message,
+        deadline: notification.metadata?.deadline as string,
+        urgency: (notification.metadata?.urgency as 'low' | 'normal' | 'high' | 'critical') || 'normal',
+        actionUrl: notification.action_url || `${APP_URL}/portal/decisions`,
+        unsubscribeUrl,
+      });
+      return { sent: result.success, error: result.error };
+    }
+
     case 'system_alert':
     case 'warning':
     case 'error': {
@@ -239,6 +254,50 @@ export async function processNotificationEmail(notification: Notification): Prom
     default:
       return { sent: false, error: `Unsupported notification type for email: ${type}` };
   }
+}
+
+/**
+ * Send welcome email to a new user after signup.
+ */
+export async function sendWelcomeEmailOnSignup(
+  tenantId: string,
+  userId: string,
+  userName: string
+): Promise<{ sent: boolean; error?: string }> {
+  const supabase = createServiceRoleClient();
+
+  // Get user email
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('email, auth_id')
+    .eq('tenant_id', tenantId)
+    .eq('id', userId)
+    .single();
+
+  if (userError || !user) {
+    return { sent: false, error: 'User not found' };
+  }
+
+  let email = user.email;
+  if (!email) {
+    const { data: authData } = await supabase.auth.admin.getUserById(user.auth_id);
+    email = authData?.user?.email || null;
+  }
+
+  if (!email) {
+    return { sent: false, error: 'User email not found' };
+  }
+
+  const unsubscribeUrl = buildUnsubscribeUrl(tenantId, user.auth_id);
+
+  const result = await sendWelcomeEmail({
+    to: email,
+    userName: userName || 'there',
+    loginUrl: `${APP_URL}/portal`,
+    unsubscribeUrl,
+  });
+
+  return { sent: result.success, error: result.error };
 }
 
 /**

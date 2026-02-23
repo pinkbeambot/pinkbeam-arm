@@ -32,6 +32,13 @@ const VALID_STATUS_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 };
 
 /**
+ * Check if a status transition is valid
+ */
+function isValidStatusTransition(from: TaskStatus, to: TaskStatus): boolean {
+  return VALID_STATUS_TRANSITIONS[from]?.includes(to) || false;
+}
+
+/**
  * Human-readable status descriptions
  */
 const STATUS_DESCRIPTIONS: Record<TaskStatus, string> = {

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Agent Execute Tests
- * 
+ *
  * Comprehensive test suite for the agent-execute edge function
  * Tests: Task picking, execution, state transitions, escalations, cost tracking
  * 

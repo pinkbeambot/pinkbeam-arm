@@ -1,3 +1,21 @@
+/**
+ * Error handling components index
+ * 
+ * Use these components to handle and display errors gracefully.
+ * 
+ * @example
+ * ```tsx
+ * // Error boundary wrapper
+ * <ErrorBoundary>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * 
+ * // With custom fallback
+ * <ErrorBoundary fallback={<CustomError />}>
+ *   <MyComponent />
+ * </ErrorBoundary>
+ * ```
+ */
+
 export { ErrorBoundary } from './ErrorBoundary'
-export { OfflineBanner } from './OfflineBanner'
-export { ToastProvider, toast } from './ToastProvider'
+export type { ErrorBoundaryProps } from './ErrorBoundary'

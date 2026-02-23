@@ -12,3 +12,25 @@
 export { useAgents, useAgent, type UseAgentsOptions, type UseAgentsReturn } from './useAgents';
 export { useActivities, useLatestActivities, type UseActivitiesOptions, type UseActivitiesReturn } from './useActivities';
 export { useTasks, useTask, type UseTasksOptions, type UseTasksReturn, type CreateTaskInput, type UpdateTaskInput } from './useTasks';
+
+// API utilities
+export {
+  applyFilter,
+  applyFilters,
+  applyFullTextSearch,
+  parseFilters,
+  getPrioritySortValue,
+  PRIORITY_ORDER,
+  type FilterCondition,
+  type FilterOperator,
+} from './filtering';
+
+export {
+  toCsv,
+  toJsonl,
+  formatForExport,
+  generateExportFilename,
+  getExportContentType,
+  sanitizeForExport,
+  flattenForCsv,
+} from './export';

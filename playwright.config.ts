@@ -7,38 +7,42 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   // Test directories
   testDir: './src/__tests__',
-  
+
   // Run tests in files in parallel
   fullyParallel: true,
-  
+
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
-  
+
   // Retry on CI only
   retries: process.env.CI ? 2 : 0,
-  
+
   // Opt out of parallel tests on CI
   workers: process.env.CI ? 1 : undefined,
-  
+
   // Reporter to use
   reporter: [
     ['html', { open: 'never' }],
-    ['list']
+    ['list'],
+    ['junit', { outputFile: 'test-results/junit.xml' }]
   ],
-  
+
   // Shared settings for all the projects below
   use: {
     // Base URL to use in actions like `await page.goto('/')`
     baseURL: 'http://localhost:3000',
-    
+
     // Collect trace when retrying the failed test
     trace: 'on-first-retry',
-    
+
     // Capture screenshot on failure
     screenshot: 'only-on-failure',
+
+    // Record video on failure
+    video: 'on-first-retry',
   },
 
-  // Configure projects for major browsers
+  // Configure projects for major browsers and viewports
   projects: [
     // Auth setup — runs first, saves session cookies for dependent projects
     {
@@ -56,6 +60,8 @@ export default defineConfig({
         viewport: { width: 1280, height: 720 }
       },
     },
+
+    // E2E Tests - Desktop Firefox
     {
       name: 'e2e-firefox',
       testMatch: /e2e\/.*\.spec\.ts$/,
@@ -91,4 +97,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },
+
+  // Output directory for test artifacts
+  outputDir: 'test-results/',
 });

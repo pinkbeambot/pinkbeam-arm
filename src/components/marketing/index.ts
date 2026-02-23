@@ -1,5 +1,6 @@
 // Marketing Components - Barrel Export
 export { Hero } from "./Hero";
+export { LogoCloud } from "./LogoCloud";
 export { ProblemSection } from "./ProblemSection";
 export { SolutionSection } from "./SolutionSection";
 export { EmployeeTabs } from "./EmployeeTabs";

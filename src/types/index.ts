@@ -8,9 +8,11 @@ export type AgentStatus =
   | 'initializing' 
   | 'idle' 
   | 'active' 
+  | 'busy'
   | 'paused' 
   | 'blocked' 
   | 'error' 
+  | 'offline'
   | 'escaped' 
   | 'terminated';
 
@@ -50,11 +52,18 @@ export type EscalationUrgency =
   | 'high' 
   | 'critical';
 
+export type EscalationStatus = 
+  | 'open' 
+  | 'acknowledged' 
+  | 'resolved' 
+  | 'dismissed';
+
 export type EscalationType = 
   | 'clarification' 
   | 'approval' 
   | 'error' 
-  | 'edge_case';
+  | 'edge_case'
+  | 'policy_violation';
 
 export type DecisionStatus = 
   | 'proposed' 
@@ -63,11 +72,18 @@ export type DecisionStatus =
   | 'overridden' 
   | 'executed';
 
+export type DecisionPriority = 
+  | 'low' 
+  | 'normal' 
+  | 'high' 
+  | 'urgent';
+
 export type DecisionCategory = 
   | 'action' 
   | 'resource' 
   | 'escalation' 
-  | 'strategy';
+  | 'strategy'
+  | 'system';
 
 // Core Agent Types
 export interface Agent {
@@ -156,6 +172,25 @@ export interface Task {
   deadline_at?: string;
 }
 
+// Task Dependency Types
+export interface TaskDependency {
+  id: string;
+  tenant_id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: 'blocks' | 'requires' | 'optional';
+  created_at: string;
+  // Join fields
+  depends_on?: Task;
+  dependent_task?: Task;
+}
+
+export interface TaskWithDependencies extends Task {
+  dependencies: TaskDependency[];
+  blocked_by: TaskDependency[];
+  subtasks?: Task[];
+}
+
 // Activity Types
 export type ActivityType = 
   | 'task_started'
@@ -202,16 +237,42 @@ export interface Decision {
   agent?: Agent;
   task_id?: string;
   status: DecisionStatus;
+  category?: 'action' | 'resource' | 'escalation' | 'strategy' | 'system';
+  priority?: DecisionPriority;
   title: string;
   description: string;
   reasoning?: string;
   alternatives_considered?: string[];
   confidence: number;
   proposed_action?: Record<string, unknown>;
+  executed_action?: Record<string, unknown>;
+  self_authorized?: boolean;
   overridden_by?: string;
   override_reason?: string;
+  proposed_at?: string;
+  decided_at?: string;
   executed_at?: string;
   created_at: string;
+  updated_at?: string;
+  deleted_at?: string;
+  immutable?: boolean;
+  outcome?: Record<string, unknown>;
+}
+
+export interface DecisionWithAgent extends Decision {
+  agent: Agent;
+  task?: {
+    id: string;
+    title: string;
+    status: string;
+    description?: string;
+  };
+  overrider?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
+  activity_history?: Activity[];
 }
 
 // Escalation Types
@@ -221,19 +282,28 @@ export interface Escalation {
   agent_id: string;
   agent?: Agent;
   task_id?: string;
-  type: 'clarification' | 'approval' | 'error' | 'edge_case';
+  type: EscalationType;
   urgency: EscalationUrgency;
   title: string;
   description: string;
   context?: string;
   agent_recommendation?: string;
   agent_confidence?: number;
-  status: 'open' | 'resolved';
+  status: EscalationStatus;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
   resolved_by?: string;
   resolution?: string;
+  resolution_type?: string;
+  resolution_answer?: string;
+  resolution_resources?: Record<string, unknown>;
+  learning_notes?: string;
+  time_to_resolve_seconds?: number;
+  sla_deadline_at?: string;
   created_at: string;
   resolved_at?: string;
   updated_at?: string;
+  deleted_at?: string;
   // Extended fields
   question?: {
     title: string;
@@ -250,6 +320,27 @@ export interface Escalation {
     error_code?: string;
     retry_after?: number;
   };
+}
+
+export interface EscalationWithAgent extends Escalation {
+  agent: Agent;
+  task?: {
+    id: string;
+    title: string;
+    status: string;
+    description?: string;
+  };
+  resolver?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
+  acknowledger?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
+  activity_history?: Activity[];
 }
 
 // Navigation Types
@@ -612,3 +703,62 @@ export type {
   PlanFeature,
   StripeWebhookPayload,
 } from './billing';
+
+// Analytics Types
+export type {
+  DateRangePreset,
+  DateRange,
+  AnalyticsFilters,
+  AgentPerformanceMetrics,
+  AgentPerformanceResponse,
+  TaskStatusBreakdown,
+  TaskPipelineStage,
+  TaskPipelineResponse,
+  DecisionCategoryMetrics,
+  DecisionTrend,
+  DecisionAnalyticsResponse,
+  CostBreakdown,
+  CostTrend,
+  AgentCostMetrics,
+  CostAnalyticsResponse,
+  ActivityTimelineItem,
+  ActivityTimelineResponse,
+  ExportFormat,
+  ExportRequest,
+  ExportResponse,
+  AnalyticsQueryParams,
+} from './analytics';
+
+// Advanced Analytics Types
+export type {
+  TaskCompletionPrediction,
+  PredictionFactor,
+  WorkloadForecast,
+  AgentWorkloadForecast,
+  WorkloadForecastPoint,
+  CostProjection,
+  CostForecastPoint,
+  Anomaly,
+  TimeSeriesData,
+  HeatmapCell,
+  ActivityHeatmapData,
+  CohortData,
+  CohortAnalysis,
+  PeriodComparison,
+  ComparisonDataPoint,
+  RealtimeMetrics,
+  AgentStatusUpdate,
+  NLQueryResult,
+  VisualizationRecommendation,
+  AutomatedInsight,
+  SmartAlert,
+  ReportConfig,
+  ReportSection,
+  GeneratedReport,
+  PredictiveAnalyticsRequest,
+  PredictiveAnalyticsResponse,
+  HeatmapRequest,
+  CohortRequest,
+  NLQueryRequest,
+  RealtimeMetricsResponse,
+} from './advanced-analytics';

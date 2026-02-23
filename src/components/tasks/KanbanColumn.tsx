@@ -33,6 +33,8 @@ export function KanbanColumn({
   onTaskClick,
   onTaskEdit,
   onTaskDelete,
+  onAssigneeChange,
+  teamMembers,
   readOnly = false,
 }: KanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
@@ -141,6 +143,8 @@ export function KanbanColumn({
                 onClick={onTaskClick}
                 onEdit={onTaskEdit}
                 onDelete={onTaskDelete}
+                onAssigneeChange={onAssigneeChange}
+                teamMembers={teamMembers}
               />
             ))}
 
@@ -176,3 +180,5 @@ export function KanbanColumn({
     </div>
   );
 }
+
+export default KanbanColumn;

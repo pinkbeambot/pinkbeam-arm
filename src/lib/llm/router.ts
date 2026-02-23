@@ -1,344 +1,158 @@
 /**
- * LLM Router
- * Routes requests to appropriate LLM providers with fallback and cost optimization
+ * Enhanced LLM Router
  */
 
-import {
-  LLMProvider,
-  LLMRequest,
-  LLMResponse,
-  LLMModel,
-  RouterConfig,
-  RoutingDecision,
-  LLMError,
-  AgentLLMPreferences,
-  ProviderConfigs,
-} from './types';
+import { LLMProvider, LLMRequest, LLMResponse, LLMModel, RouterConfig, RoutingDecision, LLMError, AgentLLMPreferences, LLMRequestConfig } from './types';
+import { ALL_MODELS, createProvider, ProviderConfig, OpenAIProvider, OllamaProvider } from './providers';
+import { withRetry, CircuitBreakerRegistry, RetryableError, DEFAULT_RETRY_CONFIG } from './retry';
+import { CostTrackingService, selectModelWithCostOptimization, calculateEstimatedCost, CostLimitExceededError, ModelSelectionConfig } from './cost-tracking';
+import { StreamHandler, StreamCallbacks, StreamConfig } from './streaming';
+import { globalPromptRegistry, renderPrompt, PromptVersion } from './prompts';
+import { ClaudeProvider } from './claude';
 
-import { ClaudeProvider, createClaudeProvider, CLAUDE_MODELS } from './claude';
+export interface EnhancedRouterConfig extends RouterConfig {
+  retryConfig?: Partial<typeof DEFAULT_RETRY_CONFIG>;
+  costTracking?: { enabled: boolean; enableBuffering: boolean; defaultWarningThreshold: number };
+  streaming?: { enabled: boolean; defaultShowTypingIndicator: boolean };
+  circuitBreaker?: { failureThreshold: number; successThreshold: number; timeoutMs: number };
+}
 
-// Default router configuration
-const DEFAULT_CONFIG: RouterConfig = {
-  defaultProvider: 'anthropic',
-  defaultModel: 'claude-3-5-sonnet-20241022',
-  fallbackEnabled: true,
-  fallbackProviders: ['anthropic'],
-  costOptimization: true,
-  latencyTarget: 'balanced',
+const DEFAULT_ENHANCED_CONFIG: EnhancedRouterConfig = {
+  defaultProvider: 'anthropic', defaultModel: 'claude-3-5-sonnet-20241022', fallbackEnabled: true,
+  fallbackProviders: ['anthropic', 'openai'], costOptimization: true, latencyTarget: 'balanced',
+  retryConfig: { maxRetries: 3, baseDelayMs: 1000 },
+  costTracking: { enabled: true, enableBuffering: true, defaultWarningThreshold: 80 },
+  streaming: { enabled: true, defaultShowTypingIndicator: true },
+  circuitBreaker: { failureThreshold: 5, successThreshold: 3, timeoutMs: 60000 },
 };
 
-// Model catalog
-const ALL_MODELS: LLMModel[] = [
-  ...CLAUDE_MODELS,
-  // OpenAI models would be added here
-  // Google models would be added here
-  // Local models would be added here
-];
+export class EnhancedLLMRouter {
+  private config: EnhancedRouterConfig;
+  private providers = new Map<LLMProvider, ClaudeProvider | OpenAIProvider | OllamaProvider | null>();
+  private circuitBreakers: CircuitBreakerRegistry;
+  private costTracking: CostTrackingService;
+  private providerConfigs: ProviderConfig;
 
-export class LLMRouter {
-  private config: RouterConfig;
-  private providers: Map<LLMProvider, ClaudeProvider | null> = new Map();
-  private providerConfigs: ProviderConfigs;
-
-  constructor(config?: Partial<RouterConfig>, providerConfigs?: ProviderConfigs) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+  constructor(config?: Partial<EnhancedRouterConfig>, providerConfigs?: ProviderConfig) {
+    this.config = { ...DEFAULT_ENHANCED_CONFIG, ...config };
     this.providerConfigs = providerConfigs || {};
-    
-    // Initialize providers
+    this.circuitBreakers = new CircuitBreakerRegistry();
+    this.costTracking = new CostTrackingService();
     this.initializeProviders();
   }
 
-  /**
-   * Initialize available providers
-   */
   private initializeProviders(): void {
-    // Initialize Anthropic if API key is available
-    try {
-      const anthropic = createClaudeProvider(this.providerConfigs.anthropic);
-      this.providers.set('anthropic', anthropic);
-    } catch {
-      this.providers.set('anthropic', null);
+    for (const provider of ['anthropic', 'openai', 'local'] as LLMProvider[]) {
+      try { 
+        const p = provider === 'openai' ? require('./providers').createOpenAIProvider(this.providerConfigs.openai) :
+                   provider === 'local' ? require('./providers').createOllamaProvider(this.providerConfigs.ollama) :
+                   require('./claude').createClaudeProvider(this.providerConfigs.anthropic);
+        this.providers.set(provider, p);
+      } catch { this.providers.set(provider, null); }
     }
-
-    // Other providers would be initialized here
-    // this.providers.set('openai', ...);
-    // this.providers.set('google', ...);
   }
 
-  /**
-   * Get available models
-   */
-  getAvailableModels(): LLMModel[] {
-    return ALL_MODELS.filter(model => {
-      const provider = this.providers.get(model.provider);
-      return provider !== null;
-    });
-  }
+  getAvailableModels(): LLMModel[] { return ALL_MODELS.filter(m => this.providers.get(m.provider) !== null); }
+  getAllModels(): LLMModel[] { return ALL_MODELS; }
+  getProvider(provider: LLMProvider) { return this.providers.get(provider) || null; }
 
-  /**
-   * Get provider instance
-   */
-  getProvider(provider: LLMProvider): ClaudeProvider | null {
-    return this.providers.get(provider) || null;
-  }
-
-  /**
-   * Route and execute request
-   */
   async complete(request: LLMRequest): Promise<LLMResponse> {
     const decision = this.makeRoutingDecision(request);
     const provider = this.providers.get(decision.provider);
-
-    if (!provider) {
-      throw new LLMError(
-        'PROVIDER_UNAVAILABLE',
-        `Provider ${decision.provider} is not available`,
-        false
-      );
-    }
-
-    try {
-      return await provider.complete({
-        ...request,
-        config: {
-          ...request.config,
-          model: decision.model,
-        },
-      });
-    } catch (error) {
-      // Attempt fallback if enabled
-      if (this.config.fallbackEnabled && error instanceof LLMError && error.retryable) {
-        return this.fallback(request, decision.provider);
+    if (!provider) throw new LLMError('PROVIDER_UNAVAILABLE', `Provider ${decision.provider} is not available`, false);
+    if (this.config.costTracking?.enabled && request.tenantId) {
+      for (const limit of this.costTracking.getLimits(request.tenantId)) {
+        if (limit.hardLimit && limit.currentValue >= limit.limitValue) throw new CostLimitExceededError(`Cost limit exceeded: ${limit.limitType}`, limit);
       }
-      throw error;
     }
+    return withRetry(async () => this.circuitBreakers.execute(decision.provider, async () => {
+      try {
+        const response = await provider.complete({ ...request, config: { ...request.config, model: decision.model } });
+        if (this.config.costTracking?.enabled && request.trackCost !== false) {
+          this.costTracking.track({ tenantId: request.tenantId || 'unknown', agentId: request.agentId, taskId: request.taskId, provider: decision.provider, model: decision.model, inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens, totalTokens: response.usage.totalTokens, costUsd: response.usage.costUsd, latencyMs: response.latencyMs, requestType: 'completion' });
+        }
+        return response;
+      } catch (error) { if (error instanceof LLMError && error.retryable) throw new RetryableError(error.message, error.code, true); throw error; }
+    }), { ...DEFAULT_RETRY_CONFIG, ...this.config.retryConfig });
   }
 
-  /**
-   * Make routing decision based on request and preferences
-   */
+  async stream(request: LLMRequest, callbacks: StreamCallbacks, config?: Partial<StreamConfig>): Promise<void> {
+    const decision = this.makeRoutingDecision(request);
+    const handler = new StreamHandler({ enabled: true, showTypingIndicator: this.config.streaming?.defaultShowTypingIndicator ?? true, partialResponseIntervalMs: 50, ...config }, callbacks);
+    if (request.agentId) { const { globalTypingIndicatorManager } = await import('./streaming'); globalTypingIndicatorManager.startTyping(request.agentId); }
+    try { const response = await this.complete(request); handler.start(); handler.processChunk(response.content); handler.complete(decision.model, response.finishReason); }
+    catch (error) { handler.handleError('STREAM_ERROR', error instanceof Error ? error.message : 'Unknown', true); }
+    finally { if (request.agentId) { const { globalTypingIndicatorManager } = await import('./streaming'); globalTypingIndicatorManager.stopTyping(request.agentId); } }
+  }
+
   makeRoutingDecision(request: LLMRequest): RoutingDecision {
-    // Check if model is explicitly specified
     if (request.config?.model) {
       const model = ALL_MODELS.find(m => m.id === request.config?.model);
-      if (model && this.providers.get(model.provider)) {
-        return {
-          provider: model.provider,
-          model: model.id,
-          reason: 'Explicit model selection',
-          estimatedCost: 0,
-          estimatedLatency: 0,
-        };
-      }
+      if (model && this.providers.get(model.provider)) return { provider: model.provider, model: model.id, reason: 'Explicit model selection', estimatedCost: 0, estimatedLatency: 0 };
     }
-
-    // Use default provider and model
-    const defaultModel = this.config.defaultModel;
-    const model = ALL_MODELS.find(m => m.id === defaultModel) || ALL_MODELS[0];
-
-    return {
-      provider: this.config.defaultProvider,
-      model: model?.id || defaultModel,
-      reason: 'Default provider selection',
-      estimatedCost: 0,
-      estimatedLatency: 0,
-    };
+    if (this.config.costOptimization) {
+      const inputTokens = request.messages.reduce((a, m) => a + Math.ceil(m.content.length / 4), 0);
+      const selected = selectModelWithCostOptimization(this.getAvailableModels(), inputTokens, request.config?.maxTokens || 1024, { budgetPriority: this.config.latencyTarget === 'fast' ? 'speed' : this.config.latencyTarget === 'quality' ? 'quality' : 'balanced', preferredProviders: [this.config.defaultProvider] });
+      if (selected) return { provider: selected.model.provider, model: selected.model.id, reason: selected.reason, estimatedCost: selected.costEstimate, estimatedLatency: 0 };
+    }
+    return { provider: this.config.defaultProvider, model: this.config.defaultModel, reason: 'Default provider selection', estimatedCost: 0, estimatedLatency: 0 };
   }
 
-  /**
-   * Attempt fallback to alternative provider
-   */
-  private async fallback(request: LLMRequest, failedProvider: LLMProvider): Promise<LLMResponse> {
-    const fallbackProviders = this.config.fallbackProviders.filter(p => p !== failedProvider);
-    
-    for (const providerName of fallbackProviders) {
-      const provider = this.providers.get(providerName);
-      if (!provider) continue;
-
-      try {
-        return await provider.complete(request);
-      } catch {
-        // Continue to next fallback
-        continue;
-      }
-    }
-
-    throw new LLMError(
-      'FALLBACK_EXHAUSTED',
-      'All fallback providers failed',
-      false
-    );
+  async healthCheck(): Promise<Record<LLMProvider, { healthy: boolean; latency: number }>> {
+    const results: Record<string, { healthy: boolean; latency: number }> = {};
+    for (const [name, provider] of Array.from(this.providers.entries())) results[name] = provider ? await provider.healthCheck() : { healthy: false, latency: 0 };
+    return results as Record<LLMProvider, { healthy: boolean; latency: number }>;
   }
 
-  /**
-   * Select optimal model based on task requirements
-   */
-  selectOptimalModel(
-    requirements: {
-      contextLength?: number;
-      requiresVision?: boolean;
-      requiresFunctions?: boolean;
-      latencyPreference?: 'fast' | 'balanced' | 'quality';
-      costBudget?: number;
-    }
-  ): LLMModel | null {
+  getCircuitBreakerMetrics() { return this.circuitBreakers.getAllMetrics(); }
+  resetCircuitBreaker(provider: LLMProvider): void { this.circuitBreakers.reset(provider); }
+  estimateCost(modelId: string, inputTokens: number, outputTokens: number): number { const model = ALL_MODELS.find(m => m.id === modelId); return model ? calculateEstimatedCost(model, inputTokens, outputTokens) : 0; }
+  estimateTokens(text: string, provider?: LLMProvider): number { const p = this.providers.get(provider || this.config.defaultProvider); return p ? p.estimateTokens(text) : Math.ceil(text.length / 4); }
+  updateConfig(config: Partial<EnhancedRouterConfig>): void { this.config = { ...this.config, ...config }; }
+  getConfig(): EnhancedRouterConfig { return { ...this.config }; }
+  getCostTrackingService(): CostTrackingService { return this.costTracking; }
+  setCostLimit(tenantId: string, limitType: 'monthly_spend' | 'daily_spend' | 'monthly_tokens' | 'daily_tokens', limitValue: number, options?: { warningThreshold?: number; hardLimit?: boolean }): void {
+    this.costTracking.setLimit({ id: `${tenantId}:${limitType}`, tenantId, limitType, limitValue, periodStart: new Date(), periodEnd: new Date(), warningThreshold: options?.warningThreshold ?? 80, hardLimit: options?.hardLimit ?? false, alertsEnabled: true });
+  }
+
+  selectOptimalModel(requirements: { contextLength?: number; requiresVision?: boolean; requiresFunctions?: boolean }): LLMModel | null {
     let candidates = this.getAvailableModels();
-
-    // Filter by context length
-    if (requirements.contextLength) {
-      candidates = candidates.filter(m => m.contextWindow >= requirements.contextLength!);
-    }
-
-    // Filter by vision support
-    if (requirements.requiresVision) {
-      candidates = candidates.filter(m => m.supportsVision);
-    }
-
-    // Filter by function support
-    if (requirements.requiresFunctions) {
-      candidates = candidates.filter(m => m.supportsFunctions);
-    }
-
-    if (candidates.length === 0) {
-      return null;
-    }
-
-    // Sort by preference
-    const latencyPreference = requirements.latencyPreference || this.config.latencyTarget;
-    
-    candidates.sort((a, b) => {
-      // Prioritize latency preference
-      if (latencyPreference === 'fast') {
-        const latencyOrder = { fast: 0, balanced: 1, slow: 2 };
-        return latencyOrder[a.latencyProfile] - latencyOrder[b.latencyProfile];
-      }
-      
-      // Prioritize quality (slower is often better)
-      if (latencyPreference === 'quality') {
-        const latencyOrder = { slow: 0, balanced: 1, fast: 2 };
-        return latencyOrder[a.latencyProfile] - latencyOrder[b.latencyProfile];
-      }
-
-      // Balanced - consider cost if optimization enabled
-      if (this.config.costOptimization) {
-        const aCost = a.costPer1KInput + a.costPer1KOutput;
-        const bCost = b.costPer1KInput + b.costPer1KOutput;
-        return aCost - bCost;
-      }
-
-      return 0;
-    });
-
-    return candidates[0];
+    if (requirements.contextLength) candidates = candidates.filter(m => m.contextWindow >= requirements.contextLength!);
+    if (requirements.requiresVision) candidates = candidates.filter(m => m.supportsVision);
+    if (requirements.requiresFunctions) candidates = candidates.filter(m => m.supportsFunctions);
+    return candidates[0] || null;
   }
 
-  /**
-   * Create request config based on agent preferences
-   */
-  createConfigFromPreferences(preferences: AgentLLMPreferences): import('./types').LLMRequestConfig {
+  createConfigFromPreferences(preferences: AgentLLMPreferences): LLMRequestConfig {
     return {
-      model: preferences.preferredModel,
+      model: preferences.preferredModel || this.config.defaultModel,
       temperature: preferences.temperature,
       maxTokens: preferences.maxTokens,
     };
   }
-
-  /**
-   * Health check all providers
-   */
-  async healthCheck(): Promise<Record<LLMProvider, { healthy: boolean; latency: number }>> {
-    const results: Record<string, { healthy: boolean; latency: number }> = {};
-
-    for (const [name, provider] of this.providers.entries()) {
-      if (provider) {
-        results[name] = await provider.healthCheck();
-      } else {
-        results[name] = { healthy: false, latency: 0 };
-      }
-    }
-
-    return results as Record<LLMProvider, { healthy: boolean; latency: number }>;
-  }
-
-  /**
-   * Estimate cost for a request
-   */
-  estimateCost(
-    modelId: string,
-    inputTokens: number,
-    outputTokens: number
-  ): number {
-    const model = ALL_MODELS.find(m => m.id === modelId);
-    if (!model) return 0;
-
-    const inputCost = (inputTokens / 1000) * model.costPer1KInput;
-    const outputCost = (outputTokens / 1000) * model.costPer1KOutput;
-    return inputCost + outputCost;
-  }
-
-  /**
-   * Estimate tokens for text
-   */
-  estimateTokens(text: string, provider?: LLMProvider): number {
-    const p = provider || this.config.defaultProvider;
-    const providerInstance = this.providers.get(p);
-    
-    if (providerInstance) {
-      return providerInstance.estimateTokens(text);
-    }
-
-    // Default approximation
-    return Math.ceil(text.length / 4);
-  }
-
-  /**
-   * Update router configuration
-   */
-  updateConfig(config: Partial<RouterConfig>): void {
-    this.config = { ...this.config, ...config };
-  }
-
-  /**
-   * Get current configuration
-   */
-  getConfig(): RouterConfig {
-    return { ...this.config };
+  renderPrompt(promptId: string, variables: Record<string, unknown>) {
+    const template = globalPromptRegistry.getTemplate(promptId);
+    if (!template) throw new Error(`Prompt template not found: ${promptId}`);
+    return renderPrompt(template.currentVersion, variables);
   }
 }
 
-// Singleton instance
-let globalRouter: LLMRouter | null = null;
+let globalRouter: EnhancedLLMRouter | null = null;
+export function getLLMRouter(config?: Partial<EnhancedRouterConfig>, providerConfigs?: ProviderConfig): EnhancedLLMRouter { return globalRouter || (globalRouter = new EnhancedLLMRouter(config, providerConfigs)); }
+export function resetLLMRouter(): void { globalRouter = null; }
+export async function complete(request: LLMRequest): Promise<LLMResponse> { return getLLMRouter().complete(request); }
+export async function stream(request: LLMRequest, callbacks: StreamCallbacks, config?: Partial<StreamConfig>): Promise<void> { return getLLMRouter().stream(request, callbacks, config); }
 
-/**
- * Get or create global router instance
- */
-export function getLLMRouter(
-  config?: Partial<RouterConfig>,
-  providerConfigs?: ProviderConfigs
-): LLMRouter {
-  if (!globalRouter) {
-    globalRouter = new LLMRouter(config, providerConfigs);
-  }
-  return globalRouter;
-}
-
-/**
- * Reset global router (useful for testing)
- */
-export function resetLLMRouter(): void {
-  globalRouter = null;
-}
-
-/**
- * Quick complete function using global router
- */
-export async function complete(request: LLMRequest): Promise<LLMResponse> {
-  const router = getLLMRouter();
-  return router.complete(request);
-}
-
-/**
- * Export types
- */
 export * from './types';
-export { createClaudeProvider, CLAUDE_MODELS } from './claude';
+export * from './retry';
+export * from './cost-tracking';
+export * from './streaming';
+export * from './prompts';
+// Re-export from providers except OpenAIConfig which is defined in types
+export { 
+  createOpenAIProvider, OpenAIProvider, OPENAI_MODELS, 
+  createOllamaProvider, OllamaProvider, OLLAMA_MODELS, 
+  GOOGLE_MODELS, ALL_MODELS,
+  type OllamaConfig, type ProviderConfig 
+} from './providers';
+export { createClaudeProvider } from './claude';

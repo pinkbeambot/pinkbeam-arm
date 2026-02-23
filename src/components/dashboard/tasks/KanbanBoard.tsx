@@ -240,8 +240,8 @@ export function KanbanColumn({
   return (
     <div 
       className={cn(
-        'flex flex-col min-w-[280px] max-w-[320px] bg-muted/30 rounded-lg',
-        'border-2 transition-colors duration-200',
+        'flex flex-col min-w-[260px] sm:min-w-[280px] max-w-[320px] bg-muted/30 rounded-lg',
+        'border-2 transition-colors duration-200 flex-shrink-0',
         isDragOver ? 'border-primary bg-primary/5' : 'border-transparent'
       )}
       onDragOver={handleDragOver}
@@ -261,7 +261,7 @@ export function KanbanColumn({
       </div>
 
       {/* Tasks List */}
-      <div className="flex-1 p-2 space-y-2 min-h-[200px] overflow-y-auto">
+      <div className="flex-1 p-2 space-y-2 min-h-[150px] sm:min-h-[200px] overflow-y-auto max-h-[calc(100vh-400px)] sm:max-h-[calc(100vh-350px)]">
         {tasks.map((task) => (
           <div
             key={task.id}
@@ -348,7 +348,7 @@ export function KanbanBoard({
   }, [onStatusChange]);
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 px-1">
+    <div className="flex gap-3 sm:gap-4 overflow-x-auto pb-4 px-1 -mx-4 sm:-mx-0 px-4 sm:px-1 scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent touch-pan-x">
       {KANBAN_COLUMNS.map((column) => (
         <KanbanColumn
           key={column.id}

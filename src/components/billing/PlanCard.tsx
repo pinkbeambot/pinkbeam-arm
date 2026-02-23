@@ -90,10 +90,12 @@ export function PlanCard({ plan, currentTier, onSelect, loading }: PlanCardProps
 
 function getPlanOrder(tier: SubscriptionTier): number {
   const order: Record<SubscriptionTier, number> = {
-    starter: 0,
-    pro: 1,
-    business: 2,
-    scale: 3,
+    free: 0,
+    starter: 1,
+    pro: 2,
+    business: 3,
+    scale: 4,
+    enterprise: 5,
   };
   return order[tier];
 }

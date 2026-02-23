@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Clock, Copy, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle, Circle } from 'lucide-react';
+import { CheckCircle2, Clock, Copy, MoreHorizontal, Pause, Play, Settings, Trash2, ExternalLink, AlertCircle, Circle, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { cn, formatRelativeTime, getAgentStatusColor, getAgentStatusLabel, getRoleBadgeColor, getRoleLabel, getInitials, getAvatarColor } from '@/lib/utils';
 import type { Agent, AgentStatus } from '@/types';
@@ -189,22 +189,26 @@ export function AgentTableView({
 function StatusBadge({ status }: { status: AgentStatus }) {
   const icons = {
     active: CheckCircle2,
+    busy: Zap,
     idle: Clock,
     paused: Pause,
     initializing: Circle,
     blocked: AlertCircle,
     error: AlertCircle,
+    offline: Circle,
     escaped: AlertCircle,
     terminated: Circle,
   };
 
   const colors = {
     active: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200',
+    busy: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
     idle: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
     paused: 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200',
     initializing: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
     blocked: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
     error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+    offline: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
     escaped: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
     terminated: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200',
   };

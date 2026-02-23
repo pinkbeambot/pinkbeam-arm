@@ -11,6 +11,8 @@ import {
   AlertCircle,
   XCircle,
   Ghost,
+  Zap,
+  WifiOff,
   type LucideIcon,
 } from "lucide-react";
 
@@ -67,6 +69,16 @@ const statusConfig: Record<AgentStatus, {
     iconColor: "text-emerald-500",
     animate: true,
   },
+  busy: {
+    icon: Zap,
+    label: "Busy",
+    description: "Agent is occupied with high-priority work",
+    color: "text-yellow-700 dark:text-yellow-400",
+    bgColor: "bg-yellow-50 dark:bg-yellow-500/10",
+    borderColor: "border-yellow-200 dark:border-yellow-500/30",
+    iconColor: "text-yellow-500",
+    animate: true,
+  },
   paused: {
     icon: Pause,
     label: "Paused",
@@ -94,6 +106,15 @@ const statusConfig: Record<AgentStatus, {
     bgColor: "bg-red-50 dark:bg-red-500/10",
     borderColor: "border-red-200 dark:border-red-500/30",
     iconColor: "text-red-500",
+  },
+  offline: {
+    icon: WifiOff,
+    label: "Offline",
+    description: "Agent is disconnected and unavailable",
+    color: "text-gray-700 dark:text-gray-400",
+    bgColor: "bg-gray-100 dark:bg-gray-500/10",
+    borderColor: "border-gray-200 dark:border-gray-500/30",
+    iconColor: "text-gray-500",
   },
   escaped: {
     icon: Ghost,
@@ -298,9 +319,11 @@ export function AgentStatusSelect({
     "initializing",
     "idle",
     "active",
+    "busy",
     "paused",
     "blocked",
     "error",
+    "offline",
     "escaped",
     "terminated",
   ];

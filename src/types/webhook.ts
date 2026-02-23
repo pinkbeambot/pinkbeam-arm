@@ -10,37 +10,78 @@
 // ============================================================================
 
 export type WebhookEventType =
+  // Agent events
   | 'agent.created'
+  | 'agent.updated'
+  | 'agent.deleted'
   | 'agent.status_changed'
   | 'agent.terminated'
+  // Task events
   | 'task.created'
+  | 'task.updated'
+  | 'task.completed'
   | 'task.assigned'
   | 'task.status_changed'
-  | 'task.completed'
   | 'task.failed'
-  | 'escalation.created'
-  | 'escalation.resolved'
+  // Decision events
   | 'decision.proposed'
   | 'decision.approved'
   | 'decision.rejected'
-  | 'system.alert';
+  // Escalation events
+  | 'escalation.created'
+  | 'escalation.resolved'
+  // System events
+  | 'system.alert'
+  | 'system.error'
+  | 'system.config_changed';
+
+// Event filter patterns (wildcards)
+export type WebhookEventFilter = 
+  | WebhookEventType
+  | '*'                          // All events
+  | 'agent.*'                    // All agent events
+  | 'task.*'                     // All task events
+  | 'decision.*'                 // All decision events
+  | 'escalation.*'               // All escalation events
+  | 'system.*';                  // All system events
 
 export const WEBHOOK_EVENT_TYPES: WebhookEventType[] = [
+  // Agent events
   'agent.created',
+  'agent.updated',
+  'agent.deleted',
   'agent.status_changed',
   'agent.terminated',
+  // Task events
   'task.created',
+  'task.updated',
+  'task.completed',
   'task.assigned',
   'task.status_changed',
-  'task.completed',
   'task.failed',
-  'escalation.created',
-  'escalation.resolved',
+  // Decision events
   'decision.proposed',
   'decision.approved',
   'decision.rejected',
+  // Escalation events
+  'escalation.created',
+  'escalation.resolved',
+  // System events
   'system.alert',
+  'system.error',
+  'system.config_changed',
 ];
+
+// All valid event filter patterns including wildcards
+export const WEBHOOK_EVENT_FILTERS = [
+  ...WEBHOOK_EVENT_TYPES,
+  '*',
+  'agent.*',
+  'task.*',
+  'decision.*',
+  'escalation.*',
+  'system.*',
+] as const;
 
 // ============================================================================
 // Webhook Endpoint
@@ -51,7 +92,7 @@ export interface WebhookEndpoint {
   tenant_id: string;
   url: string;
   description?: string | null;
-  events: WebhookEventType[];
+  events: WebhookEventFilter[];
   secret: string;
   is_active: boolean;
   metadata?: Record<string, unknown>;
@@ -107,14 +148,14 @@ export interface WebhookPayload {
 export interface CreateWebhookEndpointRequest {
   url: string;
   description?: string;
-  events: WebhookEventType[];
+  events: WebhookEventFilter[];
   metadata?: Record<string, unknown>;
 }
 
 export interface UpdateWebhookEndpointRequest {
   url?: string;
   description?: string;
-  events?: WebhookEventType[];
+  events?: WebhookEventFilter[];
   is_active?: boolean;
   metadata?: Record<string, unknown>;
 }
