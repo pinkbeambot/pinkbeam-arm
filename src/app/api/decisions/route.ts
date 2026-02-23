@@ -129,6 +129,7 @@ export async function GET(request: NextRequest) {
         { count: 'exact' }
       )
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('proposed_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

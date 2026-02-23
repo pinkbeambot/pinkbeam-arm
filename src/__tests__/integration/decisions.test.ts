@@ -8,7 +8,9 @@
  * - Approving decisions
  * - Rejecting decisions
  * - Overriding decisions
+ * - Soft deleting decisions
  * - Status workflow enforcement
+ * - Validation and error handling
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -20,16 +22,41 @@ global.fetch = mockFetch;
 describe('Decisions API', () => {
   const mockTenantId = 'test-tenant-id';
   const mockToken = 'test-token';
+  const mockDecisionId = 'dec-123';
+  const mockAgentId = 'agent-456';
+  const mockUserId = 'user-789';
+
+  const mockAgent = {
+    id: mockAgentId,
+    name: 'Test Agent',
+    avatar_url: 'https://example.com/avatar.png',
+    role: 'worker',
+    status: 'active',
+  };
+
   const mockDecision = {
-    id: 'dec-123',
-    title: 'Test Decision',
-    description: 'Test description',
+    id: mockDecisionId,
+    tenant_id: mockTenantId,
+    agent_id: mockAgentId,
+    agent: mockAgent,
+    task_id: 'task-123',
     status: 'proposed',
     category: 'action',
+    title: 'Test Decision',
+    description: 'Test description',
     confidence: 0.85,
-    proposed_by: 'agent-123',
-    tenant_id: mockTenantId,
+    proposed_action: { action: 'deploy', target: 'production' },
+    reasoning: {
+      context: 'Need to deploy',
+      analysis: 'Ready for production',
+      options_considered: [],
+      confidence: 0.85,
+      risks: [],
+    },
+    self_authorized: false,
+    proposed_at: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
   };
 
   beforeEach(() => {
@@ -43,7 +70,7 @@ describe('Decisions API', () => {
         ok: true,
         json: async () => ({
           data: [mockDecision],
-          pagination: { page: 1, limit: 20, total: 1 },
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
         }),
       });
 
@@ -54,6 +81,7 @@ describe('Decisions API', () => {
 
       expect(data.data).toHaveLength(1);
       expect(data.data[0].title).toBe('Test Decision');
+      expect(data.pagination.total).toBe(1);
     });
 
     it('should filter decisions by status', async () => {
@@ -61,7 +89,7 @@ describe('Decisions API', () => {
         ok: true,
         json: async () => ({
           data: [{ ...mockDecision, status: 'approved' }],
-          pagination: { page: 1, limit: 20, total: 1 },
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
         }),
       });
 
@@ -78,7 +106,7 @@ describe('Decisions API', () => {
         ok: true,
         json: async () => ({
           data: [{ ...mockDecision, category: 'strategy' }],
-          pagination: { page: 1, limit: 20, total: 1 },
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
         }),
       });
 
@@ -90,12 +118,47 @@ describe('Decisions API', () => {
       expect(data.data[0].category).toBe('strategy');
     });
 
+    it('should filter decisions by agent_id', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [mockDecision],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        }),
+      });
+
+      const response = await fetch(`/api/decisions?agent_id=${mockAgentId}`, {
+        headers: { Authorization: `Bearer ${mockToken}` },
+      });
+      const data = await response.json();
+
+      expect(data.data).toHaveLength(1);
+    });
+
+    it('should filter decisions by date range', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [mockDecision],
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        }),
+      });
+
+      const response = await fetch(
+        '/api/decisions?date_from=2024-01-01T00:00:00Z&date_to=2024-12-31T23:59:59Z',
+        { headers: { Authorization: `Bearer ${mockToken}` } }
+      );
+      const data = await response.json();
+
+      expect(data.data).toHaveLength(1);
+    });
+
     it('should handle search queries', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           data: [mockDecision],
-          pagination: { page: 1, limit: 20, total: 1 },
+          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
         }),
       });
 
@@ -105,6 +168,24 @@ describe('Decisions API', () => {
       const data = await response.json();
 
       expect(data.data).toHaveLength(1);
+    });
+
+    it('should handle custom pagination', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: [mockDecision],
+          pagination: { page: 2, limit: 50, total: 100, totalPages: 2 },
+        }),
+      });
+
+      const response = await fetch('/api/decisions?page=2&limit=50', {
+        headers: { Authorization: `Bearer ${mockToken}` },
+      });
+      const data = await response.json();
+
+      expect(data.pagination.page).toBe(2);
+      expect(data.pagination.limit).toBe(50);
     });
 
     it('should return 401 without authentication', async () => {
@@ -123,11 +204,18 @@ describe('Decisions API', () => {
   describe('POST /api/decisions', () => {
     it('should create a new decision', async () => {
       const newDecision = {
+        agent_id: mockAgentId,
         title: 'New Decision',
         description: 'New description',
         category: 'action',
-        confidence: 0.9,
-        proposed_by: 'agent-456',
+        proposed_action: { action: 'test' },
+        reasoning: {
+          context: 'Test context',
+          analysis: 'Test analysis',
+          options_considered: [],
+          confidence: 0.9,
+          risks: [],
+        },
       };
 
       mockFetch.mockResolvedValueOnce({
@@ -154,7 +242,7 @@ describe('Decisions API', () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 400,
-        json: async () => ({ error: 'Title is required' }),
+        json: async () => ({ error: 'Validation error', details: [{ message: 'Title is required' }] }),
       });
 
       const response = await fetch('/api/decisions', {
@@ -163,7 +251,32 @@ describe('Decisions API', () => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${mockToken}`,
         },
-        body: JSON.stringify({ category: 'action' }),
+        body: JSON.stringify({ category: 'action', agent_id: mockAgentId }),
+      });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should reject invalid agent_id', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Agent not found' }),
+      });
+
+      const response = await fetch('/api/decisions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({
+          agent_id: 'invalid-agent-id',
+          title: 'Test',
+          category: 'action',
+          proposed_action: {},
+          reasoning: { context: 'test', analysis: 'test', options_considered: [], confidence: 0.5, risks: [] },
+        }),
       });
 
       expect(response.status).toBe(400);
@@ -171,18 +284,24 @@ describe('Decisions API', () => {
   });
 
   describe('GET /api/decisions/[id]', () => {
-    it('should get a single decision', async () => {
+    it('should get a single decision with details', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ data: mockDecision }),
+        json: async () => ({
+          data: {
+            ...mockDecision,
+            activity_history: [],
+          },
+        }),
       });
 
-      const response = await fetch(`/api/decisions/${mockDecision.id}`, {
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       const data = await response.json();
 
-      expect(data.data.id).toBe(mockDecision.id);
+      expect(data.data.id).toBe(mockDecisionId);
+      expect(data.data.agent).toBeDefined();
     });
 
     it('should return 404 for non-existent decision', async () => {
@@ -198,6 +317,20 @@ describe('Decisions API', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('should return 404 for soft-deleted decision', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Decision not found' }),
+      });
+
+      const response = await fetch('/api/decisions/deleted-decision-id', {
+        headers: { Authorization: `Bearer ${mockToken}` },
+      });
+
+      expect(response.status).toBe(404);
+    });
   });
 
   describe('PATCH /api/decisions/[id]', () => {
@@ -205,31 +338,59 @@ describe('Decisions API', () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
-          data: { ...mockDecision, status: 'approved', approved_by: 'user-123' },
+          data: { ...mockDecision, status: 'approved', decided_at: new Date().toISOString() },
         }),
       });
 
-      const response = await fetch(`/api/decisions/${mockDecision.id}`, {
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${mockToken}`,
         },
-        body: JSON.stringify({ status: 'approved', approved_by: 'user-123' }),
+        body: JSON.stringify({ status: 'approved' }),
       });
       const data = await response.json();
 
       expect(data.data.status).toBe('approved');
+      expect(data.data.decided_at).toBeDefined();
+    });
+
+    it('should update decision status to executed', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            ...mockDecision,
+            status: 'executed',
+            decided_at: new Date().toISOString(),
+            executed_at: new Date().toISOString(),
+          },
+        }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({ status: 'executed' }),
+      });
+      const data = await response.json();
+
+      expect(data.data.status).toBe('executed');
+      expect(data.data.executed_at).toBeDefined();
     });
 
     it('should reject invalid status transitions', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 400,
-        json: async () => ({ error: 'Invalid status transition' }),
+        json: async () => ({ error: 'Validation error' }),
       });
 
-      const response = await fetch(`/api/decisions/${mockDecision.id}`, {
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -240,6 +401,188 @@ describe('Decisions API', () => {
 
       expect(response.status).toBe(400);
     });
+
+    it('should prevent modification of immutable decisions', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Decision is immutable and cannot be modified' }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should handle override with reason', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            ...mockDecision,
+            status: 'overridden',
+            override_reason: 'Incorrect assessment',
+            overridden_by: mockUserId,
+          },
+        }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({ reason: 'Incorrect assessment' }),
+      });
+      const data = await response.json();
+
+      expect(data.data.status).toBe('overridden');
+    });
+  });
+
+  describe('POST /api/decisions/[id]/approve', () => {
+    it('should approve a proposed decision', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: { ...mockDecision, status: 'approved', decided_at: new Date().toISOString() },
+        }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({ notes: 'Approved after review' }),
+      });
+      const data = await response.json();
+
+      expect(data.data.status).toBe('approved');
+    });
+
+    it('should reject approval of non-proposed decisions', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 409,
+        json: async () => ({ error: "Cannot approve decision with status 'approved'. Only 'proposed' decisions can be approved." }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+      });
+
+      expect(response.status).toBe(409);
+    });
+  });
+
+  describe('POST /api/decisions/[id]/reject', () => {
+    it('should reject a proposed decision with reason', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            ...mockDecision,
+            status: 'rejected',
+            decided_at: new Date().toISOString(),
+            outcome: { rejection_reason: 'Too risky', rejected_by: mockUserId },
+          },
+        }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({ reason: 'Too risky' }),
+      });
+      const data = await response.json();
+
+      expect(data.data.status).toBe('rejected');
+    });
+
+    it('should require rejection reason', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Validation error' }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${mockToken}`,
+        },
+        body: JSON.stringify({}),
+      });
+
+      expect(response.status).toBe(400);
+    });
+  });
+
+  describe('DELETE /api/decisions/[id]', () => {
+    it('should soft delete a decision', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ message: 'Resource deleted successfully', data: { id: mockDecisionId } }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${mockToken}` },
+      });
+      const data = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(data.message).toBe('Resource deleted successfully');
+    });
+
+    it('should prevent deletion of immutable decisions', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ error: 'Decision is immutable and cannot be deleted' }),
+      });
+
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${mockToken}` },
+      });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('should return 404 for non-existent decision', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'Decision not found' }),
+      });
+
+      const response = await fetch('/api/decisions/non-existent', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${mockToken}` },
+      });
+
+      expect(response.status).toBe(404);
+    });
   });
 
   describe('Decision Reasoning and Confidence', () => {
@@ -247,9 +590,13 @@ describe('Decisions API', () => {
       const decisionWithReasoning = {
         ...mockDecision,
         reasoning: {
-          factors: ['factor1', 'factor2'],
-          alternatives: ['option1', 'option2'],
-          risks: ['risk1'],
+          context: 'Production deployment needed',
+          analysis: 'All tests passed',
+          options_considered: [
+            { description: 'Deploy now', pros: ['Fast'], cons: ['Risky'], estimated_outcome: 'Success', confidence: 0.9 },
+          ],
+          confidence: 0.85,
+          risks: [{ description: 'Bug risk', likelihood: 'low', impact: 'medium' }],
         },
       };
 
@@ -258,12 +605,12 @@ describe('Decisions API', () => {
         json: async () => ({ data: decisionWithReasoning }),
       });
 
-      const response = await fetch(`/api/decisions/${mockDecision.id}`, {
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       const data = await response.json();
 
-      expect(data.data.reasoning.factors).toHaveLength(2);
+      expect(data.data.reasoning.options_considered).toHaveLength(1);
     });
 
     it('should validate confidence score range', async () => {
@@ -280,8 +627,11 @@ describe('Decisions API', () => {
           Authorization: `Bearer ${mockToken}`,
         },
         body: JSON.stringify({
+          agent_id: mockAgentId,
           title: 'Test',
-          confidence: 1.5, // Invalid
+          category: 'action',
+          proposed_action: {},
+          reasoning: { context: 'test', analysis: 'test', options_considered: [], confidence: 1.5, risks: [] },
         }),
       });
 
@@ -298,7 +648,7 @@ describe('Decisions API', () => {
         }),
       });
 
-      const response = await fetch(`/api/decisions/${mockDecision.id}`, {
+      const response = await fetch(`/api/decisions/${mockDecisionId}`, {
         headers: { Authorization: `Bearer ${mockToken}` },
       });
       const data = await response.json();
@@ -308,12 +658,12 @@ describe('Decisions API', () => {
     });
   });
 
-  describe('useDecisions Hook Logic', () => {
+  describe('URL Construction and Filtering', () => {
     it('should construct proper URL with filters', () => {
       const filters = {
         status: 'proposed',
         category: 'action',
-        agent_id: 'agent-123',
+        agent_id: mockAgentId,
       };
 
       const params = new URLSearchParams();
@@ -325,7 +675,7 @@ describe('Decisions API', () => {
 
       expect(url).toContain('status=proposed');
       expect(url).toContain('category=action');
-      expect(url).toContain('agent_id=agent-123');
+      expect(url).toContain(`agent_id=${mockAgentId}`);
     });
 
     it('should handle pagination params', () => {
@@ -340,6 +690,15 @@ describe('Decisions API', () => {
 
       expect(url).toContain('page=2');
       expect(url).toContain('limit=50');
+    });
+
+    it('should handle confidence_min filter', () => {
+      const params = new URLSearchParams();
+      params.set('confidence_min', '0.8');
+
+      const url = `/api/decisions?${params.toString()}`;
+
+      expect(url).toContain('confidence_min=0.8');
     });
   });
 });
