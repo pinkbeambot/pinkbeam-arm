@@ -63,11 +63,18 @@ export type DecisionStatus =
   | 'overridden' 
   | 'executed';
 
+export type DecisionPriority = 
+  | 'low' 
+  | 'normal' 
+  | 'high' 
+  | 'urgent';
+
 export type DecisionCategory = 
   | 'action' 
   | 'resource' 
   | 'escalation' 
-  | 'strategy';
+  | 'strategy'
+  | 'system';
 
 // Core Agent Types
 export interface Agent {
@@ -202,16 +209,42 @@ export interface Decision {
   agent?: Agent;
   task_id?: string;
   status: DecisionStatus;
+  category?: 'action' | 'resource' | 'escalation' | 'strategy' | 'system';
+  priority?: DecisionPriority;
   title: string;
   description: string;
   reasoning?: string;
   alternatives_considered?: string[];
   confidence: number;
   proposed_action?: Record<string, unknown>;
+  executed_action?: Record<string, unknown>;
+  self_authorized?: boolean;
   overridden_by?: string;
   override_reason?: string;
+  proposed_at?: string;
+  decided_at?: string;
   executed_at?: string;
   created_at: string;
+  updated_at?: string;
+  deleted_at?: string;
+  immutable?: boolean;
+  outcome?: Record<string, unknown>;
+}
+
+export interface DecisionWithAgent extends Decision {
+  agent: Agent;
+  task?: {
+    id: string;
+    title: string;
+    status: string;
+    description?: string;
+  };
+  overrider?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
+  activity_history?: Activity[];
 }
 
 // Escalation Types
