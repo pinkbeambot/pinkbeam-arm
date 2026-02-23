@@ -52,11 +52,18 @@ export type EscalationUrgency =
   | 'high' 
   | 'critical';
 
+export type EscalationStatus = 
+  | 'open' 
+  | 'acknowledged' 
+  | 'resolved' 
+  | 'dismissed';
+
 export type EscalationType = 
   | 'clarification' 
   | 'approval' 
   | 'error' 
-  | 'edge_case';
+  | 'edge_case'
+  | 'policy_violation';
 
 export type DecisionStatus = 
   | 'proposed' 
@@ -275,19 +282,28 @@ export interface Escalation {
   agent_id: string;
   agent?: Agent;
   task_id?: string;
-  type: 'clarification' | 'approval' | 'error' | 'edge_case';
+  type: EscalationType;
   urgency: EscalationUrgency;
   title: string;
   description: string;
   context?: string;
   agent_recommendation?: string;
   agent_confidence?: number;
-  status: 'open' | 'resolved';
+  status: EscalationStatus;
+  acknowledged_at?: string;
+  acknowledged_by?: string;
   resolved_by?: string;
   resolution?: string;
+  resolution_type?: string;
+  resolution_answer?: string;
+  resolution_resources?: Record<string, unknown>;
+  learning_notes?: string;
+  time_to_resolve_seconds?: number;
+  sla_deadline_at?: string;
   created_at: string;
   resolved_at?: string;
   updated_at?: string;
+  deleted_at?: string;
   // Extended fields
   question?: {
     title: string;
@@ -304,6 +320,27 @@ export interface Escalation {
     error_code?: string;
     retry_after?: number;
   };
+}
+
+export interface EscalationWithAgent extends Escalation {
+  agent: Agent;
+  task?: {
+    id: string;
+    title: string;
+    status: string;
+    description?: string;
+  };
+  resolver?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
+  acknowledger?: {
+    id: string;
+    name: string;
+    avatar_url?: string;
+  };
+  activity_history?: Activity[];
 }
 
 // Navigation Types

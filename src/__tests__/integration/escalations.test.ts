@@ -715,6 +715,444 @@ describe('useEscalations Hook Logic', () => {
   });
 });
 
+describe('POST /api/escalations/[id]/acknowledge', () => {
+  it('should acknowledge an open escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ...mockEscalation,
+          status: 'acknowledged',
+          acknowledged_at: '2026-02-13T15:30:00Z',
+          acknowledged_by: 'user-001',
+        },
+      }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/acknowledge', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.ok).toBe(true);
+    const result = await response.json();
+    expect(result.data.status).toBe('acknowledged');
+    expect(result.data.acknowledged_at).toBeDefined();
+  });
+
+  it('should acknowledge with optional notes', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ...mockEscalation,
+          status: 'acknowledged',
+          acknowledged_at: '2026-02-13T15:30:00Z',
+          agent_analysis: { acknowledgment_notes: 'Looking into this now' },
+        },
+      }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/acknowledge', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ notes: 'Looking into this now' }),
+    });
+
+    expect(response.ok).toBe(true);
+    const result = await response.json();
+    expect(result.data.status).toBe('acknowledged');
+  });
+
+  it('should reject acknowledging already acknowledged escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Escalation already acknowledged' }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/acknowledge', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+    const result = await response.json();
+    expect(result.error).toBe('Escalation already acknowledged');
+  });
+
+  it('should reject acknowledging resolved escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Cannot acknowledge resolved or dismissed escalation' }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/acknowledge', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('should return 404 for non-existent escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Escalation not found' }),
+    });
+
+    const response = await fetch('/api/v1/escalations/non-existent/acknowledge', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({}),
+    });
+
+    expect(response.status).toBe(404);
+  });
+});
+
+describe('POST /api/escalations/[id]/resolve', () => {
+  it('should resolve escalation with resolution details', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ...mockEscalation,
+          status: 'resolved',
+          resolution_type: 'approved',
+          resolution_answer: 'Approved 25% discount for enterprise plan',
+          resolution_resources: { approved_by: 'manager@example.com' },
+          learning_notes: 'Standard discount approved for enterprise prospects',
+          resolved_at: '2026-02-13T16:00:00Z',
+          time_to_resolve_seconds: 5400,
+        },
+      }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/resolve', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'resolved',
+        resolution_type: 'approved',
+        resolution_answer: 'Approved 25% discount for enterprise plan',
+        resolution_resources: { approved_by: 'manager@example.com' },
+        learning_notes: 'Standard discount approved for enterprise prospects',
+      }),
+    });
+
+    expect(response.ok).toBe(true);
+    const result = await response.json();
+    expect(result.data.status).toBe('resolved');
+    expect(result.data.resolution_answer).toBe('Approved 25% discount for enterprise plan');
+    expect(result.data.time_to_resolve_seconds).toBe(5400);
+  });
+
+  it('should dismiss escalation with reason', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ...mockEscalation,
+          status: 'dismissed',
+          resolution_answer: 'Not applicable - prospect already converted',
+          resolved_at: '2026-02-13T16:00:00Z',
+        },
+      }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/resolve', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'dismissed',
+        resolution_answer: 'Not applicable - prospect already converted',
+      }),
+    });
+
+    expect(response.ok).toBe(true);
+    const result = await response.json();
+    expect(result.data.status).toBe('dismissed');
+  });
+
+  it('should reject resolving already resolved escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Escalation already resolved' }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/resolve', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        status: 'resolved',
+        resolution_answer: 'Trying to resolve again',
+      }),
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it('should require resolution answer', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      json: async () => ({ error: 'Validation error', details: [{ path: ['resolution_answer'], message: 'Required' }] }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/resolve', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${mockToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status: 'resolved' }),
+    });
+
+    expect(response.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/escalations/[id]', () => {
+  it('should soft delete an escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ data: { id: 'esc-001' } }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+
+    expect(response.ok).toBe(true);
+    const result = await response.json();
+    expect(result.data.id).toBe('esc-001');
+  });
+
+  it('should return 404 for non-existent escalation', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      json: async () => ({ error: 'Escalation not found' }),
+    });
+
+    const response = await fetch('/api/v1/escalations/non-existent', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+
+    expect(response.status).toBe(404);
+  });
+
+  it('should return 401 for unauthorized delete', async () => {
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ error: 'Unauthorized' }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001', {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer invalid' },
+    });
+
+    expect(response.status).toBe(401);
+  });
+});
+
+describe('GET /api/escalations - date range filtering', () => {
+  it('should filter by date_from', async () => {
+    const mockResponse = {
+      data: [mockEscalation],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    };
+
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    const params = new URLSearchParams({ date_from: '2026-01-01T00:00:00Z' });
+    await fetch(`/api/v1/escalations?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/escalations?date_from=2026-01-01T00%3A00%3A00Z',
+      expect.any(Object)
+    );
+  });
+
+  it('should filter by date_to', async () => {
+    const mockResponse = {
+      data: [mockEscalation],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    };
+
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    const params = new URLSearchParams({ date_to: '2026-12-31T23:59:59Z' });
+    await fetch(`/api/v1/escalations?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/v1/escalations?date_to=2026-12-31T23%3A59%3A59Z',
+      expect.any(Object)
+    );
+  });
+
+  it('should filter by date range', async () => {
+    const mockResponse = {
+      data: [mockEscalation],
+      pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+    };
+
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockResponse,
+    });
+
+    const params = new URLSearchParams({
+      date_from: '2026-01-01T00:00:00Z',
+      date_to: '2026-12-31T23:59:59Z',
+    });
+    await fetch(`/api/v1/escalations?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+
+    const callUrl = (fetch as ReturnType<typeof vi.fn>).mock.calls[0][0];
+    expect(callUrl).toContain('date_from=');
+    expect(callUrl).toContain('date_to=');
+  });
+});
+
+describe('Escalation SLA tracking', () => {
+  it('should track acknowledgment SLA', async () => {
+    const createdAt = new Date('2026-02-13T14:00:00Z');
+    const acknowledgedAt = new Date('2026-02-13T14:15:00Z');
+    const timeToAcknowledge = Math.floor((acknowledgedAt.getTime() - createdAt.getTime()) / 1000);
+
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ...mockEscalation,
+          status: 'acknowledged',
+          created_at: createdAt.toISOString(),
+          acknowledged_at: acknowledgedAt.toISOString(),
+          time_to_acknowledge_seconds: timeToAcknowledge,
+        },
+      }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/acknowledge', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${mockToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    const result = await response.json();
+    expect(result.data.acknowledged_at).toBeDefined();
+    expect(result.data.status).toBe('acknowledged');
+  });
+
+  it('should track resolution SLA', async () => {
+    const createdAt = new Date('2026-02-13T14:00:00Z');
+    const resolvedAt = new Date('2026-02-13T15:30:00Z');
+    const timeToResolve = Math.floor((resolvedAt.getTime() - createdAt.getTime()) / 1000); // 5400 seconds
+
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        data: {
+          ...mockEscalation,
+          status: 'resolved',
+          created_at: createdAt.toISOString(),
+          resolved_at: resolvedAt.toISOString(),
+          time_to_resolve_seconds: timeToResolve,
+        },
+      }),
+    });
+
+    const response = await fetch('/api/v1/escalations/esc-001/resolve', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${mockToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'resolved', resolution_answer: 'Done' }),
+    });
+
+    const result = await response.json();
+    expect(result.data.time_to_resolve_seconds).toBe(5400);
+  });
+});
+
+describe('Stats with open_by_urgency', () => {
+  it('should include open_by_urgency in stats', async () => {
+    const mockStats = {
+      data: {
+        total: 50,
+        by_status: { open: 5, acknowledged: 10, resolved: 30, dismissed: 5 },
+        by_urgency: { critical: 3, high: 12, normal: 25, low: 10 },
+        by_type: { clarification: 15, approval: 10, error: 8, edge_case: 9, policy_violation: 8 },
+        open_by_urgency: { critical: 2, high: 5, normal: 6, low: 2 },
+        acknowledged_count: 10,
+        avg_resolution_time_seconds: 3600,
+        timeline: [],
+      },
+      meta: { days: 30, date_from: '2026-01-14T00:00:00Z' },
+    };
+
+    (fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      ok: true,
+      json: async () => mockStats,
+    });
+
+    const response = await fetch('/api/v1/escalations/stats', {
+      headers: { Authorization: `Bearer ${mockToken}` },
+    });
+
+    const result = await response.json();
+    expect(result.data.open_by_urgency).toBeDefined();
+    expect(result.data.open_by_urgency.critical).toBe(2);
+    expect(result.data.open_by_urgency.high).toBe(5);
+    expect(result.data.acknowledged_count).toBe(10);
+  });
+});
+
 // Helper for testing filter logic
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function matchesFiltersTest(escalation: Record<string, unknown>, options: Record<string, unknown>): boolean {

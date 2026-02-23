@@ -4,10 +4,12 @@ import { z } from 'zod';
 import { escapeIlike } from '@/lib/utils';
 
 const listEscalationsQuerySchema = z.object({
-  status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']).optional(),
+  status: z.enum(['open', 'acknowledged', 'resolved', 'dismissed']).optional(),
   urgency: z.enum(['low', 'normal', 'high', 'critical']).optional(),
   type: z.enum(['clarification', 'approval', 'error', 'edge_case', 'policy_violation']).optional(),
   agent_id: z.string().uuid().optional(),
+  date_from: z.string().datetime().optional(),
+  date_to: z.string().datetime().optional(),
   search: z.string().min(1).max(200).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
@@ -28,7 +30,7 @@ const listEscalationsQuerySchema = z.object({
  *         name: status
  *         schema:
  *           type: string
- *           enum: [open, in_progress, resolved, dismissed]
+ *           enum: [open, acknowledged, resolved, dismissed]
  *         description: Filter by escalation status
  *       - in: query
  *         name: urgency
@@ -48,6 +50,18 @@ const listEscalationsQuerySchema = z.object({
  *           type: string
  *           format: uuid
  *         description: Filter by agent ID
+ *       - in: query
+ *         name: date_from
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter escalations created after this date
+ *       - in: query
+ *         name: date_to
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *         description: Filter escalations created before this date
  *       - in: query
  *         name: search
  *         schema:
@@ -99,6 +113,8 @@ export async function GET(request: NextRequest) {
       urgency: searchParams.get('urgency') || undefined,
       type: searchParams.get('type') || undefined,
       agent_id: searchParams.get('agent_id') || undefined,
+      date_from: searchParams.get('date_from') || undefined,
+      date_to: searchParams.get('date_to') || undefined,
       search: searchParams.get('search') || undefined,
       page: searchParams.get('page') || '1',
       limit: searchParams.get('limit') || '20',
@@ -114,10 +130,12 @@ export async function GET(request: NextRequest) {
         `*,
         agent:agent_id(id, name, avatar_url, role, status),
         task:task_id(id, title, status),
-        resolver:resolved_by(id, name, avatar_url)`,
+        resolver:resolved_by(id, name, avatar_url),
+        acknowledger:acknowledged_by(id, name, avatar_url)`,
         { count: 'exact' }
       )
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -125,6 +143,8 @@ export async function GET(request: NextRequest) {
     if (validatedQuery.urgency) dbQuery = dbQuery.eq('urgency', validatedQuery.urgency);
     if (validatedQuery.type) dbQuery = dbQuery.eq('type', validatedQuery.type);
     if (validatedQuery.agent_id) dbQuery = dbQuery.eq('agent_id', validatedQuery.agent_id);
+    if (validatedQuery.date_from) dbQuery = dbQuery.gte('created_at', validatedQuery.date_from);
+    if (validatedQuery.date_to) dbQuery = dbQuery.lte('created_at', validatedQuery.date_to);
     if (validatedQuery.search) {
       const searchTerm = escapeIlike(validatedQuery.search);
       dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
@@ -138,7 +158,13 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      data: escalations?.map((e) => ({ ...e, agent: e.agent || undefined, task: e.task || undefined, resolver: e.resolver || undefined })),
+      data: escalations?.map((e) => ({
+        ...e,
+        agent: e.agent || undefined,
+        task: e.task || undefined,
+        resolver: e.resolver || undefined,
+        acknowledger: e.acknowledger || undefined,
+      })),
       pagination: { page, limit, total: count || 0, totalPages: Math.ceil((count || 0) / limit) },
     });
   } catch (error) {
