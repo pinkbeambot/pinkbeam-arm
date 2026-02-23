@@ -27,9 +27,11 @@ const statusColors: Record<AgentStatus, string> = {
   initializing: 'bg-blue-500',
   idle: 'bg-amber-500',
   active: 'bg-emerald-500',
+  busy: 'bg-yellow-500',
   paused: 'bg-slate-400',
   blocked: 'bg-pink-500',
   error: 'bg-rose-500',
+  offline: 'bg-gray-400',
   escaped: 'bg-orange-600',
   terminated: 'bg-gray-500',
 };
@@ -41,9 +43,11 @@ const statusLabels: Record<AgentStatus, string> = {
   initializing: 'Initializing',
   idle: 'Idle',
   active: 'Active',
+  busy: 'Busy',
   paused: 'Paused',
   blocked: 'Blocked',
   error: 'Error',
+  offline: 'Offline',
   escaped: 'Escaped',
   terminated: 'Terminated',
 };
@@ -55,9 +59,11 @@ const statusDescriptions: Record<AgentStatus, string> = {
   initializing: 'Agent is starting up and loading configuration',
   idle: 'Agent is ready and waiting for tasks',
   active: 'Agent is currently working on a task',
+  busy: 'Agent is occupied with high-priority work',
   paused: 'Agent is temporarily paused by user',
   blocked: 'Agent is blocked and waiting for dependencies',
   error: 'Agent encountered an error and needs attention',
+  offline: 'Agent is not connected',
   escaped: 'Agent has broken containment - immediate review required',
   terminated: 'Agent has been terminated',
 };
@@ -66,7 +72,7 @@ const statusDescriptions: Record<AgentStatus, string> = {
  * Determines if a status should have a pulse animation
  */
 const shouldPulse = (status: AgentStatus): boolean => {
-  return status === 'active' || status === 'initializing';
+  return status === 'active' || status === 'initializing' || status === 'busy';
 };
 
 /**

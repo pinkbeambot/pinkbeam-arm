@@ -43,7 +43,7 @@ export function validateEventFilters(events: string[]): { valid: string[]; inval
       const category = event.slice(0, -2) as EventCategory;
       if (EVENT_CATEGORIES[category]) valid.push(event);
       else invalid.push(event);
-    } else if (allValidEvents.includes(event)) {
+    } else if (allValidEvents.includes(event as WebhookEventType)) {
       valid.push(event);
     } else {
       invalid.push(event);

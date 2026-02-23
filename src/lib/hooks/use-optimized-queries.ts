@@ -133,12 +133,12 @@ export function useOptimisticMutation<TData, TError = Error, TVariables = unknow
       if (ctx?.previousData !== undefined) {
         queryClient.setQueryData([cacheKey], ctx.previousData);
       }
-      options.onError?.(err, variables, context);
+      // Note: options.onError is handled by React Query - no manual call needed here
     },
     onSettled: (data, error, variables, context) => {
       // Refetch after error or success
       queryClient.invalidateQueries({ queryKey: [cacheKey] });
-      options.onSettled?.(data, error, variables, context);
+      // Note: options.onSettled is handled by React Query - no manual call needed here
     },
   });
 }

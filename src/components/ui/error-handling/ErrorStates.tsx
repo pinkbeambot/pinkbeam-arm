@@ -36,6 +36,7 @@ interface ErrorStateProps {
   onDismiss?: () => void;
   className?: string;
   showHomeLink?: boolean;
+  children?: React.ReactNode;
   showSupportLink?: boolean;
 }
 

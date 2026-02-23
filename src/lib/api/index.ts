@@ -18,14 +18,11 @@ export {
   applyFilter,
   applyFilters,
   applyFullTextSearch,
-  applySorting,
-  buildSearchQuery,
   parseFilters,
   getPrioritySortValue,
   PRIORITY_ORDER,
   type FilterCondition,
   type FilterOperator,
-  type SortOption,
 } from './filtering';
 
 export {

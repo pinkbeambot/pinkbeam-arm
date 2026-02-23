@@ -9,9 +9,9 @@ import { lazy, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 // Loading fallback for chart components
-function ChartSkeleton({ className }: { className?: string }) {
+function ChartSkeleton({ className, style }: { className?: string; style?: React.CSSProperties }) {
   return (
-    <div className={className}>
+    <div className={className} style={style}>
       <Skeleton className="h-full w-full" />
     </div>
   );

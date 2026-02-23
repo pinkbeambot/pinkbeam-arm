@@ -19,6 +19,7 @@ export { ALL_MODELS as MODEL_CATALOG } from './providers';
 export { createClaudeProvider, CLAUDE_MODELS } from './claude';
 
 import type { LLMModel } from './types';
+import { ALL_MODELS } from './providers';
 
 export function quickEstimateCost(modelId: string, inputText: string, outputText?: string): number {
   const model = ALL_MODELS.find((m: LLMModel) => m.id === modelId);

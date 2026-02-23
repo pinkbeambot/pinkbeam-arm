@@ -51,7 +51,9 @@ export function NaturalLanguageQuery({
     try {
       if (onQuery) {
         const response = await onQuery(query);
-        setResult(response);
+        if (response) {
+          setResult(response);
+        }
       } else {
         // Simulate API call for demo
         await new Promise(resolve => setTimeout(resolve, 1500));

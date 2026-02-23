@@ -33,6 +33,14 @@ export function AnimatedButton({
   isLoading,
   success,
   disabled,
+  onClick,
+  type,
+  form,
+  name,
+  value,
+  id,
+  "aria-label": ariaLabel,
+  title,
   ...props
 }: AnimatedButtonProps) {
   const prefersReducedMotion = useReducedMotion();
@@ -47,9 +55,20 @@ export function AnimatedButton({
     className
   );
 
+  const buttonProps = {
+    onClick,
+    type,
+    form,
+    name,
+    value,
+    id,
+    "aria-label": ariaLabel,
+    title,
+  };
+
   if (prefersReducedMotion) {
     return (
-      <button className={baseStyles} disabled={disabled || isLoading} {...props}>
+      <button className={baseStyles} disabled={disabled || isLoading} {...buttonProps}>
         {children}
       </button>
     );
@@ -62,7 +81,7 @@ export function AnimatedButton({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       transition={{ type: "spring", stiffness: 400, damping: 17 }}
-      {...props}
+      {...buttonProps}
     >
       <AnimatePresence mode="wait">
         {isLoading ? (
