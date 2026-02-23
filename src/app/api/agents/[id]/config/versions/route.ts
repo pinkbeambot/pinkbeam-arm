@@ -1,64 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { listConfigVersionsQuerySchema, compareVersionsQuerySchema } from '@/lib/validation';
 import { generateConfigDiff, formatDiffForDisplay, type ConfigDiffResult } from '@/lib/config-utils';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
     id: string;
   }>;
-}
-
-/**
- * Helper to create Supabase client with auth
- */
-async function createAuthClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  return supabase;
-}
-
-/**
- * Helper to get tenant ID from user
- */
-async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return null;
-  }
-
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
-    return null;
-  }
-
-  return { tenantId: (userProfile as { tenant_id: string }).tenant_id, user };
 }
 
 /**
@@ -69,16 +18,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -91,9 +33,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const validatedQuery = listConfigVersionsQuerySchema.parse(queryParams);
     const { page, limit } = validatedQuery;
     const offset = (page - 1) * limit;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Verify agent exists and belongs to tenant
     const { data: agent, error: agentError } = await supabase
@@ -133,7 +72,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error fetching versions:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch versions', details: error.message },
+        { error: 'Failed to fetch versions' },
         { status: 500 }
       );
     }
@@ -195,24 +134,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse request body
     const body = await request.json();
     const validatedData = compareVersionsQuerySchema.parse(body);
     const { version_a, version_b } = validatedData;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Verify agent exists
     const { data: agent, error: agentError } = await supabase
@@ -229,13 +158,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // Helper to fetch version config
     async function fetchVersion(versionIdOrNumber: string | number) {
       const isUuid = typeof versionIdOrNumber === 'string' && versionIdOrNumber.includes('-');
-      
-      const query = (supabase as NonNullable<typeof supabase>)
+
+      const query = supabase
         .from('agent_config_versions')
         .select('id, version_number, config, name, created_at')
         .eq('agent_id', id)
         .eq('tenant_id', tenantId);
-      
+
       if (isUuid) {
         return query.eq('id', versionIdOrNumber).single();
       } else {
@@ -244,7 +173,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Fetch both versions
-    const [{ data: versionA, error: errorA }, { data: versionB, error: errorB }] = 
+    const [{ data: versionA, error: errorA }, { data: versionB, error: errorB }] =
       await Promise.all([fetchVersion(version_a), fetchVersion(version_b)]);
 
     if (errorA || !versionA) {

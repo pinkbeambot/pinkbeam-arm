@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase/client';
 import type { Chat, ChatMessage } from '@/types';
 
@@ -19,9 +20,12 @@ interface UseChatReturn {
   error: Error | null;
   hasMore: boolean;
   sending: boolean;
+  agentResponding: boolean;
+  agentResponseError: Error | null;
   sendMessage: (content: string) => Promise<void>;
   loadMore: () => Promise<void>;
   deleteMessage: (messageId: string) => Promise<void>;
+  retryLastMessage: () => Promise<void>;
 }
 
 /**
@@ -35,19 +39,23 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   const [error, setError] = useState<Error | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [sending, setSending] = useState(false);
+  const [agentResponding, setAgentResponding] = useState(false);
+  const [agentResponseError, setAgentResponseError] = useState<Error | null>(null);
+  const [lastUserMessage, setLastUserMessage] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const lastMessageTimeRef = useRef<number>(0);
 
   // Fetch messages for a chat - defined first to avoid dependency issues
   const fetchMessages = useCallback(async (id: string, before?: string) => {
     try {
-      const url = new URL(`/api/chats/${id}/messages`, window.location.origin);
+      const url = new URL(`/api/v1/chats/${id}/messages`, window.location.origin);
       url.searchParams.set('limit', '50');
       if (before) url.searchParams.set('before', before);
 
       const response = await fetch(url);
       if (!response.ok) throw new Error('Failed to fetch messages');
 
-      const { messages: newMessages, has_more } = await response.json();
+      const { data: { messages: newMessages, has_more } } = await response.json();
 
       if (before) {
         // Prepend older messages
@@ -79,19 +87,19 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
 
       if (chatId) {
         // Fetch existing chat
-        const response = await fetch(`/api/chats`);
+        const response = await fetch(`/api/v1/chats`);
         if (!response.ok) throw new Error('Failed to fetch chats');
-        const { chats } = await response.json();
+        const { data: chats } = await response.json();
         chatData = chats.find((c: Chat) => c.id === chatId) || null;
       } else if (agentId) {
         // Create new chat with agent
-        const response = await fetch('/api/chats', {
+        const response = await fetch('/api/v1/chats', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ agent_id: agentId }),
         });
         if (!response.ok) throw new Error('Failed to create chat');
-        const { chat: newChat } = await response.json();
+        const { data: newChat } = await response.json();
         chatData = newChat;
       }
 
@@ -114,6 +122,8 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
 
     try {
       setSending(true);
+      setAgentResponseError(null);
+      setLastUserMessage(content.trim());
 
       // Optimistically add user message
       const optimisticMessage: ChatMessage = {
@@ -126,28 +136,57 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
       };
       setMessages(prev => [...prev, optimisticMessage]);
 
-      const response = await fetch(`/api/chats/${chat.id}/messages`, {
+      const response = await fetch(`/api/v1/chats/${chat.id}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: content.trim() }),
       });
 
-      if (!response.ok) throw new Error('Failed to send message');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to send message');
+      }
 
-      const { message: savedMessage } = await response.json();
+      const { data: savedMessage } = await response.json();
 
       // Replace optimistic message with saved message
       setMessages(prev =>
         prev.map(m => (m.id === optimisticMessage.id ? savedMessage : m))
       );
+
+      // Agent is now responding (we expect a realtime update soon)
+      setAgentResponding(true);
+      lastMessageTimeRef.current = Date.now();
+
+      // Set a timeout to check if agent responded
+      setTimeout(() => {
+        setAgentResponding(current => {
+          // Only turn off if we haven't received an agent message in 30 seconds
+          const timeSinceLastMessage = Date.now() - lastMessageTimeRef.current;
+          if (timeSinceLastMessage > 30000) {
+            return false;
+          }
+          return current;
+        });
+      }, 30000);
+
     } catch (err) {
       // Remove optimistic message on error
       setMessages(prev => prev.filter(m => !m.id.startsWith('temp-')));
+      setAgentResponseError(err instanceof Error ? err : new Error('Failed to send message'));
       throw err;
     } finally {
       setSending(false);
     }
   }, [chat?.id]);
+
+  // Retry the last message
+  const retryLastMessage = useCallback(async () => {
+    if (lastUserMessage && chat?.id) {
+      setAgentResponseError(null);
+      await sendMessage(lastUserMessage);
+    }
+  }, [lastUserMessage, chat?.id, sendMessage]);
 
   // Load more messages (pagination)
   const loadMore = useCallback(async () => {
@@ -163,7 +202,7 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
 
     try {
       const response = await fetch(
-        `/api/chats/${chat.id}/messages/${messageId}`,
+        `/api/v1/chats/${chat.id}/messages/${messageId}`,
         { method: 'DELETE' }
       );
 
@@ -185,38 +224,50 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
   useEffect(() => {
     if (!chat?.id) return;
 
-    const channel = (supabase
-      .channel(`chat:${chat.id}`) as any)
+    const channel = supabase
+      .channel(`chat:${chat.id}`)
       .on(
-        'postgres_changes',
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'INSERT',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.INSERT,
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload: { new: ChatMessage }) => {
+        (payload) => {
+          const newMessage = payload.new as ChatMessage;
+          if (!newMessage?.id) return;
+
           setMessages(current => {
             // Check if message already exists
-            if (current.find(m => m.id === payload.new.id)) {
+            if (current.find(m => m.id === newMessage.id)) {
               return current;
             }
             // Add new message
-            return [...current, payload.new];
+            return [...current, newMessage];
           });
+
+          // If this is an agent message, turn off responding state
+          if (newMessage.role === 'agent') {
+            setAgentResponding(false);
+            setAgentResponseError(null);
+            lastMessageTimeRef.current = Date.now();
+          }
         }
       )
       .on(
-        'postgres_changes',
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'DELETE',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.DELETE,
           schema: 'public',
           table: 'chat_messages',
           filter: `chat_id=eq.${chat.id}`,
         },
-        (payload: { old: ChatMessage }) => {
+        (payload) => {
+          const deletedId = (payload.old as Partial<ChatMessage>)?.id;
+          if (!deletedId) return;
           setMessages(current =>
-            current.filter(m => m.id !== payload.old.id)
+            current.filter(m => m.id !== deletedId)
           );
         }
       )
@@ -239,9 +290,12 @@ export function useChat({ chatId, agentId }: UseChatOptions): UseChatReturn {
     error,
     hasMore,
     sending,
+    agentResponding,
+    agentResponseError,
     sendMessage,
     loadMore,
     deleteMessage,
+    retryLastMessage,
   };
 }
 
@@ -258,9 +312,9 @@ export function useChats() {
   const fetchChats = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/chats');
+      const response = await fetch('/api/v1/chats');
       if (!response.ok) throw new Error('Failed to fetch chats');
-      const { chats: fetchedChats } = await response.json();
+      const { data: fetchedChats } = await response.json();
       setChats(fetchedChats);
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch chats'));
@@ -275,12 +329,12 @@ export function useChats() {
 
   // Subscribe to chat updates
   useEffect(() => {
-    const channel = (supabase
-      .channel(`user_chats:${DEMO_TENANT_ID}`) as any)
+    const channel = supabase
+      .channel(`user_chats:${DEMO_TENANT_ID}`)
       .on(
-        'postgres_changes',
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'chats',
           filter: `tenant_id=eq.${DEMO_TENANT_ID}`,

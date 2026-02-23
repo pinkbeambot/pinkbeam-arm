@@ -1,3 +1,4 @@
+/* eslint-disable react/no-unescaped-entities */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -12,8 +13,6 @@ import {
   Award,
   Rocket,
   ArrowRight,
-  Linkedin,
-  Twitter,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -76,37 +75,6 @@ const values = [
   },
 ];
 
-const team = [
-  {
-    name: "Alex Chen",
-    role: "CEO & Co-Founder",
-    bio: "Former product lead at OpenAI. Built AI systems at scale for Fortune 500 companies.",
-    twitter: "#",
-    linkedin: "#",
-  },
-  {
-    name: "Sarah Kim",
-    role: "CTO & Co-Founder",
-    bio: "Ex-Google Brain. PhD in ML from Stanford. 15+ years building autonomous systems.",
-    twitter: "#",
-    linkedin: "#",
-  },
-  {
-    name: "Marcus Johnson",
-    role: "Head of Design",
-    bio: "Previously led design at Notion and Figma. Obsessed with human-AI interfaces.",
-    twitter: "#",
-    linkedin: "#",
-  },
-  {
-    name: "Elena Rodriguez",
-    role: "Head of Engineering",
-    bio: "Built distributed systems at Netflix and Uber. Expert in multi-tenant architectures.",
-    twitter: "#",
-    linkedin: "#",
-  },
-];
-
 const stats = [
   { value: "100+", label: "Companies Powered" },
   { value: "500+", label: "AI Employees Deployed" },
@@ -131,7 +99,7 @@ export default function AboutPage() {
               </span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground">
-              We're a team of builders, researchers, and dreamers on a mission to
+              We&apos;re a team of builders, researchers, and dreamers on a mission to
               help founders scale their businesses with AI employees.
             </p>
           </FadeIn>
@@ -149,7 +117,7 @@ export default function AboutPage() {
                   Pink Beam started with a simple observation: the best founders
                   were drowning in operational work. They had vision, product
                   sense, and drive—but they were spending 80% of their time on
-                  tasks that didn't require their unique talents.
+                  tasks that didn&apos;t require their unique talents.
                 </p>
                 <p>
                   In 2024, we set out to change that. We built the first version
@@ -160,7 +128,7 @@ export default function AboutPage() {
                 </p>
                 <p>
                   Today, we power over 100 companies with 500+ AI employees
-                  working around the clock. But we're just getting started. Our
+                  working around the clock. But we&apos;re just getting started. Our
                   vision is a world where every founder can run a 50-person
                   company as a 1-person operation.
                 </p>
@@ -218,66 +186,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="py-20 md:py-32">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeIn className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Meet the Team
-            </h2>
-            <p className="text-muted-foreground">
-              The people building the future of work.
-            </p>
-          </FadeIn>
-
-          <StaggerContainer className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {team.map((member) => (
-              <Card
-                key={member.name}
-                className="group hover:border-primary/30 transition-all duration-300"
-              >
-                <CardContent className="p-6">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-muted to-muted/50 flex items-center justify-center mb-4 mx-auto">
-                    <span className="text-2xl font-bold text-muted-foreground">
-                      {member.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-semibold text-center mb-1">
-                    {member.name}
-                  </h3>
-                  <p className="text-sm text-primary text-center mb-3">
-                    {member.role}
-                  </p>
-                  <p className="text-sm text-muted-foreground text-center mb-4">
-                    {member.bio}
-                  </p>
-                  <div className="flex justify-center gap-3">
-                    <a
-                      href={member.twitter}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={`${member.name} on Twitter`}
-                    >
-                      <Twitter className="w-4 h-4" />
-                    </a>
-                    <a
-                      href={member.linkedin}
-                      className="text-muted-foreground hover:text-foreground transition-colors"
-                      aria-label={`${member.name} on LinkedIn`}
-                    >
-                      <Linkedin className="w-4 h-4" />
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
-
-      {/* Join Us CTA */}
+      {/* CTA */}
       <section className="py-20 md:py-32 bg-gradient-to-b from-muted/30 to-background">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <FadeIn>
@@ -285,9 +194,9 @@ export default function AboutPage() {
               Join Our Team
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              We're always looking for exceptional people who want to build the
-              future of work. If you're passionate about AI and entrepreneurship,
-              we'd love to hear from you.
+              We&apos;re always looking for exceptional people who want to build the
+              future of work. If you&apos;re passionate about AI and entrepreneurship,
+              we&apos;d love to hear from you.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button size="lg" asChild>

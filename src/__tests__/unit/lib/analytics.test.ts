@@ -3,27 +3,24 @@
  * Unit tests for the analytics service
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { analyticsService, fetchPerformanceData } from '@/lib/analytics';
 import type { DateRange } from '@/components/dashboard/performance/types';
 
-// Mock fetch
-global.fetch = vi.fn();
-
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-};
-Object.defineProperty(global, 'localStorage', {
-  value: localStorageMock,
-});
+const TEST_TOKEN = 'test-token';
 
 describe('analyticsService', () => {
+  const originalFetch = globalThis.fetch;
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    localStorageMock.getItem.mockReturnValue(JSON.stringify({ access_token: 'test-token' }));
+    mockFetch = vi.fn();
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   describe('fetchOverviewMetrics', () => {
@@ -46,18 +43,18 @@ describe('analyticsService', () => {
         },
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const result = await analyticsService.fetchOverviewMetrics('30d' as DateRange);
+      const result = await analyticsService.fetchOverviewMetrics('30d' as DateRange, TEST_TOKEN);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/analytics/overview?days=30',
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/analytics/overview?days=30',
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Authorization': 'Bearer test-token',
+            'Authorization': `Bearer ${TEST_TOKEN}`,
             'Content-Type': 'application/json',
           }),
         })
@@ -66,19 +63,13 @@ describe('analyticsService', () => {
     });
 
     it('should throw error on failed fetch', async () => {
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({ error: 'Server error' }),
       });
 
-      await expect(analyticsService.fetchOverviewMetrics('30d' as DateRange)).rejects.toThrow('Server error');
-    });
-
-    it('should throw error when no auth token', async () => {
-      localStorageMock.getItem.mockReturnValueOnce(null);
-
-      await expect(analyticsService.fetchOverviewMetrics('30d' as DateRange)).rejects.toThrow('No authentication token available');
+      await expect(analyticsService.fetchOverviewMetrics('30d' as DateRange, TEST_TOKEN)).rejects.toThrow('Server error');
     });
   });
 
@@ -110,15 +101,15 @@ describe('analyticsService', () => {
         },
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const result = await analyticsService.fetchLeaderboard('30d' as DateRange);
+      const result = await analyticsService.fetchLeaderboard('30d' as DateRange, 'tasksCompleted', 20, TEST_TOKEN);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/analytics/leaderboard?days=30&sortBy=tasksCompleted&limit=20',
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/analytics/leaderboard?days=30&sortBy=tasksCompleted&limit=20',
         expect.any(Object)
       );
       expect(result.leaderboard[0].name).toBe('Test Agent');
@@ -166,15 +157,15 @@ describe('analyticsService', () => {
         },
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const result = await analyticsService.fetchBottlenecks(24);
+      const result = await analyticsService.fetchBottlenecks(24, TEST_TOKEN);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/analytics/bottlenecks?hours=24',
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/analytics/bottlenecks?hours=24',
         expect.any(Object)
       );
       expect(result.bottlenecks[0].severity).toBe('high');
@@ -223,15 +214,15 @@ describe('analyticsService', () => {
         },
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
+      mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => mockResponse,
       });
 
-      const result = await analyticsService.fetchROIMetrics('30d' as DateRange);
+      const result = await analyticsService.fetchROIMetrics('30d' as DateRange, 50, TEST_TOKEN);
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        '/api/analytics/roi?days=30&hourlyRate=50',
+      expect(mockFetch).toHaveBeenCalledWith(
+        '/api/v1/analytics/roi?days=30&hourlyRate=50',
         expect.any(Object)
       );
       expect(result.summary.roiPercentage).toBe(2400);
@@ -355,13 +346,13 @@ describe('analyticsService', () => {
         },
       };
 
-      (global.fetch as jest.Mock)
+      mockFetch
         .mockResolvedValueOnce({ ok: true, json: async () => mockOverview })
         .mockResolvedValueOnce({ ok: true, json: async () => mockLeaderboard })
         .mockResolvedValueOnce({ ok: true, json: async () => mockBottlenecks })
         .mockResolvedValueOnce({ ok: true, json: async () => mockROI });
 
-      const result = await fetchPerformanceData('30d' as DateRange);
+      const result = await fetchPerformanceData('30d' as DateRange, TEST_TOKEN);
 
       expect(result.dateRange).toBe('30d');
       expect(result.metrics.tasksCompleted.value).toBe(100);

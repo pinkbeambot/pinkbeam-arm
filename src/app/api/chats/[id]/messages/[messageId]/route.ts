@@ -1,9 +1,94 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { z } from 'zod';
 
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const updateMessageSchema = z.object({
+  is_bookmarked: z.boolean().optional(),
+});
+
+/**
+ * PATCH /api/chats/[id]/messages/[messageId]
+ * Update a message (e.g., toggle bookmark)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; messageId: string }> }
+) {
+  try {
+    const { id: chatId, messageId } = await params;
+
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
+
+    // Look up the internal user ID from the users table
+    const { data: userProfile, error: profileError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('auth_id', userId)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (profileError || !userProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 403 });
+    }
+
+    // Verify user owns this chat
+    const { data: chat, error: chatError } = await supabase
+      .from('chats')
+      .select('id')
+      .eq('id', chatId)
+      .eq('user_id', userProfile.id)
+      .eq('tenant_id', tenantId)
+      .single();
+
+    if (chatError || !chat) {
+      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+    }
+
+    const body = await request.json();
+    const parsed = updateMessageSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const updates = parsed.data;
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
+    // Update the message
+    const { data: message, error: updateError } = await supabase
+      .from('chat_messages')
+      .update(updates)
+      .eq('id', messageId)
+      .eq('chat_id', chatId)
+      .select('id, chat_id, role, content, is_bookmarked, created_at')
+      .single();
+
+    if (updateError || !message) {
+      console.error('Error updating message:', updateError);
+      return NextResponse.json(
+        { error: 'Message not found or update failed' },
+        { status: updateError ? 500 : 404 }
+      );
+    }
+
+    return NextResponse.json({ message });
+  } catch (error) {
+    console.error('Unexpected error in PATCH /api/chats/{id}/messages/{messageId}:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
 
 /**
  * @openapi
@@ -47,55 +132,30 @@ export async function DELETE(
   try {
     const { id: chatId, messageId } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
+    // Look up the internal user ID from the users table
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
+      .select('id')
+      .eq('auth_id', userId)
+      .eq('tenant_id', tenantId)
       .single();
 
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    if (profileError || !userProfile) {
+      return NextResponse.json({ error: 'User not found' }, { status: 403 });
     }
 
-    const tenantId = userProfile.tenant_id;
-    const userId = userProfile.id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const internalUserId = userProfile.id;
 
     // Verify user owns this chat
     const { data: chat, error: chatError } = await supabase
       .from('chats')
       .select('id')
       .eq('id', chatId)
-      .eq('user_id', userId)
+      .eq('user_id', internalUserId)
       .eq('tenant_id', tenantId)
       .single();
 
@@ -103,7 +163,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }
 
-    // Verify the message exists and belongs to the user
+    // Verify the message exists and belongs to the chat
     const { data: message, error: messageError } = await supabase
       .from('chat_messages')
       .select('id, role')
@@ -131,9 +191,9 @@ export async function DELETE(
       .eq('chat_id', chatId);
 
     if (deleteError) {
-      console.error('Error deleting message:', deleteError);
+      console.error('Failed to delete message:', deleteError);
       return NextResponse.json(
-        { error: 'Failed to delete message', details: deleteError.message },
+        { error: 'Failed to delete message' },
         { status: 500 }
       );
     }

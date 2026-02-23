@@ -123,7 +123,7 @@ export const testAgentConfigSchema = z.object({
 // List Templates Query
 export const listAgentTemplatesQuerySchema = z.object({
   category: z.string().optional(),
-  search: z.string().optional(),
+  search: z.string().max(200).optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(50).default(20),
 });

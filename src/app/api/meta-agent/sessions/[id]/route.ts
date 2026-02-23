@@ -5,15 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Demo tenant/user IDs for development
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 
 const historyQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(100).default(50),
@@ -31,39 +24,9 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     // Authenticate
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user profile and tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
-      .single();
-
-    // Use demo IDs if no profile (for development)
-    const tenantId = userProfile?.tenant_id || DEMO_TENANT_ID;
-    const userId = userProfile?.id || DEMO_USER_ID;
-
-    if (profileError && !process.env.NODE_ENV?.includes('development')) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    // Set tenant context
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Get session ID from params
     const { id: sessionId } = await params;
@@ -114,9 +77,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { data: commands, error: historyError } = await historyQuery;
 
     if (historyError) {
-      console.error('Error fetching command history:', historyError);
+      console.error('Failed to fetch command history:', historyError);
       return NextResponse.json(
-        { error: 'Failed to fetch command history', details: historyError.message },
+        { error: 'Failed to fetch command history' },
         { status: 500 }
       );
     }
@@ -150,39 +113,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     // Authenticate
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user profile and tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
-      .single();
-
-    // Use demo IDs if no profile (for development)
-    const tenantId = userProfile?.tenant_id || DEMO_TENANT_ID;
-    const userId = userProfile?.id || DEMO_USER_ID;
-
-    if (profileError && !process.env.NODE_ENV?.includes('development')) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    // Set tenant context
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Get session ID from params
     const { id: sessionId } = await params;
@@ -192,7 +125,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Build update object
     const updates: Record<string, unknown> = {};
-    
+
     if (body.title !== undefined) updates.title = body.title;
     if (body.status !== undefined) {
       updates.status = body.status;
@@ -215,7 +148,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating session:', error);
       return NextResponse.json(
-        { error: 'Failed to update session', details: error.message },
+        { error: 'Failed to update session' },
         { status: 500 }
       );
     }
@@ -238,39 +171,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     // Authenticate
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user profile and tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
-      .single();
-
-    // Use demo IDs if no profile (for development)
-    const tenantId = userProfile?.tenant_id || DEMO_TENANT_ID;
-    const userId = userProfile?.id || DEMO_USER_ID;
-
-    if (profileError && !process.env.NODE_ENV?.includes('development')) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    // Set tenant context
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Get session ID from params
     const { id: sessionId } = await params;
@@ -286,7 +189,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting session:', error);
       return NextResponse.json(
-        { error: 'Failed to delete session', details: error.message },
+        { error: 'Failed to delete session' },
         { status: 500 }
       );
     }

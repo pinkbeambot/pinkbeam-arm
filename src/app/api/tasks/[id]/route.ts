@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { apiDeleted, apiError } from '@/lib/api/response';
 import { updateTaskSchema } from '@/lib/validation';
+import { requirePermission } from '@/lib/rbac';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
@@ -67,47 +65,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch task with all related data
     const { data: task, error } = await supabase
@@ -143,37 +103,39 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching task:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch task', details: error.message },
+        { error: 'Failed to fetch task' },
         { status: 500 }
       );
     }
 
-    // Fetch related decisions
-    const { data: decisions } = await supabase
-      .from('decisions')
-      .select('id, title, status, confidence, proposed_at')
-      .eq('task_id', id)
-      .eq('tenant_id', tenantId)
-      .order('proposed_at', { ascending: false })
-      .limit(10);
-
-    // Fetch related escalations
-    const { data: escalations } = await supabase
-      .from('escalations')
-      .select('id, title, status, urgency, created_at')
-      .eq('task_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent activities for this task
-    const { data: activities } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('task_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    // Fetch related decisions, escalations, and activities in parallel
+    const [
+      { data: decisions },
+      { data: escalations },
+      { data: activities },
+    ] = await Promise.all([
+      supabase
+        .from('decisions')
+        .select('id, title, status, confidence, proposed_at')
+        .eq('task_id', id)
+        .eq('tenant_id', tenantId)
+        .order('proposed_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('escalations')
+        .select('id, title, status, urgency, created_at')
+        .eq('task_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('task_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
 
     return NextResponse.json({
       data: {
@@ -239,51 +201,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = updateTaskSchema.parse(body);
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase, userRole } = auth;
 
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // RBAC: Check if user can update tasks
+    const guard = requirePermission(userRole, 'tasks:update');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
     }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Check if task exists and belongs to tenant
     const { data: existingTask, error: fetchError } = await supabase
@@ -346,7 +276,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating task:', error);
       return NextResponse.json(
-        { error: 'Failed to update task', details: error.message },
+        { error: 'Failed to update task' },
         { status: 500 }
       );
     }
@@ -411,47 +341,15 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase, userRole } = auth;
+
+    // RBAC: Check if user can delete tasks (admin and owner only)
+    const guard = requirePermission(userRole, 'tasks:delete');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
     }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Check if task exists and get its status
     const { data: existingTask, error: fetchError } = await supabase
@@ -487,20 +385,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting task:', error);
       return NextResponse.json(
-        { error: 'Failed to delete task', details: error.message },
+        { error: 'Failed to delete task' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(
-      { message: 'Task deleted successfully' },
-      { status: 200 }
-    );
+    return apiDeleted({ id });
   } catch (error) {
     console.error('Unexpected error in DELETE /api/tasks/:id:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

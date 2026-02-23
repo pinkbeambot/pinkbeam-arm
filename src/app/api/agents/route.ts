@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { generateUniqueSlug } from '@/lib/api/slug';
 import { createAgentSchema, listAgentsQuerySchema } from '@/lib/validation';
+import { canCreateAgent, getTenantBilling, getSubscriptionTier } from '@/lib/billing/service';
+import { requirePermission } from '@/lib/rbac';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * @openapi
@@ -83,55 +83,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
-    }
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -155,9 +109,8 @@ export async function GET(request: NextRequest) {
         `
         *,
         parent:parent_id(id, name, avatar_url, role, status),
-        children:agents!parent_id(id, name, avatar_url, role, status),
-        current_task:current_task_id(id, title, status, priority)
-      `,
+        children:agents!parent_id(id, name, avatar_url, role, status)
+`,
         { count: 'exact' }
       )
       .eq('tenant_id', tenantId)
@@ -172,7 +125,8 @@ export async function GET(request: NextRequest) {
       dbQuery = dbQuery.eq('role', validatedQuery.role);
     }
     if (validatedQuery.search) {
-      dbQuery = dbQuery.or(`name.ilike.%${validatedQuery.search}%,description.ilike.%${validatedQuery.search}%`);
+      const searchTerm = escapeIlike(validatedQuery.search);
+      dbQuery = dbQuery.or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 
     // Execute query
@@ -181,7 +135,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching agents:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch agents', details: error.message },
+        { error: 'Failed to fetch agents' },
         { status: 500 }
       );
     }
@@ -277,57 +231,37 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = createAgentSchema.parse(body);
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase, userRole } = auth;
 
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // RBAC: Check if user can create agents
+    const guard = requirePermission(userRole, 'agents:create');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
+    // Check billing limits before creating agent
+    const canCreate = await canCreateAgent(supabase, tenantId);
+    if (!canCreate) {
+      const billing = await getTenantBilling(supabase, tenantId);
+      const tier = billing?.currentTier || 'starter';
+      const tierConfig = await getSubscriptionTier(supabase, tier);
+      const agentLimit = tierConfig?.agentLimit ?? 3;
 
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
       return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
+        {
+          error: 'Agent limit reached',
+          message: `Your ${tier} plan allows up to ${agentLimit === null ? 'unlimited' : agentLimit} agents. Please upgrade to add more agents.`,
+          code: 'AGENT_LIMIT_REACHED',
+          currentTier: tier,
+          agentLimit,
+        },
+        { status: 403 }
       );
     }
 
@@ -345,7 +279,16 @@ export async function POST(request: NextRequest) {
 
       if (parentError || !parentAgent) {
         return NextResponse.json(
-          { error: 'Parent agent not found' },
+          { error: 'Parent agent not found or belongs to a different tenant' },
+          { status: 400 }
+        );
+      }
+
+      // Enforce max hierarchy depth (matches DB constraint agents_max_depth)
+      const MAX_AGENT_DEPTH = 10;
+      if ((parentAgent.depth || 0) + 1 > MAX_AGENT_DEPTH) {
+        return NextResponse.json(
+          { error: `Agent hierarchy cannot exceed ${MAX_AGENT_DEPTH} levels deep` },
           { status: 400 }
         );
       }
@@ -355,7 +298,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate slug if not provided
-    const slug = validatedData.slug || validatedData.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    let slug: string;
+    if (validatedData.slug) {
+      slug = validatedData.slug;
+    } else {
+      try {
+        slug = await generateUniqueSlug(validatedData.name, tenantId, supabase);
+      } catch (err: unknown) {
+        if (err && typeof err === 'object' && 'error' in err && 'status' in err) {
+          const slugErr = err as { error: string; status: number };
+          return NextResponse.json({ error: slugErr.error }, { status: slugErr.status });
+        }
+        return NextResponse.json({ error: 'Failed to generate slug' }, { status: 500 });
+      }
+    }
 
     // Create the agent
     const { data: agent, error } = await supabase
@@ -385,8 +341,30 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
+      // Handle check constraint violations (hierarchy constraints)
+      if (error.code === '23514') {
+        if (error.message?.includes('agents_no_self_parent')) {
+          return NextResponse.json(
+            { error: 'An agent cannot be its own parent' },
+            { status: 400 }
+          );
+        }
+        if (error.message?.includes('agents_max_depth')) {
+          return NextResponse.json(
+            { error: 'Agent hierarchy cannot exceed 10 levels deep' },
+            { status: 400 }
+          );
+        }
+      }
+      // Handle trigger-raised exceptions (circular hierarchy, root consistency)
+      if (error.message?.includes('Circular hierarchy detected')) {
+        return NextResponse.json(
+          { error: 'Cannot create agent: this would create a circular hierarchy' },
+          { status: 400 }
+        );
+      }
       return NextResponse.json(
-        { error: 'Failed to create agent', details: error.message },
+        { error: 'Failed to create agent' },
         { status: 500 }
       );
     }

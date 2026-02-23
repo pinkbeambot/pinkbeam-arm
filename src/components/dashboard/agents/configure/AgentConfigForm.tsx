@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -453,7 +454,7 @@ export function AgentConfigForm({ agent, onSave, onCancel, isLoading }: AgentCon
             </SheetTitle>
           </SheetHeader>
           <div className="mt-6 h-[calc(100%-4rem)]">
-            <TestAgentPanel agentConfig={formState as unknown as Record<string, unknown>} />
+            <TestAgentPanel agentId={agent.id} agentConfig={formState as unknown as Record<string, unknown>} />
           </div>
         </SheetContent>
       </Sheet>

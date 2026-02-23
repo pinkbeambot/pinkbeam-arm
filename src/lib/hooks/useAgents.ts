@@ -3,14 +3,28 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
+
+import { ApiError } from '@/lib/errors';
+import { createAgentSchema, updateAgentSchema } from '@/lib/validation';
+import { useTenant } from '@/lib/hooks/useTenant';
 import type { Agent, RealtimeChangePayload, CreateAgentInput } from '@/types';
 
-const API_BASE = '/api/agents';
+const API_BASE = '/api/v1/agents';
+const REALTIME_DEBOUNCE_MS = 100;
+
+type PendingChange<T> = {
+  type: 'INSERT' | 'UPDATE' | 'DELETE';
+  payload: RealtimeChangePayload<T>;
+};
 
 /**
  * Hook to subscribe to real-time agent changes via API
  * Uses server-side API routes that properly set tenant context for RLS
  * Falls back to realtime updates via Supabase subscriptions
+ * 
+ * Realtime updates are batched in 100ms windows to prevent excessive re-renders
+ * when multiple changes arrive rapidly.
  */
 export function useAgentsRealtime(tenantId: string | null) {
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -19,6 +33,10 @@ export function useAgentsRealtime(tenantId: string | null) {
   const { session, user } = useAuth();
   const supabase = createClient();
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  
+  // Refs for debouncing realtime updates
+  const pendingChangesRef = useRef<PendingChange<Agent>[]>([]);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Fetch agents via API route (properly handles auth and RLS)
   const fetchAgents = useCallback(async () => {
@@ -41,19 +59,60 @@ export function useAgentsRealtime(tenantId: string | null) {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch agents: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_FETCH_FAILED', errorData.error || `Failed to fetch agents: ${response.status}`);
       }
 
       const result = await response.json();
       setAgents(result.data || []);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agents';
-      setError(new Error(errorMessage));
+      setError(err instanceof ApiError ? err : new Error(errorMessage));
       console.error('Error fetching agents:', err);
     } finally {
       setLoading(false);
     }
   }, [tenantId, session?.access_token]);
+
+  // Flush pending changes after debounce period
+  const flushPendingChanges = useCallback(() => {
+    if (pendingChangesRef.current.length === 0) return;
+    
+    const changes = [...pendingChangesRef.current];
+    pendingChangesRef.current = [];
+    
+    setAgents((current: Agent[]) => {
+      let result: Agent[] = current;
+      
+      for (const change of changes) {
+        const payload = change.payload;
+        
+        if (payload.eventType === 'INSERT') {
+          const newAgent = payload.new;
+          if (newAgent) {
+            // Check if already exists (avoid duplicates from rapid updates)
+            const exists = result.some(agent => agent.id === newAgent.id);
+            if (!exists) {
+              result = [newAgent, ...result];
+            }
+          }
+        } else if (payload.eventType === 'UPDATE') {
+          const updatedAgent = payload.new;
+          if (updatedAgent) {
+            result = result.map(agent => 
+              agent.id === updatedAgent.id ? updatedAgent : agent
+            );
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const deletedAgent = payload.old;
+          if (deletedAgent) {
+            result = result.filter(agent => agent.id !== deletedAgent.id);
+          }
+        }
+      }
+      
+      return result;
+    });
+  }, []);
 
   // Set up real-time subscription for live updates
   useEffect(() => {
@@ -66,30 +125,33 @@ export function useAgentsRealtime(tenantId: string | null) {
     // Fetch initial data via API
     fetchAgents();
 
-    // Subscribe to realtime changes
+    // Subscribe to realtime changes with debouncing
     const channel = supabase
       .channel(`agents:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'agents',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload: RealtimeChangePayload<Agent>) => {
-          setAgents(current => {
-            if (payload.eventType === 'INSERT') {
-              return payload.new ? [payload.new, ...current] : current;
-            } else if (payload.eventType === 'UPDATE') {
-              return current.map(agent => 
-                agent.id === payload.new?.id ? payload.new : agent
-              );
-            } else if (payload.eventType === 'DELETE') {
-              return current.filter(agent => agent.id !== payload.old?.id);
-            }
-            return current;
+        (payload) => {
+          const change = payload as unknown as RealtimeChangePayload<Agent>;
+          // Queue the change
+          pendingChangesRef.current.push({
+            type: change.eventType,
+            payload: change,
           });
+          
+          // Clear existing timer and set new one
+          if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+          }
+          
+          debounceTimerRef.current = setTimeout(() => {
+            flushPendingChanges();
+          }, REALTIME_DEBOUNCE_MS);
         }
       )
       .subscribe();
@@ -97,12 +159,18 @@ export function useAgentsRealtime(tenantId: string | null) {
     channelRef.current = channel;
 
     return () => {
+      // Flush any pending changes before cleanup
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+      flushPendingChanges();
+      
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
       }
     };
-  }, [tenantId, user?.id, supabase, fetchAgents]);
+  }, [tenantId, user?.id, supabase, fetchAgents, flushPendingChanges]);
 
   return { agents, loading, error, refetch: fetchAgents };
 }
@@ -139,14 +207,14 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to fetch agent: ${response.status}`);
+          throw new ApiError(response.status, 'AGENT_FETCH_FAILED', errorData.error || `Failed to fetch agent: ${response.status}`);
         }
 
         const result = await response.json();
         setAgent(result.data);
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch agent';
-        setError(new Error(errorMessage));
+        setError(err instanceof ApiError ? err : new Error(errorMessage));
       } finally {
         setLoading(false);
       }
@@ -158,17 +226,18 @@ export function useAgentRealtime(agentId: string | null, tenantId: string | null
     const channel = supabase
       .channel(`agent:${agentId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'agents',
           filter: `id=eq.${agentId}`,
         },
-        (payload: RealtimeChangePayload<Agent>) => {
-          if (payload.eventType === 'UPDATE' && payload.new) {
-            setAgent(current => ({ ...current!, ...payload.new }));
-          } else if (payload.eventType === 'DELETE') {
+        (payload) => {
+          const change = payload as unknown as RealtimeChangePayload<Agent>;
+          if (change.eventType === 'UPDATE' && change.new) {
+            setAgent(current => current ? { ...current, ...change.new! } : change.new!);
+          } else if (change.eventType === 'DELETE') {
             setAgent(null);
           }
         }
@@ -201,10 +270,13 @@ export function useCreateAgent() {
       throw new Error('Not authenticated');
     }
 
+    // Validate input before sending to API (tenant_id is set server-side)
+    createAgentSchema.parse(agentData);
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(API_BASE, {
         method: 'POST',
         headers: {
@@ -216,13 +288,13 @@ export function useCreateAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to create agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_CREATE_FAILED', errorData.error || `Failed to create agent: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to create agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to create agent');
       setError(error);
       throw error;
     } finally {
@@ -246,10 +318,13 @@ export function useUpdateAgent() {
       throw new Error('Not authenticated');
     }
 
+    // Validate known fields before sending to API
+    updateAgentSchema.parse(updates);
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await fetch(`${API_BASE}/${agentId}`, {
         method: 'PATCH',
         headers: {
@@ -261,13 +336,13 @@ export function useUpdateAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to update agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_UPDATE_FAILED', errorData.error || `Failed to update agent: ${response.status}`);
       }
 
       const result = await response.json();
       return result.data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to update agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to update agent');
       setError(error);
       throw error;
     } finally {
@@ -305,10 +380,10 @@ export function useDeleteAgent() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to delete agent: ${response.status}`);
+        throw new ApiError(response.status, 'AGENT_DELETE_FAILED', errorData.error || `Failed to delete agent: ${response.status}`);
       }
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to delete agent');
+      const error = err instanceof ApiError ? err : new Error('Failed to delete agent');
       setError(error);
       throw error;
     } finally {
@@ -319,14 +394,203 @@ export function useDeleteAgent() {
   return { deleteAgent, loading, error };
 }
 
-// Demo tenant ID - in production, this comes from auth context
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
+/**
+ * Hook to clone an agent via API
+ */
+export function useCloneAgent() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const cloneAgent = useCallback(async (agentId: string, options?: { name?: string; parent_id?: string | null }) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/${agentId}/clone`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(options || {}),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'AGENT_CLONE_FAILED', errorData.error || `Failed to clone agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error('Failed to clone agent');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  return { cloneAgent, loading, error };
+}
+
+/**
+ * Hook to export an agent's configuration via API
+ */
+export function useExportAgent() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const exportAgent = useCallback(async (agentId: string) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/${agentId}/export`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'AGENT_EXPORT_FAILED', errorData.error || `Failed to export agent: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error('Failed to export agent');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  return { exportAgent, loading, error };
+}
+
+/**
+ * Hook to import an agent from exported configuration via API
+ */
+export function useImportAgent() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const importAgent = useCallback(async (config: Record<string, unknown>, overrides?: { name?: string; parent_id?: string }) => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/import`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          version: '1.0',
+          config,
+          overrides,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'AGENT_IMPORT_FAILED', errorData.error || `Failed to import agent: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error('Failed to import agent');
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  return { importAgent, loading, error };
+}
+
+/**
+ * Hook to perform bulk operations on multiple agents via API
+ */
+export function useBulkAgentActions() {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { session } = useAuth();
+
+  const executeBulkAction = useCallback(async (agentIds: string[], action: 'pause' | 'resume' | 'delete') => {
+    if (!session?.access_token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`${API_BASE}/batch`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ agent_ids: agentIds, action }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new ApiError(response.status, 'BULK_ACTION_FAILED', errorData.error || `Bulk ${action} failed: ${response.status}`);
+      }
+
+      const result = await response.json();
+      return result.data as {
+        action: string;
+        total: number;
+        succeeded: number;
+        failed: number;
+        results: { id: string; success: boolean; error?: string }[];
+      };
+    } catch (err) {
+      const error = err instanceof ApiError ? err : new Error(`Failed to ${action} agents`);
+      setError(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [session?.access_token]);
+
+  const bulkPause = useCallback((agentIds: string[]) => executeBulkAction(agentIds, 'pause'), [executeBulkAction]);
+  const bulkResume = useCallback((agentIds: string[]) => executeBulkAction(agentIds, 'resume'), [executeBulkAction]);
+  const bulkDelete = useCallback((agentIds: string[]) => executeBulkAction(agentIds, 'delete'), [executeBulkAction]);
+
+  return { executeBulkAction, bulkPause, bulkResume, bulkDelete, loading, error };
+}
 
 /**
  * Convenience hook for fetching all agents
- * Uses the demo tenant ID for development
+ * Uses useTenant() to get the real tenant ID from auth context
  */
 export function useAgents() {
-  const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { tenantId } = useTenant();
+  const { agents, loading, error, refetch } = useAgentsRealtime(tenantId);
   return { agents, isLoading: loading, error, refetch };
 }

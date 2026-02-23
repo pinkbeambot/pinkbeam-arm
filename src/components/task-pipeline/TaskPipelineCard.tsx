@@ -118,6 +118,9 @@ export function TaskPipelineCard({
   isDragging = false,
   isNew = false,
   showProgress = true,
+  columnId,
+  isKeyboardGrabbed = false,
+  keyboardDragHandlers,
 }: TaskPipelineCardProps) {
   const priority = priorityConfig[task.priority];
   const hasDragHandle = !isDragging;
@@ -132,16 +135,55 @@ export function TaskPipelineCard({
     onDelete?.(task);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!keyboardDragHandlers || !columnId) return;
+
+    if (isKeyboardGrabbed) {
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          keyboardDragHandlers.onKeyboardMove('left');
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          keyboardDragHandlers.onKeyboardMove('right');
+          break;
+        case ' ':
+        case 'Enter':
+          e.preventDefault();
+          keyboardDragHandlers.onKeyboardDrop();
+          break;
+        case 'Escape':
+          e.preventDefault();
+          keyboardDragHandlers.onKeyboardCancel();
+          break;
+      }
+    } else if (e.key === ' ' || e.key === 'Enter') {
+      // Only grab on Space; Enter opens the task
+      if (e.key === ' ') {
+        e.preventDefault();
+        keyboardDragHandlers.onKeyboardGrab(task.id, task.title, columnId);
+      }
+    }
+  };
+
   return (
     <motion.div
       layout
+      tabIndex={0}
+      role="article"
+      aria-roledescription="draggable task"
+      aria-grabbed={isKeyboardGrabbed || undefined}
+      aria-label={`${task.title}, ${priority.label} priority${task.assigned_agent ? `, assigned to ${task.assigned_agent.name}` : ', unassigned'}`}
+      onClick={handleClick}
+      onKeyDown={handleKeyDown}
       initial={isNew ? { opacity: 0, y: -20, scale: 0.95 } : false}
-      animate={{ 
-        opacity: isDragging ? 0.5 : 1, 
-        y: 0, 
+      animate={{
+        opacity: isDragging ? 0.5 : 1,
+        y: 0,
         scale: isDragging ? 1.02 : 1,
-        boxShadow: isDragging 
-          ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' 
+        boxShadow: isDragging
+          ? '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)'
           : '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)'
       }}
       transition={{
@@ -152,9 +194,11 @@ export function TaskPipelineCard({
       className={cn(
         'group relative bg-card border rounded-lg p-3 cursor-pointer',
         'hover:border-primary/50 hover:shadow-md transition-colors duration-200',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         'border-l-4',
         task.isUpdating && 'ring-2 ring-primary/30',
         isNew && 'ring-2 ring-green-400/50',
+        isKeyboardGrabbed && 'ring-2 ring-primary shadow-lg scale-[1.02]',
       )}
       style={{ borderLeftColor: priority.color }}
     >

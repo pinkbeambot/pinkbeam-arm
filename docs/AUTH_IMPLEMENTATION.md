@@ -1,3 +1,14 @@
+---
+title: "Authentication Implementation"
+type: implementation
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: ENG-BE
+tags: [implementation, auth, backend, critical]
+aliases: ["Auth Implementation", "JWT Auth"]
+---
+
 # Authentication Middleware Implementation Summary
 
 ## Task Completed: #26 - Authentication Middleware & Tenant Context
@@ -171,3 +182,11 @@ Existing API routes can be refactored to use the new auth pattern:
 4. Use response helpers for consistent formatting
 
 Example refactor of `/api/agents/route.ts` is provided in the codebase pattern.
+
+---
+
+## Related Documentation
+
+- [[ARCHITECTURE]] — System architecture with auth design
+- [[API]] — API endpoints using this auth middleware
+- [[TESTING-STANDARDS]] — Testing requirements for critical auth paths

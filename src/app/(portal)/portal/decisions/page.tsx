@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { DecisionList } from '@/components/dashboard/decisions/DecisionList';
@@ -9,11 +10,11 @@ import { DecisionStats } from '@/components/dashboard/decisions/DecisionStats';
 import { DecisionFilters, type ConfidenceLevel, type DecisionType } from '@/components/dashboard/decisions/DecisionFilters';
 import { useDecisionsRealtime, useOverrideDecision, useExportDecisions } from '@/lib/hooks/useDecisions';
 import { useAgentsRealtime } from '@/lib/hooks/useAgents';
+import { useTenant } from '@/lib/hooks/useTenant';
+import { useRBAC } from '@/lib/hooks';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import type { Decision, DecisionStatus } from '@/types';
-
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 const CONFIDENCE_THRESHOLDS: Record<ConfidenceLevel, number | undefined> = {
   all: undefined, high: 0.9, medium: 0.7, low: 0.5,
@@ -40,7 +41,9 @@ function getDateRange(range: 'all' | 'today' | 'week' | 'month'): { from?: strin
 }
 
 export default function DecisionsPage() {
+  const router = useRouter();
   const { toast } = useToast();
+  const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [agentFilter, setAgentFilter] = useState<string | 'all'>('all');
@@ -55,7 +58,7 @@ export default function DecisionsPage() {
   const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
 
-  const { agents, loading: agentsLoading } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { agents, loading: agentsLoading } = useAgentsRealtime(tenantId);
   const dateRangeParams = useMemo(() => getDateRange(dateRange), [dateRange]);
 
   const { decisions, loading: decisionsLoading, error, refetch, pagination } = useDecisionsRealtime({
@@ -71,6 +74,14 @@ export default function DecisionsPage() {
 
   const { overrideDecision, loading: overrideLoading } = useOverrideDecision();
   const { exportDecisions } = useExportDecisions();
+
+  // RBAC permissions
+  const { can } = useRBAC();
+  const canOverrideDecisions = can('decisions:override');
+
+  const showPermissionDenied = useCallback(() => {
+    toast({ title: 'Permission Denied', description: 'You do not have permission to override decisions.', variant: 'destructive' });
+  }, [toast]);
 
   const handleSelectDecision = useCallback((decision: Decision) => {
     setSelectedDecision(decision);
@@ -94,21 +105,21 @@ export default function DecisionsPage() {
   }, [decisions, exportDecisions, toast]);
 
   const handleViewTask = useCallback((taskId: string) => {
-    toast({ title: 'Navigate to Task', description: `Opening task ${taskId}...` });
-  }, [toast]);
+    router.push(`/portal/tasks?taskId=${taskId}`);
+  }, [router]);
 
-  const handleViewActivity = useCallback((decisionId: string) => {
-    toast({ title: 'View in Activity', description: 'Opening activity feed...' });
-  }, [toast]);
+  const handleViewActivity = useCallback((_decisionId: string) => {
+    router.push('/portal/activity');
+  }, [router]);
 
   const handlePageChange = useCallback((newPage: number) => { setPage(newPage); }, []);
 
-  const handleFilterChange = useCallback((setter: (value: any) => void) => (value: any) => {
+  const handleFilterChange = useCallback(<T,>(setter: (value: T) => void) => (value: T) => {
     setter(value);
     setPage(1);
   }, []);
 
-  const loading = decisionsLoading || agentsLoading;
+  const loading = decisionsLoading || agentsLoading || tenantLoading;
 
   return (
     <DashboardLayout>
@@ -118,6 +129,7 @@ export default function DecisionsPage() {
         <div className="mb-6">
           <DecisionFilters
             agents={agents}
+            decisions={decisions}
             searchQuery={searchQuery}
             onSearchChange={handleFilterChange(setSearchQuery)}
             agentFilter={agentFilter}
@@ -138,9 +150,11 @@ export default function DecisionsPage() {
           />
         </div>
 
-        {error && (
+        {(tenantError || error) && (
           <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
-            <p className="text-red-800 dark:text-red-200">Failed to load decisions: {error.message}</p>
+            <p className="text-red-800 dark:text-red-200">
+              {tenantError ? `Tenant error: ${tenantError.message}` : `Failed to load decisions: ${error?.message}`}
+            </p>
             <button onClick={refetch} className="mt-2 text-sm text-red-600 dark:text-red-400 underline">Retry</button>
           </div>
         )}
@@ -160,7 +174,7 @@ export default function DecisionsPage() {
               loading={false}
               selectedDecisionId={selectedDecision?.id}
               onSelectDecision={handleSelectDecision}
-              onOverrideDecision={(decision) => handleSelectDecision(decision)}
+              onOverrideDecision={canOverrideDecisions ? (decision) => handleSelectDecision(decision) : showPermissionDenied}
               onViewTask={handleViewTask}
               searchQuery={searchQuery}
               agentFilter={agentFilter}
@@ -194,7 +208,7 @@ export default function DecisionsPage() {
           decision={selectedDecision}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onOverride={handleOverrideDecision}
+          onOverride={canOverrideDecisions ? handleOverrideDecision : async () => { showPermissionDenied(); }}
           onViewTask={handleViewTask}
           onViewActivity={handleViewActivity}
           loading={overrideLoading}

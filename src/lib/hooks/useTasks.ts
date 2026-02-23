@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { ApiError } from '@/lib/errors';
+import { createTaskSchema, updateTaskSchema } from '@/lib/validation';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type { Task, TaskStatus, TaskPriority, RealtimeChangePayload } from '@/types';
 
 interface UseTasksOptions {
@@ -104,7 +107,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/tasks?${params}`, {
+      const response = await fetch(`/api/v1/tasks?${params}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -138,9 +141,9 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
     const channel = supabase
       .channel('tasks_changes')
       .on(
-        'postgres_changes' as const,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'tasks',
         },
@@ -153,7 +156,7 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
               if (
                 newTask &&
                 (!status || newTask.status === status) &&
-                (!assignee_id || newTask.assigned_agent_id === assignee_id) &&
+                (!assignee_id || newTask.assignee_id === assignee_id) &&
                 (!priority || newTask.priority === priority)
               ) {
                 return [newTask, ...currentTasks];
@@ -186,52 +189,80 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
 
   // Create task
   const createTask = async (task: CreateTaskInput): Promise<Task> => {
+    // Validate input before sending to API
+    createTaskSchema.parse(task);
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(task),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to create task');
+    try {
+      const response = await fetch('/api/v1/tasks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(task),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create task');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
-
-    const result = await response.json();
-    return result.data;
   };
 
   // Update task
   const updateTask = async (id: string, updates: UpdateTaskInput): Promise<Task> => {
+    // Validate known fields before sending to API
+    updateTaskSchema.parse(updates);
+
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify(updates),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to update task');
+    try {
+      const response = await fetch(`/api/v1/tasks/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify(updates),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update task');
+      }
+
+      const result = await response.json();
+      return result.data;
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
-
-    const result = await response.json();
-    return result.data;
   };
 
   // Delete task
@@ -241,20 +272,31 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/tasks/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to delete task');
+    try {
+      const response = await fetch(`/api/v1/tasks/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new ApiError(response.status, 'TASK_DELETE_FAILED', errorData.error || 'Failed to delete task');
+      }
+
+      // Remove from local state
+      setTasks((current) => current.filter((t) => t.id !== id));
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
-
-    // Remove from local state
-    setTasks((current) => current.filter((t) => t.id !== id));
   };
 
   // Add dependency
@@ -268,21 +310,32 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({
-        depends_on_task_id: dependsOnTaskId,
-        dependency_type: type,
-      }),
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to add dependency');
+    try {
+      const response = await fetch(`/api/v1/tasks/${taskId}/dependencies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          depends_on_task_id: dependsOnTaskId,
+          dependency_type: type,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to add dependency');
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
   };
 
@@ -293,19 +346,30 @@ export function useTasks(options: UseTasksOptions = {}): UseTasksReturn {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(
-      `/api/tasks/${taskId}/dependencies?dependency_id=${dependencyId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      }
-    );
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Failed to remove dependency');
+    try {
+      const response = await fetch(
+        `/api/v1/tasks/${taskId}/dependencies?dependency_id=${dependencyId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          signal: controller.signal,
+        }
+      );
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove dependency');
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      throw err;
     }
   };
 
@@ -346,7 +410,7 @@ export function useTask(taskId: string | null) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/tasks/${taskId}`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
@@ -378,9 +442,9 @@ export function useTask(taskId: string | null) {
     const channel = supabase
       .channel(`task_${taskId}`)
       .on(
-        'postgres_changes' as const,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: 'UPDATE',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.UPDATE,
           schema: 'public',
           table: 'tasks',
           filter: `id=eq.${taskId}`,
@@ -410,9 +474,17 @@ export function useTask(taskId: string | null) {
 /**
  * Hook for task dependencies
  */
+interface TaskDependencyRow {
+  id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: 'blocks' | 'requires' | 'optional';
+  created_at: string;
+}
+
 export function useTaskDependencies(taskId: string | null) {
-  const [dependencies, setDependencies] = useState<any[]>([]);
-  const [dependents, setDependents] = useState<any[]>([]);
+  const [dependencies, setDependencies] = useState<TaskDependencyRow[]>([]);
+  const [dependents, setDependents] = useState<TaskDependencyRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -430,7 +502,7 @@ export function useTaskDependencies(taskId: string | null) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/tasks/${taskId}/dependencies`, {
+      const response = await fetch(`/api/v1/tasks/${taskId}/dependencies`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },

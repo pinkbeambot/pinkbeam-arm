@@ -1,6 +1,17 @@
+---
+title: "Agent Roles & Testing Enforcement"
+type: process
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [process, testing, core, agents]
+aliases: ["Agent Roles", "Testing Enforcement"]
+---
+
 # Agent Roles & Testing Enforcement
 
-**Updated:** 2026-02-13  
+**Updated:** 2026-02-13
 **Status:** Active and Enforced
 
 ---
@@ -148,14 +159,20 @@ Before submitting PR:
 ```
 docs/
 ├── TESTING-STANDARDS.md     # Comprehensive testing guide
-├── CTO-IDENTITY.md          # CTO role with testing enforcement
-├── ENG-BE-IDENTITY.md       # Backend engineer with testing
-├── ENG-FE-IDENTITY.md       # Frontend engineer with testing
 ├── DEVELOPMENT-PROCESS.md   # Updated with testing ownership
 └── AGENT-ROLES.md           # This file
 ```
 
 ---
 
-*Testing standards established by: VALIS (CEO)*  
+*Testing standards established by: VALIS (CEO)*
 *Enforcement begins: Immediately*
+
+---
+
+## Related Documentation
+
+- [[TESTING-STANDARDS]] — Comprehensive testing guide referenced by this document
+- [[DEVELOPMENT-PROCESS]] — Development process including testing ownership
+- [[E2E-TEST-PLAN]] — E2E test strategy and implementation plan
+- [[AGENT-PROTOCOL]] — Agent communication protocol

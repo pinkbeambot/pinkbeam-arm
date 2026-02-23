@@ -1,33 +1,28 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useCallback, useEffect } from 'react';
 import { 
   Brain, 
   Search, 
   Filter, 
   X, 
-  ChevronDown,
   ArrowUpDown,
   Download,
   FileJson,
   FileSpreadsheet,
-  Calendar,
-  User,
-  Gauge,
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  MoreHorizontal,
-  Eye,
-  Pencil,
-  History
+  Save,
+  Trash2,
+  Bookmark
 } from 'lucide-react';
-import { cn, formatRelativeTime, formatDateTime, getInitials, getAvatarColor } from '@/lib/utils';
+import { cn, formatRelativeTime, formatDateTime } from '@/lib/utils';
 import type { Decision, Agent, DecisionStatus } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,51 +33,36 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { DateRangeFilter, type DateRange, DATE_RANGE_OPTIONS } from './DateRangeFilter';
+import { AgentFilter } from './AgentFilter';
+import { ConfidenceFilter, type ConfidenceLevel, CONFIDENCE_OPTIONS } from './ConfidenceFilter';
 
-export type ConfidenceLevel = 'all' | 'high' | 'medium' | 'low';
 export type DecisionType = 'all' | 'proposed' | 'approved' | 'rejected' | 'overridden' | 'executed';
 
-interface DecisionFiltersProps {
-  agents: Agent[];
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
-  agentFilter: string | 'all';
-  onAgentFilterChange: (agent: string | 'all') => void;
-  confidenceFilter: ConfidenceLevel;
-  onConfidenceFilterChange: (level: ConfidenceLevel) => void;
-  typeFilter: DecisionType;
-  onTypeFilterChange: (type: DecisionType) => void;
-  dateRange: 'all' | 'today' | 'week' | 'month';
-  onDateRangeChange: (range: 'all' | 'today' | 'week' | 'month') => void;
-  sortField: 'created_at' | 'confidence' | 'title';
-  onSortFieldChange: (field: 'created_at' | 'confidence' | 'title') => void;
-  sortOrder: 'asc' | 'desc';
-  onSortOrderChange: (order: 'asc' | 'desc') => void;
-  totalCount: number;
-  filteredCount: number;
-  onExport: (format: 'csv' | 'json') => void;
+export interface FilterPreset {
+  name: string;
+  filters: {
+    searchQuery: string;
+    agentFilter: string | 'all';
+    confidenceFilter: ConfidenceLevel;
+    typeFilter: DecisionType;
+    dateRange: DateRange;
+    sortField: 'created_at' | 'confidence' | 'title';
+    sortOrder: 'asc' | 'desc';
+  };
+  createdAt: string;
 }
 
-const CONFIDENCE_OPTIONS: { value: ConfidenceLevel; label: string; color: string; min: number; max: number }[] = [
-  { value: 'all', label: 'All Levels', color: 'bg-gray-500', min: 0, max: 100 },
-  { value: 'high', label: 'High (>80%)', color: 'bg-green-500', min: 80, max: 100 },
-  { value: 'medium', label: 'Medium (50-80%)', color: 'bg-amber-500', min: 50, max: 80 },
-  { value: 'low', label: 'Low (<50%)', color: 'bg-red-500', min: 0, max: 50 },
-];
+const PRESETS_STORAGE_KEY = 'decision-filter-presets';
 
 const TYPE_OPTIONS: { value: DecisionType; label: string; color: string }[] = [
   { value: 'all', label: 'All Types', color: 'bg-gray-500' },
@@ -93,21 +73,96 @@ const TYPE_OPTIONS: { value: DecisionType; label: string; color: string }[] = [
   { value: 'executed', label: 'Executed', color: 'bg-pink-500' },
 ];
 
-const DATE_RANGE_OPTIONS: { value: 'all' | 'today' | 'week' | 'month'; label: string }[] = [
-  { value: 'all', label: 'All Time' },
-  { value: 'today', label: 'Today' },
-  { value: 'week', label: 'Last 7 Days' },
-  { value: 'month', label: 'Last 30 Days' },
-];
-
 const SORT_OPTIONS: { value: 'created_at' | 'confidence' | 'title'; label: string }[] = [
   { value: 'created_at', label: 'Decision Date' },
   { value: 'confidence', label: 'Confidence Score' },
   { value: 'title', label: 'Title' },
 ];
 
+interface DecisionFiltersProps {
+  agents: Agent[];
+  decisions: Decision[];
+  searchQuery: string;
+  onSearchChange: (query: string) => void;
+  agentFilter: string | 'all';
+  onAgentFilterChange: (agent: string | 'all') => void;
+  confidenceFilter: ConfidenceLevel;
+  onConfidenceFilterChange: (level: ConfidenceLevel) => void;
+  typeFilter: DecisionType;
+  onTypeFilterChange: (type: DecisionType) => void;
+  dateRange: DateRange;
+  onDateRangeChange: (range: DateRange) => void;
+  sortField: 'created_at' | 'confidence' | 'title';
+  onSortFieldChange: (field: 'created_at' | 'confidence' | 'title') => void;
+  sortOrder: 'asc' | 'desc';
+  onSortOrderChange: (order: 'asc' | 'desc') => void;
+  totalCount: number;
+  filteredCount: number;
+  onExport: (format: 'csv' | 'json') => void;
+}
+
+// LocalStorage helper functions for presets
+export function savePreset(name: string, filters: FilterPreset['filters']): void {
+  if (typeof window === 'undefined') return;
+  
+  const presets = loadPresets();
+  const existingIndex = presets.findIndex(p => p.name === name);
+  
+  const newPreset: FilterPreset = {
+    name,
+    filters,
+    createdAt: new Date().toISOString(),
+  };
+  
+  if (existingIndex >= 0) {
+    presets[existingIndex] = newPreset;
+  } else {
+    presets.push(newPreset);
+  }
+  
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+export function loadPresets(): FilterPreset[] {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const stored = localStorage.getItem(PRESETS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function deletePreset(name: string): void {
+  if (typeof window === 'undefined') return;
+  
+  const presets = loadPresets().filter(p => p.name !== name);
+  localStorage.setItem(PRESETS_STORAGE_KEY, JSON.stringify(presets));
+}
+
+const exportToCSV = (decisions: Decision[]) => {
+  const headers = ['Title', 'Agent', 'Status', 'Confidence', 'Created'];
+  const rows = decisions.map(d => [
+    d.title,
+    d.agent?.name || d.agent_id,
+    d.status,
+    d.confidence,
+    d.created_at
+  ]);
+  const csv = [headers, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `decisions-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
+
 export function DecisionFilters({
   agents,
+  decisions,
   searchQuery,
   onSearchChange,
   agentFilter,
@@ -126,6 +181,54 @@ export function DecisionFilters({
   filteredCount,
   onExport,
 }: DecisionFiltersProps) {
+  // Preset state
+  const [presets, setPresets] = useState<FilterPreset[]>([]);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  // Load presets on mount
+  useEffect(() => {
+    setPresets(loadPresets());
+  }, []);
+
+  // Save current filters as preset
+  const handleSavePreset = useCallback(() => {
+    if (!presetName.trim()) return;
+    
+    const filters: FilterPreset['filters'] = {
+      searchQuery,
+      agentFilter,
+      confidenceFilter,
+      typeFilter,
+      dateRange,
+      sortField,
+      sortOrder,
+    };
+    
+    savePreset(presetName.trim(), filters);
+    setPresets(loadPresets());
+    setSaveDialogOpen(false);
+    setPresetName('');
+  }, [presetName, searchQuery, agentFilter, confidenceFilter, typeFilter, dateRange, sortField, sortOrder]);
+
+  // Load a preset
+  const handleLoadPreset = useCallback((preset: FilterPreset) => {
+    onSearchChange(preset.filters.searchQuery);
+    onAgentFilterChange(preset.filters.agentFilter);
+    onConfidenceFilterChange(preset.filters.confidenceFilter);
+    onTypeFilterChange(preset.filters.typeFilter);
+    onDateRangeChange(preset.filters.dateRange);
+    onSortFieldChange(preset.filters.sortField);
+    onSortOrderChange(preset.filters.sortOrder);
+  }, [onSearchChange, onAgentFilterChange, onConfidenceFilterChange, onTypeFilterChange, onDateRangeChange, onSortFieldChange, onSortOrderChange]);
+
+  // Delete a preset
+  const handleDeletePreset = useCallback((name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deletePreset(name);
+    setPresets(loadPresets());
+  }, []);
+
   const activeFiltersCount = [
     agentFilter !== 'all',
     confidenceFilter !== 'all',
@@ -168,80 +271,17 @@ export function DecisionFilters({
         </div>
 
         {/* Agent Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <User className="h-4 w-4" />
-              <span>Agent</span>
-              {agentFilter !== 'all' && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  1
-                </Badge>
-              )}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            <DropdownMenuLabel>Filter by Agent</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              checked={agentFilter === 'all'}
-              onCheckedChange={() => onAgentFilterChange('all')}
-            >
-              All Agents
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuSeparator />
-            {agents.map((agent) => (
-              <DropdownMenuCheckboxItem
-                key={agent.id}
-                checked={agentFilter === agent.id}
-                onCheckedChange={() => onAgentFilterChange(agent.id)}
-              >
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage src={agent.avatar_url || undefined} />
-                    <AvatarFallback className="text-[8px]">
-                      {getInitials(agent.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  {agent.name}
-                </div>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <AgentFilter
+          agents={agents}
+          agentFilter={agentFilter}
+          onAgentFilterChange={onAgentFilterChange}
+        />
 
         {/* Confidence Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Gauge className="h-4 w-4" />
-              <span>Confidence</span>
-              {confidenceFilter !== 'all' && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  1
-                </Badge>
-              )}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuLabel>Filter by Confidence</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {CONFIDENCE_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                checked={confidenceFilter === option.value}
-                onCheckedChange={() => onConfidenceFilterChange(option.value)}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={cn('w-2 h-2 rounded-full', option.color)} />
-                  {option.label}
-                </div>
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <ConfidenceFilter
+          confidenceFilter={confidenceFilter}
+          onConfidenceFilterChange={onConfidenceFilterChange}
+        />
 
         {/* Type Filter */}
         <DropdownMenu>
@@ -254,7 +294,6 @@ export function DecisionFilters({
                   1
                 </Badge>
               )}
-              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -276,33 +315,10 @@ export function DecisionFilters({
         </DropdownMenu>
 
         {/* Date Range Filter */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="gap-2">
-              <Calendar className="h-4 w-4" />
-              <span>Date</span>
-              {dateRange !== 'all' && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  1
-                </Badge>
-              )}
-              <ChevronDown className="h-3 w-3 ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuLabel>Filter by Date</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            {DATE_RANGE_OPTIONS.map((option) => (
-              <DropdownMenuCheckboxItem
-                key={option.value}
-                checked={dateRange === option.value}
-                onCheckedChange={() => onDateRangeChange(option.value)}
-              >
-                {option.label}
-              </DropdownMenuCheckboxItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <DateRangeFilter
+          dateRange={dateRange}
+          onDateRangeChange={onDateRangeChange}
+        />
 
         {/* Sort */}
         <DropdownMenu>
@@ -310,7 +326,6 @@ export function DecisionFilters({
             <Button variant="outline" className="gap-2">
               <ArrowUpDown className="h-4 w-4" />
               <span>Sort</span>
-              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">
@@ -341,13 +356,22 @@ export function DecisionFilters({
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Export CSV */}
+        <Button
+          variant="outline"
+          className="gap-2"
+          onClick={() => exportToCSV(decisions)}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          <span>Export CSV</span>
+        </Button>
+
         {/* Export */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               <span>Export</span>
-              <ChevronDown className="h-3 w-3 ml-1" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-40">
@@ -363,6 +387,80 @@ export function DecisionFilters({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Save Preset Button */}
+        <Dialog open={saveDialogOpen} onOpenChange={setSaveDialogOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline" className="gap-2">
+              <Save className="h-4 w-4" />
+              <span>Save Preset</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Save Filter Preset</DialogTitle>
+              <DialogDescription>
+                Save your current filter configuration for quick access later.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="preset-name">Preset Name</Label>
+                <Input
+                  id="preset-name"
+                  placeholder="e.g., High Priority Review"
+                  value={presetName}
+                  onChange={(e) => setPresetName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSavePreset();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setSaveDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSavePreset} disabled={!presetName.trim()}>
+                Save Preset
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Load Preset Dropdown */}
+        {presets.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Bookmark className="h-4 w-4" />
+                <span>Load Preset</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Saved Presets</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {presets.map((preset) => (
+                <DropdownMenuItem
+                  key={preset.name}
+                  onClick={() => handleLoadPreset(preset)}
+                  className="flex items-center justify-between group"
+                >
+                  <span className="truncate flex-1">{preset.name}</span>
+                  <button
+                    onClick={(e) => handleDeletePreset(preset.name, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-destructive/10 rounded"
+                    title="Delete preset"
+                  >
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </button>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Clear Filters */}
         {hasActiveFilters && (
@@ -494,7 +592,7 @@ export function filterAndSortDecisions(
   agentFilter: string | 'all',
   confidenceFilter: ConfidenceLevel,
   typeFilter: DecisionType,
-  dateRange: 'all' | 'today' | 'week' | 'month',
+  dateRange: DateRange,
   sortField: 'created_at' | 'confidence' | 'title',
   sortOrder: 'asc' | 'desc'
 ): Decision[] {
@@ -569,3 +667,7 @@ export function filterAndSortDecisions(
 
   return filtered;
 }
+
+// Re-export types for convenience
+export { DATE_RANGE_OPTIONS, CONFIDENCE_OPTIONS };
+export type { DateRange, ConfidenceLevel };

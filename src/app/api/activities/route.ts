@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { listActivitiesQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * @openapi
@@ -95,47 +92,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -165,8 +124,7 @@ export async function GET(request: NextRequest) {
         `
         *,
         agent:agent_id(id, name, avatar_url, role, status),
-        task:task_id(id, title, status, priority),
-        actor_details:actor_id(id, name, avatar_url, role)
+        task:task_id(id, title, status, priority)
       `,
         { count: 'exact' }
       )
@@ -247,7 +205,8 @@ export async function GET(request: NextRequest) {
     if (validatedQuery.search) {
       const searchTerm = validatedQuery.search.trim();
       if (searchTerm.length > 0) {
-        dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
+        const escaped = escapeIlike(searchTerm);
+        dbQuery = dbQuery.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`);
       }
     }
 
@@ -257,15 +216,17 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching activities:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch activities', details: error.message },
+        { error: 'Failed to fetch activities' },
         { status: 500 }
       );
     }
 
     // Determine pagination
-    const hasMore = activities && activities.length > limit;
-    const slicedActivities = hasMore ? activities.slice(0, limit) : (activities || []);
-    
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const allActivities: any[] = activities || [];
+    const hasMore = allActivities.length > limit;
+    const slicedActivities = hasMore ? allActivities.slice(0, limit) : allActivities;
+
     // Get the next cursor
     const nextCursor = hasMore && slicedActivities.length > 0
       ? String(slicedActivities[slicedActivities.length - 1].sequence_number)
@@ -277,56 +238,53 @@ export async function GET(request: NextRequest) {
       .map(a => a.actor_id)
     )];
 
-    let agents: Record<string, unknown>[] = [];
-    if (agentIds.length > 0) {
-      const { data: agentData } = await supabase
-        .from('agents')
-        .select('id, name, avatar_url, role, status')
-        .in('id', agentIds);
-      agents = agentData || [];
-    }
-
     // Fetch related tasks if needed
     const taskIds = slicedActivities
       .filter(a => a.target_type === 'tasks' && a.target_id)
       .map(a => a.target_id);
-    
-    let tasks: Record<string, unknown>[] = [];
-    if (taskIds.length > 0) {
-      const { data: taskData } = await supabase
-        .from('tasks')
-        .select('id, title, status, priority, assignee_id')
-        .in('id', taskIds);
-      tasks = taskData || [];
-    }
 
     // Fetch related decisions if needed
     const decisionIds = slicedActivities
       .filter(a => a.target_type === 'decisions' && a.target_id)
       .map(a => a.target_id);
-    
-    let decisions: Record<string, unknown>[] = [];
-    if (decisionIds.length > 0) {
-      const { data: decisionData } = await supabase
-        .from('decisions')
-        .select('id, title, status, category, agent_id')
-        .in('id', decisionIds);
-      decisions = decisionData || [];
-    }
 
     // Fetch related escalations if needed
     const escalationIds = slicedActivities
       .filter(a => a.target_type === 'escalations' && a.target_id)
       .map(a => a.target_id);
-    
-    let escalations: Record<string, unknown>[] = [];
-    if (escalationIds.length > 0) {
-      const { data: escalationData } = await supabase
-        .from('escalations')
-        .select('id, title, status, urgency, agent_id')
-        .in('id', escalationIds);
-      escalations = escalationData || [];
-    }
+
+    // Parallelize all related entity queries with Promise.all()
+    const [agentResult, taskResult, decisionResult, escalationResult] = await Promise.all([
+      agentIds.length > 0
+        ? supabase
+            .from('agents')
+            .select('id, name, avatar_url, role, status')
+            .in('id', agentIds)
+        : Promise.resolve({ data: null }),
+      taskIds.length > 0
+        ? supabase
+            .from('tasks')
+            .select('id, title, status, priority, assignee_id')
+            .in('id', taskIds)
+        : Promise.resolve({ data: null }),
+      decisionIds.length > 0
+        ? supabase
+            .from('decisions')
+            .select('id, title, status, category, agent_id')
+            .in('id', decisionIds)
+        : Promise.resolve({ data: null }),
+      escalationIds.length > 0
+        ? supabase
+            .from('escalations')
+            .select('id, title, status, urgency, agent_id')
+            .in('id', escalationIds)
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const agents = agentResult.data || [];
+    const tasks = taskResult.data || [];
+    const decisions = decisionResult.data || [];
+    const escalations = escalationResult.data || [];
 
     // Format response
     return NextResponse.json({

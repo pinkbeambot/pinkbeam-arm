@@ -1,18 +1,17 @@
-import { createClient } from '@supabase/supabase-js';
-import { Database } from './database';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { TypedDatabase } from './database';
 
-// Environment variables
+// Environment variables - safe for client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Client-side Supabase client (RLS enforced)
-export const supabaseClient = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabaseClient = createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey);
 
 // Server-side Supabase client (for API routes, RLS enforced via JWT)
 export function createServerClient(authToken?: string) {
   if (authToken) {
-    return createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    return createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -24,21 +23,12 @@ export function createServerClient(authToken?: string) {
       },
     });
   }
-  return createClient<Database>(supabaseUrl, supabaseAnonKey);
+  return createClient<TypedDatabase>(supabaseUrl, supabaseAnonKey);
 }
 
-// Service role client (bypasses RLS - use only in Edge Functions/secure contexts)
-export const supabaseService = createClient<Database>(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-  },
-});
-
 // Helper to set tenant context for RLS
-export async function setTenantContext(supabase: ReturnType<typeof createClient>, tenantId: string) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase.rpc as any)('set_tenant_context', { tenant_id: tenantId });
+export async function setTenantContext(supabase: SupabaseClient<TypedDatabase>, tenantId: string) {
+  await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 }
 
 // Get current user from session
@@ -69,8 +59,7 @@ export async function getCurrentTenant(authToken: string) {
   const { data: tenant } = await supabase
     .from('tenants')
     .select('*')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .eq('id', (user as any).tenant_id)
+    .eq('id', user.tenant_id)
     .single();
   
   return tenant;

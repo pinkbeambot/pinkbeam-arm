@@ -1,0 +1,40 @@
+#!/bin/bash
+# Git pre-commit hook — Prevents commits with wrong attribution
+# Install: cp .githooks/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit
+
+USER_NAME=$(git config user.name)
+USER_EMAIL=$(git config user.email)
+
+# Check if user.name is set correctly
+if [ -z "$USER_NAME" ]; then
+  echo "❌ ERROR: git user.name is not set"
+  echo "   Run: git config user.name 'YOUR-AGENT-ID'"
+  exit 1
+fi
+
+# Check if using default Richard Hernandez name
+if [ "$USER_NAME" = "Richard Hernandez" ]; then
+  echo "❌ ERROR: git user.name is 'Richard Hernandez'"
+  echo "   You must set your agent ID before committing:"
+  echo "   git config user.name 'ENG-FE'  # or ENG-BE, CTO, etc."
+  exit 1
+fi
+
+# Check if user.email is set
+if [ -z "$USER_EMAIL" ]; then
+  echo "❌ ERROR: git user.email is not set"
+  echo "   Run: git config user.email 'your-agent@pinkbeam.ai'"
+  exit 1
+fi
+
+# Run pre-flight checks if script exists
+if [ -f "scripts/pre-flight.sh" ]; then
+  echo "🧪 Running pre-flight checks..."
+  if ! ./scripts/pre-flight.sh; then
+    echo "❌ Pre-flight checks failed"
+    exit 1
+  fi
+fi
+
+echo "✅ Pre-commit checks passed"
+exit 0

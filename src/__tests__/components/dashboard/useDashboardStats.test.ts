@@ -4,65 +4,65 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
-import { useDashboardStats } from '@/components/dashboard/useDashboardStats';
 
-// Mock supabase client
-const mockSelect = vi.fn();
-const mockIn = vi.fn();
-const mockEq = vi.fn();
-const mockGte = vi.fn();
-const mockLt = vi.fn();
-const mockFrom = vi.fn();
-
-vi.mock('@/lib/supabase', () => ({
-  supabaseClient: {
-    from: (...args: unknown[]) => mockFrom(...args),
-  },
+// Mock useAuth to provide session tokens
+const mockUseAuth = vi.fn();
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => mockUseAuth(),
 }));
 
+// Import after mocks
+import { useDashboardStats } from '@/components/dashboard/useDashboardStats';
+
+// Helper: create a successful fetch Response
+function okResponse(body: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Helper: create an error fetch Response
+function errorResponse(status: number, body?: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(body || { error: `Failed: ${status}` }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 describe('useDashboardStats', () => {
+  const originalFetch = globalThis.fetch;
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    
-    // Reset mock chain
-    mockFrom.mockReturnValue({
-      select: mockSelect,
-    });
-    mockSelect.mockReturnValue({
-      in: mockIn,
-      eq: mockEq,
-    });
-    mockIn.mockReturnValue({
-      eq: mockEq,
-    });
-    mockEq.mockReturnValue({
-      gte: mockGte,
-    });
-    mockGte.mockReturnValue({
-      lt: mockLt,
+
+    mockFetch = vi.fn();
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+
+    // Default: authenticated session
+    mockUseAuth.mockReturnValue({
+      session: { access_token: 'test-token' },
     });
   });
 
   afterEach(() => {
     vi.useRealTimers();
+    globalThis.fetch = originalFetch;
   });
 
-  function setupMockQueries(results: Array<{ count: number | null; error?: Error | null }>) {
-    let callIndex = 0;
-    mockLt.mockImplementation(() => {
-      const result = results[callIndex] || { count: 0, error: null };
-      callIndex++;
-      return Promise.resolve(result);
-    });
-  }
-
   it('should fetch stats successfully', async () => {
-    setupMockQueries([
-      { count: 5 },   // agents
-      { count: 12 },  // tasks
-      { count: 3 },   // escalations
-    ]);
+    mockFetch.mockResolvedValue(
+      okResponse({
+        data: {
+          activeAgents: 5,
+          tasksCompletedToday: 12,
+          pendingEscalations: 3,
+          avgResponseTime: null,
+        },
+      })
+    );
 
     const { result } = renderHook(() => useDashboardStats());
 
@@ -84,11 +84,15 @@ describe('useDashboardStats', () => {
   }, 10000);
 
   it('should handle loading state', async () => {
-    setupMockQueries([
-      { count: 5 },
-      { count: 12 },
-      { count: 3 },
-    ]);
+    mockFetch.mockResolvedValue(
+      okResponse({
+        data: {
+          activeAgents: 5,
+          tasksCompletedToday: 12,
+          pendingEscalations: 3,
+        },
+      })
+    );
 
     const { result } = renderHook(() => useDashboardStats());
 
@@ -101,12 +105,9 @@ describe('useDashboardStats', () => {
   }, 10000);
 
   it('should handle errors', async () => {
-    const mockError = new Error('Database error');
-    setupMockQueries([
-      { count: null, error: mockError },
-      { count: 12 },
-      { count: 3 },
-    ]);
+    mockFetch.mockResolvedValue(
+      errorResponse(500, { error: 'Database error' })
+    );
 
     const { result } = renderHook(() => useDashboardStats());
 
@@ -115,19 +116,34 @@ describe('useDashboardStats', () => {
     }, { timeout: 3000 });
 
     expect(result.current.error).toBeTruthy();
+    expect(result.current.error?.message).toBe('Database error');
   }, 10000);
 
   it('should refetch when called', async () => {
     let callCount = 0;
-    const results = [
-      { count: 5 }, { count: 12 }, { count: 3 },   // First fetch
-      { count: 10 }, { count: 20 }, { count: 1 },  // Refetch
-    ];
-    
-    mockLt.mockImplementation(() => {
-      const result = results[callCount] || { count: 0 };
+
+    mockFetch.mockImplementation(() => {
       callCount++;
-      return Promise.resolve(result);
+      if (callCount === 1) {
+        return Promise.resolve(
+          okResponse({
+            data: {
+              activeAgents: 5,
+              tasksCompletedToday: 12,
+              pendingEscalations: 3,
+            },
+          })
+        );
+      }
+      return Promise.resolve(
+        okResponse({
+          data: {
+            activeAgents: 10,
+            tasksCompletedToday: 20,
+            pendingEscalations: 1,
+          },
+        })
+      );
     });
 
     const { result } = renderHook(() => useDashboardStats());
@@ -149,11 +165,16 @@ describe('useDashboardStats', () => {
   }, 10000);
 
   it('should handle null counts gracefully', async () => {
-    setupMockQueries([
-      { count: null },
-      { count: null },
-      { count: null },
-    ]);
+    mockFetch.mockResolvedValue(
+      okResponse({
+        data: {
+          activeAgents: null,
+          tasksCompletedToday: null,
+          pendingEscalations: null,
+          avgResponseTime: null,
+        },
+      })
+    );
 
     const { result } = renderHook(() => useDashboardStats());
 
@@ -170,11 +191,15 @@ describe('useDashboardStats', () => {
   }, 10000);
 
   it('should clear interval on unmount', async () => {
-    setupMockQueries([
-      { count: 5 },
-      { count: 12 },
-      { count: 3 },
-    ]);
+    mockFetch.mockResolvedValue(
+      okResponse({
+        data: {
+          activeAgents: 5,
+          tasksCompletedToday: 12,
+          pendingEscalations: 3,
+        },
+      })
+    );
 
     const { result, unmount } = renderHook(() => useDashboardStats());
 
@@ -183,9 +208,10 @@ describe('useDashboardStats', () => {
     }, { timeout: 3000 });
 
     const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
-    
+
     unmount();
 
     expect(clearIntervalSpy).toHaveBeenCalled();
+    clearIntervalSpy.mockRestore();
   }, 10000);
 });

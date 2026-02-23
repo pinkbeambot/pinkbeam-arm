@@ -5,17 +5,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { processCommand, extractIntent } from '@/lib/meta-agent/intent-processor';
-import type { ProcessMessageRequest, MetaAgentSessionContext } from '@/types/meta-agent';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-// Demo tenant/user IDs for development
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
-const DEMO_USER_ID = '00000000-0000-0000-0000-000000000001';
+import {
+  extractIntent,
+  processCommandWithLLM,
+} from '@/lib/meta-agent/intent-processor';
+import type { ConversationMessage } from '@/lib/meta-agent/intent-processor';
+import type { MetaAgentSessionContext } from '@/types/meta-agent';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 
 const processMessageSchema = z.object({
   message: z.string().min(1).max(2000),
@@ -25,42 +22,12 @@ const processMessageSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
     // Authenticate
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user profile and tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
-      .single();
-
-    // Use demo IDs if no profile (for development)
-    const tenantId = userProfile?.tenant_id || DEMO_TENANT_ID;
-    const userId = userProfile?.id || DEMO_USER_ID;
-
-    if (profileError && !process.env.NODE_ENV?.includes('development')) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    // Set tenant context
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
     // Parse and validate request
     const body = await request.json();
@@ -77,7 +44,7 @@ export async function POST(request: NextRequest) {
           p_title: `VALIS Session ${new Date().toLocaleString()}`,
         }
       );
-      
+
       if (sessionError) {
         console.error('Error creating session:', sessionError);
         return NextResponse.json(
@@ -85,7 +52,7 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
-      
+
       sessionId = newSessionId;
     }
 
@@ -104,7 +71,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Extract intent first for logging
+    // Extract intent via regex for logging (fast, synchronous)
     const { intent, confidence, entities } = extractIntent(validatedData.message);
 
     // Create command record
@@ -138,8 +105,26 @@ export async function POST(request: NextRequest) {
     // Build session context
     const sessionContext: MetaAgentSessionContext = session.context || {};
 
-    // Process the command
-    const context = {
+    // Fetch conversation history from prior commands in this session
+    const { data: priorCommands } = await supabase
+      .from('meta_agent_commands')
+      .select('raw_message, response_message, status')
+      .eq('session_id', sessionId)
+      .eq('tenant_id', tenantId)
+      .neq('id', command.id)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: true })
+      .limit(20);
+
+    const conversationHistory: ConversationMessage[] = (priorCommands || []).flatMap(
+      (cmd: { raw_message: string; response_message: string }) => [
+        { role: 'user' as const, content: cmd.raw_message },
+        { role: 'assistant' as const, content: cmd.response_message },
+      ]
+    );
+
+    // Process through LLM (falls back to regex if LLM unavailable)
+    const handlerContext = {
       tenant_id: tenantId,
       user_id: userId,
       session_id: sessionId!,
@@ -147,11 +132,16 @@ export async function POST(request: NextRequest) {
       supabase,
     };
 
-    const result = await processCommand(validatedData.message, sessionContext, context);
+    const result = await processCommandWithLLM({
+      message: validatedData.message,
+      conversationHistory,
+      sessionContext,
+      handlerContext,
+    });
 
     // Update command with results
     const processingTime = Date.now() - startTime;
-    
+
     const { data: updatedCommand, error: updateError } = await supabase
       .from('meta_agent_commands')
       .update({
@@ -166,12 +156,15 @@ export async function POST(request: NextRequest) {
           ...result.metadata,
           suggested_followups: result.suggested_followups,
           processing_stage: 'completed',
+          used_llm: result.usedLLM,
         },
         processing_time_ms: processingTime,
+        tokens_used: result.llmResult?.tokensUsed,
         processed_at: new Date().toISOString(),
         completed_at: new Date().toISOString(),
       })
       .eq('id', command.id)
+      .eq('tenant_id', tenantId)
       .select()
       .single();
 
@@ -193,7 +186,8 @@ export async function POST(request: NextRequest) {
         context: updatedContext,
         last_activity_at: new Date().toISOString(),
       })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .eq('tenant_id', tenantId);
 
     // Return response
     return NextResponse.json({
@@ -202,7 +196,7 @@ export async function POST(request: NextRequest) {
         ...session,
         context: updatedContext,
       },
-      suggested_actions: result.suggested_followups?.map((text, index) => ({
+      suggested_actions: result.suggested_followups?.map((text) => ({
         label: text,
         action: 'send_message',
         params: { message: text },

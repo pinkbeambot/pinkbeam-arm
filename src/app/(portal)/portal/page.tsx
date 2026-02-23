@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Activity, Bot, CheckCircle2, Clock, AlertCircle, TrendingUp, Users, Loader2, RefreshCw } from "lucide-react";
 import { ActivityFeed } from "@/components/dashboard/activity";
 import { useDashboardStats } from "@/components/dashboard/useDashboardStats";
+import { OnboardingModal } from "@/components/onboarding";
+import { useOnboarding } from "@/components/onboarding";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -124,6 +126,7 @@ function QuickActionButton({ icon: Icon, label, onClick }: QuickActionButtonProp
 export default function DashboardPage() {
   const router = useRouter();
   const { stats, isLoading, error, refetch } = useDashboardStats();
+  const { isOpen, isLoading: onboardingLoading, completeOnboarding, skipOnboarding } = useOnboarding();
 
   const handleCreateAgent = () => {
     router.push('/portal/agents');
@@ -199,7 +202,6 @@ export default function DashboardPage() {
             <ActivityFeed
               maxHeight="600px"
               showFilters={false}
-              autoScroll={false}
             />
           </div>
 
@@ -265,6 +267,14 @@ export default function DashboardPage() {
           </div>
         </div>
       </PageContainer>
+
+      {/* Onboarding Modal */}
+      <OnboardingModal
+        isOpen={isOpen}
+        onClose={skipOnboarding}
+        onComplete={completeOnboarding}
+        onSkip={skipOnboarding}
+      />
     </PortalLayout>
   );
 }

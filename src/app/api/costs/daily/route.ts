@@ -47,64 +47,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
 import { dailyCostsQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Daily cost RPC response type
+interface DailyCostRow {
+  date: string;
+  request_count: number | string;
+  total_tokens: number | string;
+  total_cost_usd: number | string;
+}
 
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
-    }
+    // Authenticate
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -125,13 +85,13 @@ export async function GET(request: NextRequest) {
     if (dailyError) {
       console.error('Error fetching daily costs:', dailyError);
       return NextResponse.json(
-        { error: 'Failed to fetch daily costs', details: dailyError.message },
+        { error: 'Failed to fetch daily costs' },
         { status: 500 }
       );
     }
 
     // Format response
-    const formattedData = (dailyCosts || []).map((day: any) => ({
+    const formattedData = (dailyCosts as DailyCostRow[] || []).map((day) => ({
       date: day.date,
       request_count: Number(day.request_count || 0),
       total_tokens: Number(day.total_tokens || 0),

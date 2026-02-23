@@ -127,16 +127,18 @@ export function subscribeToActivities(
         try {
           switch (payload.eventType) {
             case 'INSERT':
-              callbacks.onInsert?.(payload.new as Activity);
+              if (payload.new) callbacks.onInsert?.(payload.new as Activity);
               break;
             case 'UPDATE':
-              callbacks.onUpdate?.(
-                payload.new as Activity,
-                payload.old as Activity
-              );
+              if (payload.new && payload.old) {
+                callbacks.onUpdate?.(
+                  payload.new as Activity,
+                  payload.old as Activity
+                );
+              }
               break;
             case 'DELETE':
-              callbacks.onDelete?.(payload.old as Activity);
+              if (payload.old) callbacks.onDelete?.(payload.old as Activity);
               break;
           }
         } catch (error) {

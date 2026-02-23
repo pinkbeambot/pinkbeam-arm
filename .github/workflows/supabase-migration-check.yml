@@ -1,0 +1,64 @@
+name: Supabase Migration Validator
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+
+jobs:
+  validate-migrations:
+    name: Validate Supabase Migrations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Get changed migration files
+        id: changed-files
+        run: |
+          CHANGED_MIGRATIONS=$(git diff --name-only origin/main...HEAD | grep "^supabase/migrations/" || echo "")
+          echo "migrations<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$CHANGED_MIGRATIONS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+      - name: Validate migrations with Claude
+        if: steps.changed-files.outputs.migrations != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+
+          prompt: |
+            New Supabase migrations detected in this PR:
+            ${{ steps.changed-files.outputs.migrations }}
+
+            Please validate these migrations:
+
+            1. **SQL Syntax**: Check for syntax errors
+            2. **RLS Policies**: Ensure tenant_id isolation is maintained
+            3. **Breaking Changes**: Check for destructive operations (DROP, ALTER that removes columns)
+            4. **Indexes**: Verify indexes on tenant_id for multi-tenant queries
+            5. **Triggers**: Ensure log_activity() triggers are added for new tables
+            6. **Enums**: Check enum definitions match docs/ARCHITECTURE.md
+            7. **Foreign Keys**: Validate relationships and cascades
+            8. **Security**: No hardcoded secrets or sensitive data
+
+            Critical checks for multi-tenant security:
+            - Every table must have tenant_id column
+            - Every table must have RLS policies using current_setting('app.current_tenant')
+            - No policies that bypass tenant isolation
+
+            Post a comment on this PR with:
+            - ✅ All checks passed, OR
+            - ⚠️ Issues found with details and recommended fixes
+
+          claude_args: '--allowed-tools "Bash(gh pr comment)"'
+
+      - name: No migrations changed
+        if: steps.changed-files.outputs.migrations == ''
+        run: echo "No migration files changed in this PR"

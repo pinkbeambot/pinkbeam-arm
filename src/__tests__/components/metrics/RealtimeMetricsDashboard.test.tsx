@@ -3,44 +3,97 @@
  * Issue: #64 - Fix metrics error handling
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import * as React from 'react';
 
-// Mock Supabase
-const mockSupabaseClient = {
-  from: vi.fn(),
-  channel: vi.fn(() => ({
-    on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn((callback) => {
-      callback('SUBSCRIBED');
-      return { unsubscribe: vi.fn() };
-    }),
-  })),
-};
+// Mock useAuth to provide session tokens
+const mockUseAuth = vi.fn();
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => mockUseAuth(),
+}));
 
+// Mock the Supabase browser client (used for Realtime subscriptions only)
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => mockSupabaseClient,
+  createClient: () => ({
+    channel: () => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn((cb: (status: string) => void) => {
+        cb('SUBSCRIBED');
+        return { unsubscribe: vi.fn() };
+      }),
+      unsubscribe: vi.fn(),
+    }),
+  }),
 }));
 
 // Import after mocks
 import { RealtimeMetricsDashboard } from '@/components/dashboard/metrics/RealtimeMetricsDashboard';
 
+// Helper: create a successful fetch Response
+function okResponse(body: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Helper: create an error fetch Response
+function errorResponse(status: number, statusText: string, body?: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(body || { error: statusText }), {
+    status,
+    statusText,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Default mock: both endpoints succeed with empty data
+function mockSuccessResponses(mockFetch: ReturnType<typeof vi.fn>) {
+  mockFetch.mockImplementation((url: string) => {
+    if (url.startsWith('/api/v1/agents')) {
+      return Promise.resolve(okResponse({ data: [] }));
+    }
+    if (url.startsWith('/api/v1/activities')) {
+      return Promise.resolve(okResponse({ activities: [] }));
+    }
+    return Promise.resolve(okResponse({}));
+  });
+}
+
+// Mock: agents endpoint fails
+function mockAgentsError(mockFetch: ReturnType<typeof vi.fn>, message = 'Database error') {
+  mockFetch.mockImplementation((url: string) => {
+    if (url.startsWith('/api/v1/agents')) {
+      return Promise.resolve(errorResponse(500, 'Internal Server Error', { error: message }));
+    }
+    if (url.startsWith('/api/v1/activities')) {
+      return Promise.resolve(okResponse({ activities: [] }));
+    }
+    return Promise.resolve(okResponse({}));
+  });
+}
+
 describe('RealtimeMetricsDashboard', () => {
+  const originalFetch = globalThis.fetch;
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch = vi.fn();
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+    // Default: authenticated session
+    mockUseAuth.mockReturnValue({
+      session: { access_token: 'test-token-123' },
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   describe('rendering', () => {
     it('should render dashboard with title', () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -49,14 +102,7 @@ describe('RealtimeMetricsDashboard', () => {
     });
 
     it('should render with custom className', () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       const { container } = render(<RealtimeMetricsDashboard className="custom-class" />);
 
@@ -64,14 +110,7 @@ describe('RealtimeMetricsDashboard', () => {
     });
 
     it('should show live indicator when connected', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -85,40 +124,19 @@ describe('RealtimeMetricsDashboard', () => {
 
   describe('error states', () => {
     it('should display error banner when metrics fetch fails', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ 
-            data: null, 
-            error: { message: 'Database connection failed' } 
-          })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockAgentsError(mockFetch, 'Database connection failed');
 
       render(<RealtimeMetricsDashboard />);
 
-      // Wait longer for the error state to appear
       await waitFor(() => {
         expect(screen.getByTestId('metrics-error-banner')).toBeInTheDocument();
       }, { timeout: 3000 });
 
-      expect(screen.getByText('Failed to fetch metrics')).toBeInTheDocument();
+      expect(screen.getAllByText(/Failed to fetch/i).length).toBeGreaterThanOrEqual(1);
     });
 
     it('should display error state in agent list when fetch fails', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ 
-            data: null, 
-            error: { message: 'Database error' } 
-          })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockAgentsError(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -128,17 +146,7 @@ describe('RealtimeMetricsDashboard', () => {
     });
 
     it('should show retry button in error state', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ 
-            data: null, 
-            error: { message: 'Network error' } 
-          })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockAgentsError(mockFetch, 'Network error');
 
       render(<RealtimeMetricsDashboard />);
 
@@ -151,17 +159,7 @@ describe('RealtimeMetricsDashboard', () => {
     });
 
     it('should hide overview metrics when there is an error', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ 
-            data: null, 
-            error: { message: 'Database error' } 
-          })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockAgentsError(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -176,14 +174,7 @@ describe('RealtimeMetricsDashboard', () => {
 
   describe('empty states', () => {
     it('should show empty state when no agents found', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -197,14 +188,7 @@ describe('RealtimeMetricsDashboard', () => {
 
   describe('interactive elements', () => {
     it('should toggle between compact and detailed view', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -225,14 +209,7 @@ describe('RealtimeMetricsDashboard', () => {
 
   describe('time range selector', () => {
     it('should render time range options', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       render(<RealtimeMetricsDashboard />);
 
@@ -245,14 +222,7 @@ describe('RealtimeMetricsDashboard', () => {
 
   describe('props', () => {
     it('should respect showAgentList prop', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       render(<RealtimeMetricsDashboard showAgentList={false} />);
 

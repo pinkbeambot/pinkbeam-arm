@@ -1,3 +1,14 @@
+---
+title: "Testing Standards"
+type: process
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [testing, process, critical]
+aliases: ["Testing", "Test Standards"]
+---
+
 # Pink Beam ARM — Testing Standards
 
 **Status:** Enforced Standard  
@@ -355,3 +366,12 @@ Before submitting PR, verify:
 ---
 
 **This standard is non-negotiable.** All engineers must follow these testing requirements. CTO enforces on every PR.
+
+---
+
+## Related Documentation
+
+- [[AGENT-ROLES]] — Role-specific testing enforcement
+- [[E2E-TEST-PLAN]] — E2E test strategy and implementation plan
+- [[DEVELOPMENT-PROCESS]] — Development process with testing ownership
+- [[CICD]] — CI/CD pipeline executing test suite

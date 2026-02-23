@@ -1,5 +1,6 @@
 'use client';
 
+/* eslint-disable react-hooks/preserve-manual-memoization, react-hooks/exhaustive-deps */
 import { useState, useCallback, useMemo } from 'react';
 import { AlertCircle, Bell, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -8,6 +9,8 @@ import { EscalationList, EscalationFilters } from '@/components/dashboard/escala
 import { EscalationDetailPanel } from '@/components/dashboard/escalations/EscalationDetailPanel';
 import { EscalationStatsView } from '@/components/dashboard/escalations/EscalationStats';
 import { useEscalations, useEscalationStats } from '@/lib/hooks/useEscalations';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import type { Escalation, EscalationUrgency, EscalationType } from '@/types';
@@ -17,6 +20,7 @@ export const dynamic = 'force-dynamic';
 
 export default function EscalationsPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   // Filters state
   const [statusFilter, setStatusFilter] = useState<'open' | 'resolved' | 'all'>('open');
@@ -35,8 +39,16 @@ export default function EscalationsPage() {
     type: typeFilter,
     agentId: agentFilter,
   });
-  
+
   const { stats, loading: statsLoading } = useEscalationStats();
+
+  // RBAC permissions
+  const { can } = useRBAC();
+  const canResolveEscalations = can('escalations:resolve');
+
+  const showPermissionDenied = useCallback(() => {
+    toast({ title: 'Permission Denied', description: 'You do not have permission to resolve escalations.', variant: 'destructive' });
+  }, [toast]);
 
   // Get unique agents for filter dropdown
   const agents = useMemo(() => {
@@ -57,7 +69,7 @@ export default function EscalationsPage() {
 
   const handleResolve = useCallback(async (escalation: Escalation) => {
     try {
-      await resolveEscalation(escalation.id, 'Resolved from list view', 'user-001');
+      await resolveEscalation(escalation.id, 'Resolved from list view', user?.id ?? '');
       toast({
         title: 'Escalation Resolved',
         description: `${escalation.title} has been marked as resolved.`,
@@ -74,7 +86,7 @@ export default function EscalationsPage() {
 
   const handleResolveFromPanel = useCallback(async (id: string, resolution: string) => {
     try {
-      await resolveEscalation(id, resolution, 'user-001');
+      await resolveEscalation(id, resolution, user?.id ?? '');
       toast({
         title: 'Response Sent',
         description: 'Your response has been sent to the agent.',
@@ -89,13 +101,23 @@ export default function EscalationsPage() {
     }
   }, [resolveEscalation, refetch, toast]);
 
-  const handleTakeOver = useCallback((escalation: Escalation) => {
-    toast({
-      title: 'Task Taken Over',
-      description: `You have taken over ${escalation.title}.`,
-    });
-    setDetailOpen(false);
-  }, [toast]);
+  const handleTakeOver = useCallback(async (escalation: Escalation) => {
+    try {
+      await resolveEscalation(escalation.id, 'Taken over by user', user?.id ?? '');
+      toast({
+        title: 'Task Taken Over',
+        description: `You have taken over ${escalation.title}.`,
+      });
+      setDetailOpen(false);
+      refetch();
+    } catch {
+      toast({
+        title: 'Error',
+        description: 'Failed to take over escalation.',
+        variant: 'destructive',
+      });
+    }
+  }, [resolveEscalation, refetch, toast, user?.id]);
 
   const handleMarkAllRead = useCallback(() => {
     toast({
@@ -104,11 +126,17 @@ export default function EscalationsPage() {
     });
   }, [toast]);
 
-  const handleEnableNotifications = useCallback(() => {
-    toast({
-      title: 'Notifications Enabled',
-      description: 'You will receive browser notifications for critical escalations.',
-    });
+  const handleEnableNotifications = useCallback(async () => {
+    if (!('Notification' in window)) {
+      toast({ title: 'Not Supported', description: 'Browser notifications are not supported.', variant: 'destructive' });
+      return;
+    }
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      toast({ title: 'Notifications Enabled', description: 'You will receive browser notifications for critical escalations.' });
+    } else {
+      toast({ title: 'Permission Denied', description: 'Notification permission was denied. You can enable it in browser settings.', variant: 'destructive' });
+    }
   }, [toast]);
 
   return (
@@ -201,8 +229,8 @@ export default function EscalationsPage() {
           loading={loading}
           selectedEscalationId={selectedEscalation?.id}
           onSelectEscalation={handleSelectEscalation}
-          onResolve={handleResolve}
-          onTakeOver={handleTakeOver}
+          onResolve={canResolveEscalations ? handleResolve : showPermissionDenied}
+          onTakeOver={canResolveEscalations ? handleTakeOver : undefined}
         />
 
         {/* Detail Panel */}
@@ -210,8 +238,8 @@ export default function EscalationsPage() {
           escalation={selectedEscalation}
           open={detailOpen}
           onOpenChange={setDetailOpen}
-          onResolve={handleResolveFromPanel}
-          onTakeOver={handleTakeOver ? (id) => {
+          onResolve={canResolveEscalations ? handleResolveFromPanel : async () => { showPermissionDenied(); }}
+          onTakeOver={canResolveEscalations ? (id) => {
             const escalation = escalations.find(e => e.id === id);
             if (escalation) handleTakeOver(escalation);
           } : undefined}

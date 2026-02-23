@@ -1,5 +1,8 @@
 // Dashboard Components & Hooks
 
+// Global Search
+export { GlobalSearch } from './GlobalSearch';
+
 // Activity Feed (re-export from activity folder)
 export {
   ActivityFeed,

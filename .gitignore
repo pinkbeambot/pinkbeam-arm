@@ -5,6 +5,7 @@
 # Secrets
 *.pem
 *.key
+.mcp.json
 
 # Dependencies
 node_modules/
@@ -16,6 +17,7 @@ coverage/
 test-results/
 playwright-report/
 playwright/.cache/
+.playwright/.auth/
 .lighthouseci/
 lhci_reports/
 

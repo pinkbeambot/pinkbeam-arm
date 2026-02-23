@@ -1,5 +1,6 @@
 "use client";
 
+/* eslint-disable react/no-unescaped-entities */
 import { Search, Users, Headphones, PenTool, Palette, Video } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { StaggerContainer, FadeIn } from "@/components/animations";
@@ -62,9 +63,9 @@ export function SolutionSection() {
             </span>
           </h2>
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto">
-            Pink Beam isn't another AI tool you have to learn. It's a team of autonomous 
-            AI employees that scale your output without scaling your headcount. They handle 
-            the repetitive work so your human team can focus on what they do best—strategy, 
+            Pink Beam isn&apos;t another AI tool you have to learn. It&apos;s a team of autonomous
+            AI employees that scale your output without scaling your headcount. They handle
+            the repetitive work so your human team can focus on what they do best—strategy,
             creativity, and relationships.
           </p>
           <p className="text-base text-foreground mt-6 font-medium">

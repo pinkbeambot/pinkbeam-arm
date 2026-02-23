@@ -28,13 +28,14 @@ describe('useChat', () => {
         ok: true,
         json: () => Promise.resolve({ chats: [], messages: [], has_more: false }),
       })
-    ) as any;
+    ) as unknown as typeof global.fetch;
   });
 
   it('initializes with correct default state', () => {
     const { result } = renderHook(() => useChat({ chatId: null }));
-    
-    expect(result.current.loading).toBe(true);
+
+    // When chatId is null, loading is set to false immediately
+    expect(result.current.loading).toBe(false);
     expect(result.current.messages).toEqual([]);
     expect(result.current.chat).toBeNull();
     expect(result.current.sending).toBe(false);
@@ -70,7 +71,7 @@ describe('useChats', () => {
         ok: true,
         json: () => Promise.resolve({ chats: [] }),
       })
-    ) as any;
+    ) as unknown as typeof global.fetch;
   });
 
   it('initializes with correct default state', () => {

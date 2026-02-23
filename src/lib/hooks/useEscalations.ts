@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type { Escalation, EscalationUrgency, EscalationType, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
@@ -78,7 +79,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
         params.set('limit', String(currentOptions.limit));
       }
 
-      const response = await fetch(`/api/escalations?${params.toString()}`, {
+      const response = await fetch(`/api/v1/escalations?${params.toString()}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -135,14 +136,15 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
       const subscription = supabase
         .channel(`escalations:${tenantId}`)
         .on(
-          'postgres_changes' as any,
+          REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
           {
-            event: '*',
+            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
             schema: 'public',
             table: 'escalations',
             filter: `tenant_id=eq.${tenantId}`,
           },
-          (payload: RealtimeChangePayload<Escalation>) => {
+          (rawPayload) => {
+            const payload = rawPayload as unknown as RealtimeChangePayload<Escalation>;
             if (payload.eventType === 'INSERT') {
               // Only add if it matches current filters
               const newEscalation = payload.new;
@@ -199,7 +201,7 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
       throw new Error('Not authenticated');
     }
 
-    const response = await fetch(`/api/escalations/${id}`, {
+    const response = await fetch(`/api/v1/escalations/${id}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
@@ -223,12 +225,10 @@ export function useEscalations(options: UseEscalationsOptions = {}) {
     return result.data;
   }, []);
 
-  const resolveEscalation = useCallback(async (id: string, resolution: string, resolvedBy: string) => {
+  const resolveEscalation = useCallback(async (id: string, resolution: string, _resolvedBy: string) => {
     await updateEscalation(id, {
       status: 'resolved',
       resolution,
-      resolved_by: resolvedBy,
-      resolved_at: new Date().toISOString(),
     });
   }, [updateEscalation]);
 
@@ -303,7 +303,7 @@ export function useEscalationStats(days: number = 30) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`/api/escalations/stats?days=${days}`, {
+      const response = await fetch(`/api/v1/escalations/stats?days=${days}`, {
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
@@ -366,9 +366,9 @@ export function useEscalationStats(days: number = 30) {
       const subscription = supabase
         .channel(`escalations-stats:${tenantId}`)
         .on(
-          'postgres_changes',
+          REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
           {
-            event: '*',
+            event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
             schema: 'public',
             table: 'escalations',
             filter: `tenant_id=eq.${tenantId}`,
@@ -396,6 +396,7 @@ export function useEscalationStats(days: number = 30) {
 
 export function useCreateEscalation() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
 
   const createEscalation = useCallback(async (data: {
     agent_id: string;
@@ -409,13 +410,14 @@ export function useCreateEscalation() {
     agent_analysis?: { what_i_know?: string; what_i_dont_know?: string; what_i_tried?: string[]; suggested_resolution?: string };
   }) => {
     setLoading(true);
+    setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch('/api/escalations', {
+      const response = await fetch('/api/v1/escalations', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
@@ -431,10 +433,14 @@ export function useCreateEscalation() {
 
       const result = await response.json();
       return result.data as Escalation;
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error('Failed to create escalation');
+      setError(e);
+      throw e;
     } finally {
       setLoading(false);
     }
   }, []);
 
-  return { createEscalation, loading };
+  return { createEscalation, loading, error };
 }

@@ -1,63 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { applyTemplateSchema, mergeConfigs, type AgentConfig } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
     id: string;
   }>;
-}
-
-/**
- * Helper to create Supabase client with auth
- */
-async function createAuthClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  return supabase;
-}
-
-/**
- * Helper to get tenant ID from user
- */
-async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return null;
-  }
-
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
-    return null;
-  }
-
-  return { tenantId: (userProfile as { tenant_id: string }).tenant_id, user };
 }
 
 /**
@@ -68,19 +17,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch template
     const { data: template, error } = await supabase
@@ -96,7 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching template:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch template', details: error.message },
+        { error: 'Failed to fetch template' },
         { status: 500 }
       );
     }
@@ -127,33 +66,24 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch template to check if it's a system template
     const { data: template, error: fetchError } = await supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('is_system, tenant_id')
       .eq('id', id)
-      .single();
+      .single() as { data: { is_system: boolean; tenant_id: string } | null; error: { code?: string; message: string } | null };
 
-    if (fetchError) {
-      if (fetchError.code === 'PGRST116') {
+    if (fetchError || !template) {
+      if (fetchError?.code === 'PGRST116' || !template) {
         return NextResponse.json({ error: 'Template not found' }, { status: 404 });
       }
+      console.error('Failed to fetch template:', fetchError);
       return NextResponse.json(
-        { error: 'Failed to fetch template', details: fetchError.message },
+        { error: 'Failed to fetch template' },
         { status: 500 }
       );
     }
@@ -184,7 +114,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting template:', error);
       return NextResponse.json(
-        { error: 'Failed to delete template', details: error.message },
+        { error: 'Failed to delete template' },
         { status: 500 }
       );
     }

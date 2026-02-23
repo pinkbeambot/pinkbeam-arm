@@ -1,58 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { listAgentTemplatesQuerySchema, applyTemplateSchema } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-/**
- * Helper to create Supabase client with auth
- */
-async function createAuthClient(request: NextRequest) {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) {
-    return null;
-  }
-  const token = authHeader.split(' ')[1];
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-    global: {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    },
-  });
-
-  return supabase;
-}
-
-/**
- * Helper to get tenant ID from user
- */
-async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof createAuthClient>>>) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) {
-    return null;
-  }
-
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('tenant_id')
-    .eq('auth_id', user.id)
-    .single();
-
-  if (profileError || !userProfile || !(userProfile as { tenant_id: string }).tenant_id) {
-    return null;
-  }
-
-  return { tenantId: (userProfile as { tenant_id: string }).tenant_id, user };
-}
+import { escapeIlike } from '@/lib/utils';
 
 /**
  * GET /api/agent-templates
@@ -60,16 +10,9 @@ async function getTenantId(supabase: NonNullable<Awaited<ReturnType<typeof creat
  */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId } = tenantResult;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -85,12 +28,9 @@ export async function GET(request: NextRequest) {
     const { category, search, page, limit } = validatedQuery;
     const offset = (page - 1) * limit;
 
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
     // Build query
     let dbQuery = supabase
-      .from('agent_templates')
+      .from('agent_templates' as never)
       .select('*', { count: 'exact' })
       .eq('is_active', true)
       .or(`is_system.eq.true,tenant_id.eq.${tenantId}`)
@@ -104,16 +44,18 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      dbQuery = dbQuery.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+      const escaped = escapeIlike(search);
+      dbQuery = dbQuery.or(`name.ilike.%${escaped}%,description.ilike.%${escaped}%`);
     }
 
     // Execute query with pagination
-    const { data: templates, error, count } = await dbQuery.range(offset, offset + limit - 1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: templates, error, count } = await dbQuery.range(offset, offset + limit - 1) as { data: any[] | null; error: any; count: number | null };
 
     if (error) {
       console.error('Error fetching templates:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch templates', details: error.message },
+        { error: 'Failed to fetch templates' },
         { status: 500 }
       );
     }
@@ -187,16 +129,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createAuthClient(request);
-    if (!supabase) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const tenantResult = await getTenantId(supabase);
-    if (!tenantResult) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-    const { tenantId, user } = tenantResult;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse request body
     const body = await request.json();
@@ -216,9 +151,6 @@ export async function POST(request: NextRequest) {
     });
 
     const validatedData = templateSchema.parse(body);
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Check if slug already exists for this tenant
     const { data: existing } = await supabase
@@ -259,7 +191,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating template:', error);
       return NextResponse.json(
-        { error: 'Failed to create template', details: error.message },
+        { error: 'Failed to create template' },
         { status: 500 }
       );
     }

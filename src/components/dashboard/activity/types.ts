@@ -4,6 +4,7 @@
  * Type definitions specific to the Activity Feed component.
  */
 
+import type { ConnectionState } from '@/lib/realtime/useRealtime';
 import type { Activity, ActivityType, Agent, Task, Decision, Escalation } from '@/types';
 
 // ============================================================================
@@ -127,10 +128,18 @@ export interface UseActivityFeedReturn {
   events: ActivityEvent[];
   isLoading: boolean;
   isRealtime: boolean;
+  /** Current realtime connection state */
+  connectionState: ConnectionState;
+  /** Realtime connection error if any */
+  connectionError: Error | null;
+  /** Number of reconnection attempts */
+  retryCount: number;
   error: Error | null;
   hasMore: boolean;
   loadMore: () => void;
   refetch: () => void;
+  /** Manually retry realtime connection */
+  retryConnection: () => void;
 }
 
 // ============================================================================

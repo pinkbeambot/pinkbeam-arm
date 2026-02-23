@@ -1,3 +1,14 @@
+---
+title: "Engineering Status"
+type: reference
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [reference, planning, engineering]
+aliases: ["Engineering", "Eng Status"]
+---
+
 # Pink Beam ARM - Engineering Status
 
 **Started:** 2026-02-13  
@@ -8,8 +19,8 @@
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| ARCHITECTURE.md | ✅ Complete | Multi-tenancy, event-driven, agent protocol |
-| AGENT-PROTOCOL.md | ✅ Complete | AAP spec v1.0 with message types |
+| [[ARCHITECTURE]] | ✅ Complete | Multi-tenancy, event-driven, agent protocol |
+| [[AGENT-PROTOCOL]] | ✅ Complete | AAP spec v1.0 with message types |
 | Database Schema | ✅ Complete | 5 migrations: tables, RLS, triggers, realtime, seed |
 | TypeScript Types | ✅ Complete | Full type definitions in `src/types/index.ts` |
 | UI Components | ✅ Complete | 52+ shadcn/ui components |
@@ -91,12 +102,22 @@ Daily status reports on:
 
 ## Documentation
 
-- `docs/PRD.md` - Product Requirements (67KB)
-- `docs/ARCHITECTURE.md` - System Architecture
-- `docs/AGENT-PROTOCOL.md` - Agent Protocol Spec
-- `docs/STATUS.md` - This file
+- [[PRD]] - Product Requirements (67KB)
+- [[ARCHITECTURE]] - System Architecture
+- [[AGENT-PROTOCOL]] - Agent Protocol Spec
+- [[STATUS]] - Development snapshot
 - `ENG-BE-TASKS.md` - Backend assignments
 - `ENG-FE-TASKS.md` - Frontend assignments
 
 ---
 _Last updated: 2026-02-13 03:40 PST by CTO_
+
+---
+
+## Related Documentation
+
+- [[ARCHITECTURE]] — System architecture being implemented
+- [[PRD]] — Product requirements driving engineering work
+- [[MASTER-TASK-LIST]] — Full task breakdown by phase
+- [[STATUS]] — Current development snapshot
+- [[DEVELOPMENT-PROCESS]] — Engineering development process

@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
+import { ApiError } from '@/lib/errors';
+import { overrideDecisionSchema, updateDecisionSchema } from '@/lib/validation';
 import type { Decision, DecisionStatus, RealtimeChangePayload } from '@/types';
 
 const supabase = createClient();
@@ -79,13 +82,13 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
       params.set('page', page.toString());
       params.set('limit', limit.toString());
 
-      const response = await fetch(`/api/decisions?${params.toString()}`, {
+      const response = await fetch(`/api/v1/decisions?${params.toString()}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch decisions: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_FETCH_FAILED', errorData.error || `Failed to fetch decisions: ${response.status}`);
       }
 
       const result: DecisionsResponse = await response.json();
@@ -105,18 +108,19 @@ export function useDecisionsRealtime(options: UseDecisionsOptions = {}) {
     const subscription = supabase
       .channel('decisions:changes')
       .on(
-        'postgres_changes' as any,
-        { event: '*', schema: 'public', table: 'decisions' },
-        (payload: RealtimeChangePayload<Decision>) => {
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
+        { event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL, schema: 'public', table: 'decisions' },
+        (rawPayload) => {
+          const payload = rawPayload as unknown as RealtimeChangePayload<Decision>;
           const currentOpts = optionsRef.current;
           if (currentOpts.page === 1 && !currentOpts.agentId && !currentOpts.status && !currentOpts.search) {
             fetchDecisions();
           } else {
-            if (payload.eventType === 'INSERT') {
-              setDecisions((prev) => [payload.new!, ...prev].slice(0, currentOpts.limit));
-            } else if (payload.eventType === 'UPDATE') {
-              setDecisions((prev) => prev.map((d) => (d.id === payload.new?.id ? { ...d, ...payload.new } : d)));
-            } else if (payload.eventType === 'DELETE') {
+            if (payload.eventType === 'INSERT' && payload.new) {
+              setDecisions((prev) => [payload.new as Decision, ...prev].slice(0, currentOpts.limit));
+            } else if (payload.eventType === 'UPDATE' && payload.new) {
+              setDecisions((prev) => prev.map((d) => (d.id === payload.new?.id ? { ...d, ...payload.new as Decision } : d)));
+            } else if (payload.eventType === 'DELETE' && payload.old) {
               setDecisions((prev) => prev.filter((d) => d.id !== payload.old?.id));
             }
           }
@@ -142,20 +146,20 @@ export function useDecisionDetail(decisionId: string | null) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/decisions/${decisionId}`, {
+      const response = await fetch(`/api/v1/decisions/${decisionId}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
       });
 
       if (!response.ok) {
         if (response.status === 404) { setDecision(null); return; }
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to fetch decision: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_FETCH_FAILED', errorData.error || `Failed to fetch decision: ${response.status}`);
       }
       const result = await response.json();
       setDecision(result.data);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch decision'));
+      setError(err instanceof ApiError ? err : new Error('Failed to fetch decision'));
     } finally {
       setLoading(false);
     }
@@ -170,28 +174,33 @@ export function useOverrideDecision() {
   const [error, setError] = useState<Error | null>(null);
 
   const overrideDecision = useCallback(async (decisionId: string, overrideData: { correctDecision: string; reason: string; sendFeedback: boolean }) => {
+    const payload = {
+      reason: overrideData.reason,
+      correct_action: overrideData.correctDecision ? { decision: overrideData.correctDecision } : undefined,
+    };
+
+    // Validate before sending to API
+    overrideDecisionSchema.parse(payload);
+
     setLoading(true);
     setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/decisions/${decisionId}`, {
+      const response = await fetch(`/api/v1/decisions/${decisionId}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: overrideData.reason,
-          correct_action: overrideData.correctDecision ? { decision: overrideData.correctDecision } : undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to override decision: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_OVERRIDE_FAILED', errorData.error || `Failed to override decision: ${response.status}`);
       }
       return (await response.json()).data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to override decision');
+      const error = err instanceof ApiError ? err : new Error('Failed to override decision');
       setError(error);
       throw error;
     } finally {
@@ -207,13 +216,16 @@ export function useUpdateDecision() {
   const [error, setError] = useState<Error | null>(null);
 
   const updateDecision = useCallback(async (decisionId: string, updateData: { status?: DecisionStatus; outcome?: Record<string, unknown>; executed_action?: Record<string, unknown> }) => {
+    // Validate before sending to API
+    updateDecisionSchema.parse(updateData);
+
     setLoading(true);
     setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
 
-      const response = await fetch(`/api/decisions/${decisionId}`, {
+      const response = await fetch(`/api/v1/decisions/${decisionId}`, {
         method: 'PATCH',
         headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
@@ -221,11 +233,11 @@ export function useUpdateDecision() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `Failed to update decision: ${response.status}`);
+        throw new ApiError(response.status, 'DECISION_UPDATE_FAILED', errorData.error || `Failed to update decision: ${response.status}`);
       }
       return (await response.json()).data;
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Failed to update decision');
+      const error = err instanceof ApiError ? err : new Error('Failed to update decision');
       setError(error);
       throw error;
     } finally {

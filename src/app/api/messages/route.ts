@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { createMessageSchema, listMessagesQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
  * @openapi
@@ -90,47 +86,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -191,7 +149,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching messages:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch messages', details: error.message },
+        { error: 'Failed to fetch messages' },
         { status: 500 }
       );
     }
@@ -262,101 +220,73 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Parse and validate request body
+    // Parse and validate request body first (before auth to fail fast on bad input)
     const body = await request.json();
     const validatedData = createMessageSchema.parse(body);
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Validate from_agent, to_agent, and thread in parallel
+    const [
+      { data: fromAgent, error: fromAgentError },
+      { data: toAgent, error: toAgentError },
+      { data: threadMessage, error: threadError },
+    ] = await Promise.all([
+      // Validate from_agent exists and belongs to tenant (if provided)
+      validatedData.from_agent_id
+        ? supabase
+            .from('agents')
+            .select('id')
+            .eq('id', validatedData.from_agent_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+
+      // Validate to_agent exists and belongs to tenant (if provided and not broadcast)
+      validatedData.to_agent_id && !validatedData.to_broadcast
+        ? supabase
+            .from('agents')
+            .select('id')
+            .eq('id', validatedData.to_agent_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+
+      // Validate thread exists if provided
+      validatedData.thread_id
+        ? supabase
+            .from('messages')
+            .select('id')
+            .eq('id', validatedData.thread_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+    // Check from_agent error
+    if (validatedData.from_agent_id && (fromAgentError || !fromAgent)) {
+      return NextResponse.json(
+        { error: 'Sender agent not found or does not belong to tenant' },
+        { status: 400 }
+      );
     }
 
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    // Check to_agent error
+    if (validatedData.to_agent_id && !validatedData.to_broadcast && (toAgentError || !toAgent)) {
+      return NextResponse.json(
+        { error: 'Recipient agent not found or does not belong to tenant' },
+        { status: 400 }
+      );
     }
 
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    // Validate from_agent exists and belongs to tenant (if provided)
-    if (validatedData.from_agent_id) {
-      const { data: fromAgent, error: fromAgentError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', validatedData.from_agent_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (fromAgentError || !fromAgent) {
-        return NextResponse.json(
-          { error: 'Sender agent not found or does not belong to tenant' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate to_agent exists and belongs to tenant (if provided and not broadcast)
-    if (validatedData.to_agent_id && !validatedData.to_broadcast) {
-      const { data: toAgent, error: toAgentError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', validatedData.to_agent_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (toAgentError || !toAgent) {
-        return NextResponse.json(
-          { error: 'Recipient agent not found or does not belong to tenant' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Validate thread exists if provided
-    if (validatedData.thread_id) {
-      const { data: threadMessage, error: threadError } = await supabase
-        .from('messages')
-        .select('id')
-        .eq('id', validatedData.thread_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (threadError || !threadMessage) {
-        return NextResponse.json(
-          { error: 'Thread message not found or does not belong to tenant' },
-          { status: 400 }
-        );
-      }
+    // Check thread error
+    if (validatedData.thread_id && (threadError || !threadMessage)) {
+      return NextResponse.json(
+        { error: 'Thread message not found or does not belong to tenant' },
+        { status: 400 }
+      );
     }
 
     // Create the message
@@ -379,7 +309,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating message:', error);
       return NextResponse.json(
-        { error: 'Failed to create message', details: error.message },
+        { error: 'Failed to create message' },
         { status: 500 }
       );
     }

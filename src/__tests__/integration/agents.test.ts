@@ -14,7 +14,7 @@ import { describe, it, expect } from 'vitest';
 // Unit tests for hook logic (no Supabase dependency)
 describe('useAgents Hook Logic', () => {
   it('should construct correct API URL with filters', () => {
-    const baseUrl = '/api/agents';
+    const baseUrl = '/api/v1/agents';
     const filters = {
       status: 'active',
       role: 'worker',
@@ -94,9 +94,12 @@ describe('Tenant Context Fix (#61, #62)', () => {
   it('should validate context was set successfully', () => {
     // API routes now check the return value of set_tenant_context
     const mockSuccessResponse = { data: true, error: null };
-    const mockFailureResponse = { data: false, error: { message: 'Failed' } };
+    const mockFailureResponse: { data: boolean; error: { message: string } | null } = {
+      data: false,
+      error: { message: 'Failed' }
+    };
 
-    const isContextSet = (response: typeof mockSuccessResponse) => {
+    const isContextSet = (response: { data: boolean; error: { message: string } | null }) => {
       return response.data === true && response.error === null;
     };
 

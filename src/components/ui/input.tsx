@@ -1,6 +1,24 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
+/**
+ * Input component for text entry
+ * 
+ * @example
+ * ```tsx
+ * <Input type="text" placeholder="Enter your name" />
+ * ```
+ * 
+ * With error state:
+ * ```tsx
+ * <Input aria-invalid={true} />
+ * ```
+ * 
+ * File input:
+ * ```tsx
+ * <Input type="file" />
+ * ```
+ */
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
     <input

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
@@ -30,56 +26,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
-        { status: 401 }
-      );
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: { code: 'UNAUTHORIZED', message: 'Unauthorized' } },
-        { status: 401 }
-      );
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json(
-        { error: { code: 'TENANT_NOT_FOUND', message: 'Tenant not found' } },
-        { status: 403 }
-      );
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch all messages in the thread
     const { data: messages, error } = await supabase
@@ -98,7 +47,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error fetching thread messages:', error);
       return NextResponse.json(
-        { error: { code: 'FETCH_ERROR', message: 'Failed to fetch thread messages', details: error.message } },
+        { error: { code: 'FETCH_ERROR', message: 'Failed to fetch thread messages' } },
         { status: 500 }
       );
     }

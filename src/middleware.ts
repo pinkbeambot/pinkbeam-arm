@@ -1,6 +1,8 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import { rateLimitMiddleware, addRateLimitHeaders } from '@/lib/middleware/rate-limit';
+import { csrfMiddleware } from '@/lib/middleware/csrf';
+import { API_VERSION, isNonVersionedRoute } from '@/lib/api/versioning';
 
 // Dev auth bypass - SERVER SIDE ONLY, development only
 // NEVER set DEV_AUTH_BYPASS in production - build will fail
@@ -19,6 +21,7 @@ const PUBLIC_ROUTES = [
 
 // Public page routes
 const PUBLIC_PAGE_ROUTES = [
+  '/auth',
   '/login',
   '/signup',
   '/',
@@ -61,11 +64,18 @@ function isPublicPageRoute(pathname: string): boolean {
  * - Extracts tenant_id from JWT claims
  * - Handles token refresh automatically
  * - Returns 401 for invalid/missing tokens on API routes
+ * - Enforces CSRF protection (origin validation + double-submit cookie)
  * - Applies per-tenant rate limiting (100 req/min free, 1000 req/min pro)
  * - Returns 429 with Retry-After header when limit exceeded
  */
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Normalize versioned API paths for route matching.
+  // /api/v1/agents → /api/agents for PUBLIC_ROUTES, rate-limit checks, etc.
+  const normalizedPathname = pathname.startsWith('/api/v1/')
+    ? pathname.replace('/api/v1/', '/api/')
+    : pathname;
 
   // Skip middleware for static files and Next.js internals
   if (
@@ -85,7 +95,7 @@ export async function middleware(request: NextRequest) {
   if (DEV_AUTH_BYPASS) {
     // For API routes, inject a mock tenant context
     if (pathname.startsWith('/api/')) {
-      const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+      const isPublicRoute = PUBLIC_ROUTES.some(route => normalizedPathname.startsWith(route));
       if (isPublicRoute) return NextResponse.next();
 
       const response = NextResponse.next({ request: { headers: request.headers } });
@@ -156,10 +166,10 @@ export async function middleware(request: NextRequest) {
     console.error('Session error:', sessionError.message);
   }
 
-  // Handle API routes
+  // Handle API routes (match both /api/ and /api/v1/)
   if (pathname.startsWith('/api/')) {
-    // Check if this is a public API route
-    const isPublicRoute = PUBLIC_ROUTES.some(route => pathname.startsWith(route));
+    // Check if this is a public API route (using normalized path)
+    const isPublicRoute = PUBLIC_ROUTES.some(route => normalizedPathname.startsWith(route));
     if (isPublicRoute) {
       return NextResponse.next();
     }
@@ -172,9 +182,15 @@ export async function middleware(request: NextRequest) {
       );
     }
 
+    // CSRF validation (origin + double-submit cookie)
+    const csrf = csrfMiddleware(request);
+    if (csrf.errorResponse) {
+      return csrf.errorResponse;
+    }
+
     // Get user's tenant_id from session
     const user = session.user;
-    const tenantId = user.user_metadata?.tenant_id || 
+    const tenantId = user.user_metadata?.tenant_id ||
                      user.app_metadata?.tenant_id ||
                      (await getTenantIdFromUser(supabase, user.id));
 
@@ -192,38 +208,49 @@ export async function middleware(request: NextRequest) {
     request.headers.set('x-tenant-id', tenantId);
     request.headers.set('x-user-id', user.id);
 
-    // Apply rate limiting (unless excluded)
-    if (!isRateLimitExcluded(pathname)) {
+    // Apply rate limiting (unless excluded, using normalized path)
+    if (!isRateLimitExcluded(normalizedPathname)) {
       const rateLimitResponse = await rateLimitMiddleware(request, tenantId);
-      
+
       if (rateLimitResponse) {
         return rateLimitResponse;
       }
-      
+
       response = await addRateLimitHeaders(response, tenantId);
     }
 
-    return response;
+    // API version headers
+    response.headers.set('X-API-Version', API_VERSION);
+    if (!pathname.startsWith(`/api/${API_VERSION}/`) && !isNonVersionedRoute(normalizedPathname)) {
+      response.headers.set('X-Deprecated', 'Use /api/v1/ prefix. Unversioned paths will be removed in a future release.');
+    }
+
+    // Attach CSRF cookie to the response
+    return csrf.attachCookie(response);
   }
 
-  // Handle page routes - redirect unauthenticated users from /portal/* to /login
+  // Handle page routes - redirect unauthenticated users from /portal/* to /auth
   if (pathname.startsWith('/portal/') || pathname === '/portal') {
     if (!session) {
-      const loginUrl = new URL('/login', request.url);
-      loginUrl.searchParams.set('redirect', pathname);
-      return NextResponse.redirect(loginUrl);
+      const authUrl = new URL('/auth', request.url);
+      authUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(authUrl);
     }
   }
 
-  // Redirect authenticated users away from /login
-  if (pathname === '/login' || pathname.startsWith('/login/')) {
+  // Redirect authenticated users away from /auth, /login, and /signup
+  if (pathname === '/auth' || pathname.startsWith('/auth/') ||
+      pathname === '/login' || pathname.startsWith('/login/') ||
+      pathname === '/signup' || pathname.startsWith('/signup/')) {
     if (session) {
       const redirectTo = request.nextUrl.searchParams.get('redirect') || '/portal';
       return NextResponse.redirect(new URL(redirectTo, request.url));
     }
   }
 
-  return response;
+  // Set CSRF cookie on page responses so it's available before the first API call
+  const pageCsrf = csrfMiddleware(request);
+  return pageCsrf.attachCookie(response);
 }
 
 /**

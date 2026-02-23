@@ -34,51 +34,8 @@ interface VersionHistoryProps {
   onView: (version: ConfigVersion) => void;
 }
 
-// Mock data for demonstration
-const mockVersions: ConfigVersion[] = [
-  {
-    id: 'v3',
-    version: 3,
-    name: 'Added escalation triggers',
-    description: 'Enabled high-stakes and ambiguity escalation',
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-    createdBy: 'Alex CEO',
-    changes: [
-      { field: 'escalateHighStakes', oldValue: 'false', newValue: 'true', type: 'modified' },
-      { field: 'escalateAmbiguity', oldValue: 'false', newValue: 'true', type: 'modified' },
-    ],
-    config: {},
-  },
-  {
-    id: 'v2',
-    version: 2,
-    name: 'Updated system prompt',
-    description: 'Clarified success criteria and added examples',
-    createdAt: new Date(Date.now() - 172800000).toISOString(),
-    createdBy: 'Alex CEO',
-    changes: [
-      { field: 'systemPrompt', oldValue: 'Previous prompt...', newValue: 'Updated prompt with examples...', type: 'modified' },
-      { field: 'successCriteria', oldValue: '', newValue: 'Response time < 1 hour', type: 'added' },
-    ],
-    config: {},
-  },
-  {
-    id: 'v1',
-    version: 1,
-    name: 'Initial configuration',
-    description: 'Created agent with default settings',
-    createdAt: new Date(Date.now() - 259200000).toISOString(),
-    createdBy: 'System',
-    changes: [
-      { field: 'name', oldValue: '', newValue: 'Support Agent', type: 'added' },
-      { field: 'role', oldValue: '', newValue: 'worker', type: 'added' },
-    ],
-    config: {},
-  },
-];
-
 export function VersionHistory({
-  versions = mockVersions,
+  versions,
   currentVersionId,
   onRollback,
   onView,
@@ -113,6 +70,18 @@ export function VersionHistory({
         return 'text-gray-600 bg-gray-50 dark:bg-gray-950';
     }
   };
+
+  if (versions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center">
+        <GitCommit className="h-8 w-8 text-muted-foreground mb-3" />
+        <p className="font-medium text-muted-foreground">No version history available</p>
+        <p className="text-sm text-muted-foreground mt-1">
+          Configuration changes will appear here once tracked.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

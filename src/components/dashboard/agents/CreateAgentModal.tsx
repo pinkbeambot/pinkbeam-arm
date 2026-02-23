@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Bot, Sparkles, User, Wrench, Shield, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { cn, getInitials, getAvatarColor } from '@/lib/utils';
-import type { AgentRole, Capability, CreateAgentInput } from '@/types';
+import { SUPPORTED_MODELS } from '@/lib/constants/models';
+import type { Agent, AgentRole, Capability, CreateAgentInput } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +24,7 @@ interface CreateAgentModalProps {
   onOpenChange: (open: boolean) => void;
   onCreate: (data: CreateAgentInput) => Promise<void>;
   loading?: boolean;
+  existingAgents?: Agent[];
 }
 
 type Step = 'template' | 'basic' | 'capabilities' | 'review';
@@ -33,6 +38,15 @@ interface AgentTemplate {
   defaultCapabilities: Capability[];
   suggestedModel: string;
 }
+
+const basicInfoSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
+  role: z.enum(['ceo', 'manager', 'worker', 'specialist', 'system'] as const),
+  description: z.string().min(1, 'Description is required'),
+  model: z.string().min(1, 'Model is required'),
+});
+
+type BasicInfoFormData = z.infer<typeof basicInfoSchema>;
 
 const templates: AgentTemplate[] = [
   {
@@ -91,14 +105,6 @@ const capabilities: { id: Capability; label: string; description: string }[] = [
   { id: 'modify_config', label: 'Modify Config', description: 'Can change agent settings' },
 ];
 
-const models = [
-  { value: 'claude-3-opus', label: 'Claude 3 Opus (Most capable)' },
-  { value: 'claude-3-sonnet', label: 'Claude 3 Sonnet (Balanced)' },
-  { value: 'claude-3-haiku', label: 'Claude 3 Haiku (Fastest)' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-];
-
 export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: CreateAgentModalProps) {
   const [step, setStep] = useState<Step>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<AgentTemplate | null>(null);
@@ -155,8 +161,15 @@ export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: Crea
     switch (step) {
       case 'template':
         return selectedTemplate !== null;
-      case 'basic':
-        return formData.name.trim().length > 0 && formData.description.trim().length > 0;
+      case 'basic': {
+        const result = basicInfoSchema.safeParse({
+          name: formData.name,
+          role: formData.role,
+          description: formData.description,
+          model: formData.model,
+        });
+        return result.success;
+      }
       case 'capabilities':
         return (formData.capabilities?.length || 0) > 0;
       case 'review':
@@ -168,9 +181,9 @@ export function CreateAgentModal({ open, onOpenChange, onCreate, loading }: Crea
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent data-testid="create-agent-modal" aria-modal="true" aria-labelledby="create-agent-title" className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create New Agent</DialogTitle>
+          <DialogTitle id="create-agent-title">Create New Agent</DialogTitle>
           <DialogDescription>
             Set up a new AI agent to join your workforce.
           </DialogDescription>
@@ -244,6 +257,7 @@ function TemplateStep({ onSelect }: { onSelect: (template: AgentTemplate) => voi
         return (
           <button
             key={template.id}
+            data-testid={`template-${template.id}`}
             onClick={() => onSelect(template)}
             className={cn(
               'flex flex-col items-start p-4 rounded-lg border-2 text-left transition-all',
@@ -279,6 +293,20 @@ function BasicInfoStep({
   formData: CreateAgentInput; 
   onChange: (data: CreateAgentInput) => void;
 }) {
+  const {
+    register,
+    formState: { errors },
+  } = useForm<BasicInfoFormData>({
+    resolver: zodResolver(basicInfoSchema),
+    mode: 'onChange',
+    defaultValues: {
+      name: formData.name,
+      role: formData.role,
+      description: formData.description,
+      model: formData.model,
+    },
+  });
+
   return (
     <div className="space-y-6">
       <div className="space-y-2">
@@ -286,9 +314,13 @@ function BasicInfoStep({
         <Input
           id="name"
           placeholder="e.g., Marketing Writer, Lead Qualifier"
-          value={formData.name}
-          onChange={(e) => onChange({ ...formData, name: e.target.value })}
+          {...register('name', {
+            onChange: (e) => onChange({ ...formData, name: e.target.value }),
+          })}
         />
+        {errors.name && (
+          <p className="text-sm text-destructive">{errors.name.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -301,12 +333,16 @@ function BasicInfoStep({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="ceo">CEO (executive oversight)</SelectItem>
             <SelectItem value="manager">Manager (can spawn agents)</SelectItem>
             <SelectItem value="worker">Worker (handles tasks)</SelectItem>
             <SelectItem value="specialist">Specialist (domain expert)</SelectItem>
             <SelectItem value="system">System (infrastructure)</SelectItem>
           </SelectContent>
         </Select>
+        {errors.role && (
+          <p className="text-sm text-destructive">{errors.role.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -314,10 +350,14 @@ function BasicInfoStep({
         <Textarea
           id="description"
           placeholder="Describe what this agent does and its responsibilities..."
-          value={formData.description}
-          onChange={(e) => onChange({ ...formData, description: e.target.value })}
           rows={4}
+          {...register('description', {
+            onChange: (e) => onChange({ ...formData, description: e.target.value }),
+          })}
         />
+        {errors.description && (
+          <p className="text-sm text-destructive">{errors.description.message}</p>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -330,13 +370,16 @@ function BasicInfoStep({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            {models.map((model) => (
+            {SUPPORTED_MODELS.map((model) => (
               <SelectItem key={model.value} value={model.value}>
                 {model.label}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
+        {errors.model && (
+          <p className="text-sm text-destructive">{errors.model.message}</p>
+        )}
       </div>
     </div>
   );
@@ -434,7 +477,7 @@ function ReviewStep({
 
         <div>
           <span className="text-sm font-medium text-muted-foreground">Model</span>
-          <p className="text-sm">{models.find(m => m.value === formData.model)?.label || formData.model}</p>
+          <p className="text-sm">{SUPPORTED_MODELS.find(m => m.value === formData.model)?.label || formData.model}</p>
         </div>
 
         <Separator />

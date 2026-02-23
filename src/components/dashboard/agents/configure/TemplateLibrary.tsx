@@ -1,7 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Sparkles, User, Wrench, Shield, MessageSquare, BarChart3, FileText, Mail, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { 
+  Search, Sparkles, User, Wrench, Shield, MessageSquare, BarChart3, FileText, Mail, Check,
+  Users, HeadphonesIcon, Bot, Share2, Search as SearchIcon, Loader2, AlertCircle
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { AgentRole, Capability } from '@/types';
 import { Input } from '@/components/ui/input';
@@ -9,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface TemplateLibraryProps {
   open: boolean;
@@ -30,114 +34,114 @@ export interface AgentTemplate {
   tags: string[];
 }
 
-const categories = ['All', 'Sales', 'Marketing', 'Support', 'Operations', 'Content', 'Analysis'];
+// Icon mapping from string names to Lucide components
+const iconMap: Record<string, React.ElementType> = {
+  User,
+  Users,
+  Wrench,
+  Shield,
+  MessageSquare,
+  BarChart3,
+  FileText,
+  Mail,
+  Sparkles,
+  HeadphonesIcon,
+  Bot,
+  Share2,
+  Search: SearchIcon,
+  // Fallback
+  default: Bot,
+};
 
-const templates: AgentTemplate[] = [
-  {
-    id: 'sdr',
-    name: 'SDR Agent',
-    role: 'worker',
-    description: 'Qualifies leads, schedules meetings, and handles initial outreach.',
-    icon: User,
-    category: 'Sales',
-    defaultCapabilities: ['decide', 'escalate', 'access_external'],
-    suggestedModel: 'claude-3-sonnet',
-    systemPrompt: 'You are a Sales Development Representative (SDR) agent. Your role is to qualify leads, schedule meetings, and handle initial outreach. Be professional, persistent but respectful, and always provide value in your communications. Research prospects thoroughly before reaching out and personalize your messages.',
-    successCriteria: 'Lead response rate >20%, Meetings booked >5/week, Qualified opportunities created',
-    tags: ['sales', 'outreach', 'leads'],
-  },
-  {
-    id: 'content-writer',
-    name: 'Content Writer',
-    role: 'specialist',
-    description: 'Creates blog posts, social media content, and marketing copy.',
-    icon: FileText,
-    category: 'Content',
-    defaultCapabilities: ['decide', 'escalate'],
-    suggestedModel: 'claude-3-sonnet',
-    systemPrompt: 'You are a Content Writer specializing in engaging, SEO-optimized content. You write blog posts, social media content, and marketing copy. Always research topics thoroughly, use a consistent brand voice, and optimize for readability and engagement.',
-    successCriteria: 'Content published on schedule, Engagement metrics meet targets, SEO rankings improved',
-    tags: ['content', 'writing', 'marketing'],
-  },
-  {
-    id: 'support-agent',
-    name: 'Support Agent',
-    role: 'worker',
-    description: 'Handles customer inquiries and resolves common issues.',
-    icon: MessageSquare,
-    category: 'Support',
-    defaultCapabilities: ['decide', 'escalate', 'access_external'],
-    suggestedModel: 'claude-3-haiku',
-    systemPrompt: 'You are a Customer Support Agent. Your goal is to resolve customer issues quickly and empathetically. Always acknowledge the customer\'s frustration, provide clear solutions, and follow up to ensure satisfaction. Escalate complex issues appropriately.',
-    successCriteria: 'First response time <1 hour, Resolution rate >80%, CSAT score >4.5',
-    tags: ['support', 'customer service', 'help desk'],
-  },
-  {
-    id: 'manager',
-    name: 'Manager Agent',
-    role: 'manager',
-    description: 'Coordinates other agents and handles complex delegations.',
-    icon: Shield,
-    category: 'Operations',
-    defaultCapabilities: ['spawn', 'delegate', 'decide', 'escalate'],
-    suggestedModel: 'claude-3-opus',
-    systemPrompt: 'You are a Manager Agent responsible for coordinating other agents and handling complex task delegation. You break down large projects into subtasks, assign them to appropriate agents, monitor progress, and ensure quality. You have the authority to spawn child agents when needed.',
-    successCriteria: 'Projects completed on time, Sub-agent coordination effective, Quality standards met',
-    tags: ['management', 'coordination', 'planning'],
-  },
-  {
-    id: 'analyst',
-    name: 'Data Analyst',
-    role: 'specialist',
-    description: 'Analyzes data, creates reports, and provides insights.',
-    icon: BarChart3,
-    category: 'Analysis',
-    defaultCapabilities: ['decide', 'escalate', 'access_external'],
-    suggestedModel: 'claude-3-sonnet',
-    systemPrompt: 'You are a Data Analyst agent. You analyze business data, create reports, and provide actionable insights. Always verify your calculations, cite data sources, and present findings clearly with visualizations when appropriate.',
-    successCriteria: 'Reports delivered accurately, Insights drive business decisions, Data quality maintained',
-    tags: ['analytics', 'reports', 'data'],
-  },
-  {
-    id: 'email-specialist',
-    name: 'Email Specialist',
-    role: 'worker',
-    description: 'Manages email inbox, drafts responses, and organizes messages.',
-    icon: Mail,
-    category: 'Operations',
-    defaultCapabilities: ['decide', 'escalate', 'access_external'],
-    suggestedModel: 'claude-3-haiku',
-    systemPrompt: 'You are an Email Management Specialist. You organize inboxes, draft professional responses, and prioritize messages by importance. Maintain a professional tone, respond promptly to urgent emails, and keep the inbox organized with labels and folders.',
-    successCriteria: 'Inbox zero maintained, Response time <4 hours, No important emails missed',
-    tags: ['email', 'inbox', 'communication'],
-  },
-  {
-    id: 'social-media',
-    name: 'Social Media Manager',
-    role: 'specialist',
-    description: 'Manages social media accounts and engagement.',
-    icon: Sparkles,
-    category: 'Marketing',
-    defaultCapabilities: ['decide', 'escalate', 'access_external'],
-    suggestedModel: 'claude-3-sonnet',
-    systemPrompt: 'You are a Social Media Manager. You create engaging posts, respond to comments, monitor brand mentions, and analyze social metrics. Stay on brand voice, engage authentically with followers, and be responsive to trending topics.',
-    successCriteria: 'Posting schedule maintained, Engagement rate increased, Brand sentiment positive',
-    tags: ['social media', 'marketing', 'engagement'],
-  },
-  {
-    id: 'dev-helper',
-    name: 'Dev Helper',
-    role: 'specialist',
-    description: 'Assists with code reviews, documentation, and debugging.',
-    icon: Wrench,
-    category: 'Operations',
-    defaultCapabilities: ['decide', 'escalate'],
-    suggestedModel: 'claude-3-opus',
-    systemPrompt: 'You are a Development Helper agent. You assist with code reviews, write documentation, help debug issues, and explain technical concepts. Always follow best practices, write clean code, and provide clear explanations.',
-    successCriteria: 'Code quality improved, Documentation complete, Bugs identified and resolved',
-    tags: ['development', 'code', 'technical'],
-  },
-];
+// API Response types
+interface ApiTemplate {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  category: string;
+  icon: string;
+  color: string;
+  capabilities: string[];
+  recommended_model: string;
+  recommended_tools: string[];
+  is_system: boolean;
+  usage_count: number;
+  config_preview?: {
+    basic_info?: {
+      role?: string;
+    };
+    instructions?: {
+      system_prompt_preview?: string;
+    };
+  };
+}
+
+interface ApiResponse {
+  data: ApiTemplate[];
+  meta: {
+    categories: string[];
+  };
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// Map API template to component template format
+function mapApiTemplateToAgentTemplate(apiTemplate: ApiTemplate): AgentTemplate {
+  // Map icon string to component
+  const IconComponent = iconMap[apiTemplate.icon] || iconMap.default;
+  
+  // Map capabilities strings to Capability type
+  const capabilityMap: Record<string, Capability> = {
+    'spawn': 'spawn',
+    'delegate': 'delegate',
+    'decide': 'decide',
+    'escalate': 'escalate',
+    'access_external': 'access_external',
+    'modify_config': 'modify_config',
+  };
+  
+  const defaultCapabilities = apiTemplate.capabilities
+    .map(cap => capabilityMap[cap])
+    .filter(Boolean) as Capability[];
+  
+  // Derive role from category or default to worker
+  const roleMap: Record<string, AgentRole> = {
+    'sales': 'worker',
+    'marketing': 'specialist',
+    'support': 'worker',
+    'operations': 'worker',
+    'content': 'specialist',
+    'analysis': 'specialist',
+    'research': 'specialist',
+    'general': 'worker',
+  };
+  
+  const role = roleMap[apiTemplate.category.toLowerCase()] || 'worker';
+  
+  // Get system prompt from config preview or use description
+  const systemPrompt = apiTemplate.config_preview?.instructions?.system_prompt_preview 
+    ? apiTemplate.config_preview.instructions.system_prompt_preview.replace(/\.\.\.$/, '')
+    : apiTemplate.description;
+  
+  return {
+    id: apiTemplate.id,
+    name: apiTemplate.name,
+    role,
+    description: apiTemplate.description,
+    icon: IconComponent,
+    category: apiTemplate.category,
+    defaultCapabilities,
+    suggestedModel: apiTemplate.recommended_model || 'claude-3-5-sonnet-20241022',
+    systemPrompt,
+    successCriteria: 'Template configured successfully',
+    tags: [apiTemplate.category, ...apiTemplate.recommended_tools.slice(0, 2)],
+  };
+}
 
 export function TemplateLibrary({
   open,
@@ -147,6 +151,47 @@ export function TemplateLibrary({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [previewTemplate, setPreviewTemplate] = useState<AgentTemplate | null>(null);
+  const [templates, setTemplates] = useState<AgentTemplate[]>([]);
+  const [categories, setCategories] = useState<string[]>(['All']);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch templates from API when modal opens
+  useEffect(() => {
+    if (!open) return;
+    
+    const fetchTemplates = async () => {
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const response = await fetch('/api/v1/agent-templates');
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to fetch templates: ${response.status}`);
+        }
+        
+        const apiResponse: ApiResponse = await response.json();
+        
+        // Map API templates to component format
+        const mappedTemplates = apiResponse.data.map(mapApiTemplateToAgentTemplate);
+        setTemplates(mappedTemplates);
+        
+        // Set categories from API
+        const apiCategories = apiResponse.meta.categories || [];
+        setCategories(['All', ...apiCategories.filter(c => c && c !== 'All')]);
+      } catch (err) {
+        console.error('Error fetching templates:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load templates');
+        setTemplates([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchTemplates();
+  }, [open]);
 
   const filteredTemplates = templates.filter((template) => {
     const matchesSearch = 
@@ -193,69 +238,97 @@ export function TemplateLibrary({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide px-2">
                 Categories
               </p>
-              {categories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={cn(
-                    'w-full text-left px-3 py-2 rounded-md text-sm transition-all',
-                    selectedCategory === category
-                      ? 'bg-primary text-primary-foreground'
-                      : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-                  )}
-                >
-                  {category}
-                  {category !== 'All' && (
-                    <span className="ml-2 text-xs opacity-60">
-                      ({templates.filter(t => t.category === category).length})
-                    </span>
-                  )}
-                </button>
-              ))}
+              {isLoading ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                  Loading...
+                </div>
+              ) : (
+                categories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={cn(
+                      'w-full text-left px-3 py-2 rounded-md text-sm transition-all',
+                      selectedCategory === category
+                        ? 'bg-primary text-primary-foreground'
+                        : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {category}
+                    {category !== 'All' && (
+                      <span className="ml-2 text-xs opacity-60">
+                        ({templates.filter(t => t.category === category).length})
+                      </span>
+                    )}
+                  </button>
+                ))
+              )}
             </div>
           </div>
 
           {/* Template Grid */}
           <ScrollArea className="flex-1 -mr-6 pr-6">
-            <div className="grid grid-cols-2 gap-4 pb-4">
-              {filteredTemplates.map((template) => {
-                const Icon = template.icon;
-                return (
-                  <button
-                    key={template.id}
-                    onClick={() => setPreviewTemplate(template)}
-                    className={cn(
-                      'flex flex-col items-start p-4 rounded-lg border text-left transition-all',
-                      previewTemplate?.id === template.id
-                        ? 'border-primary bg-primary/5'
-                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                    )}
-                  >
-                    <div className="flex items-center gap-3 mb-3 w-full">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <Icon className="h-5 w-5 text-primary" />
+            {error && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            {isLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : filteredTemplates.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                <Bot className="h-12 w-12 mb-4 opacity-50" />
+                <p>No templates found</p>
+                {searchQuery && (
+                  <p className="text-sm">Try adjusting your search</p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-4 pb-4">
+                {filteredTemplates.map((template) => {
+                  const Icon = template.icon;
+                  return (
+                    <button
+                      key={template.id}
+                      onClick={() => setPreviewTemplate(template)}
+                      className={cn(
+                        'flex flex-col items-start p-4 rounded-lg border text-left transition-all',
+                        previewTemplate?.id === template.id
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                      )}
+                    >
+                      <div className="flex items-center gap-3 mb-3 w-full">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <Icon className="h-5 w-5 text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-semibold block truncate">{template.name}</span>
+                          <Badge variant="secondary" className="text-xs capitalize">
+                            {template.role}
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="font-semibold block truncate">{template.name}</span>
-                        <Badge variant="secondary" className="text-xs capitalize">
-                          {template.role}
-                        </Badge>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                        {template.description}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mt-auto">
+                        {template.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="outline" className="text-xs capitalize">
+                            {tag}
+                          </Badge>
+                        ))}
                       </div>
-                    </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                      {template.description}
-                    </p>
-                    <div className="flex flex-wrap gap-1 mt-auto">
-                      {template.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="outline" className="text-xs capitalize">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </ScrollArea>
 
           {/* Preview Panel */}

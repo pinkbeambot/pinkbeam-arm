@@ -1,11 +1,12 @@
 /**
  * VALIS Intent Processor
  * Issue: #17 - Meta-Agent Natural Language Interface
- * 
+ *
  * Processes natural language commands and routes to appropriate intent handlers.
+ * Supports both LLM-powered processing (with agentic tool-use loop) and
+ * regex-based fallback for when the LLM service is unavailable.
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   MetaAgentIntent,
   ExtractedEntities,
@@ -21,6 +22,8 @@ import { handleQueryIntent } from './intents/query';
 import { handleSpawnIntent } from './intents/spawn';
 import { handleControlIntent } from './intents/control';
 import { handleBroadcastIntent } from './intents/broadcast';
+import { processWithLLM, isLLMAvailable } from './valis-llm';
+import type { ConversationMessage, ValisLLMResult } from './valis-llm';
 
 // Intent handler registry
 const intentHandlers: Record<MetaAgentIntent, (input: IntentHandlerInput, context: IntentHandlerContext) => Promise<IntentHandlerOutput>> = {
@@ -335,3 +338,91 @@ Try rephrasing your request, or ask for help with a specific command.`,
     ],
   };
 }
+
+// ============================================================================
+// LLM-Powered Processing
+// ============================================================================
+
+export interface ProcessWithLLMOptions {
+  message: string;
+  conversationHistory: ConversationMessage[];
+  sessionContext: MetaAgentSessionContext;
+  handlerContext: IntentHandlerContext;
+}
+
+export interface ProcessWithLLMResult extends IntentHandlerOutput {
+  llmResult?: ValisLLMResult;
+  usedLLM: boolean;
+}
+
+/**
+ * Process a command using LLM with agentic tool-use, falling back to
+ * regex-based processing if the LLM service is unavailable.
+ */
+export async function processCommandWithLLM(
+  options: ProcessWithLLMOptions
+): Promise<ProcessWithLLMResult> {
+  const { message, conversationHistory, sessionContext, handlerContext } = options;
+  const startTime = Date.now();
+
+  // Try LLM-powered processing first
+  if (isLLMAvailable()) {
+    try {
+      const llmResult = await processWithLLM(
+        message,
+        conversationHistory,
+        sessionContext,
+        handlerContext
+      );
+
+      const processingTime = Date.now() - startTime;
+
+      return {
+        success: true,
+        result_summary: `Processed with LLM (${llmResult.toolCalls.length} tool calls)`,
+        response_message: llmResult.response,
+        suggested_followups: extractSuggestedFollowups(llmResult),
+        usedLLM: true,
+        llmResult,
+        metadata: {
+          processing_time_ms: processingTime,
+          tool_calls: llmResult.toolCalls.length,
+          tokens_used: llmResult.tokensUsed,
+          cost_usd: llmResult.costUsd,
+        },
+      };
+    } catch (error) {
+      console.error('LLM processing failed, falling back to regex:', error);
+      // Fall through to regex-based processing
+    }
+  }
+
+  // Fallback: regex-based processing
+  const result = await processCommand(message, sessionContext, handlerContext);
+  return {
+    ...result,
+    usedLLM: false,
+  };
+}
+
+/**
+ * Extract suggested follow-ups from LLM tool call results
+ */
+function extractSuggestedFollowups(llmResult: ValisLLMResult): string[] {
+  const followups: string[] = [];
+
+  for (const call of llmResult.toolCalls) {
+    if (call.result.suggested_followups) {
+      followups.push(...call.result.suggested_followups);
+    }
+  }
+
+  // Deduplicate and limit to 5
+  return [...new Set(followups)].slice(0, 5);
+}
+
+/**
+ * Check if LLM processing is available
+ */
+export { isLLMAvailable } from './valis-llm';
+export type { ConversationMessage, ValisLLMResult } from './valis-llm';

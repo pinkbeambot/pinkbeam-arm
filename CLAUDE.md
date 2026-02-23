@@ -15,14 +15,27 @@ npm run start        # Start production server
 npm run lint         # ESLint (flat config, Next.js + TypeScript rules)
 ```
 
-No test framework is configured yet.
+```bash
+npm run test                # Vitest (unit tests)
+npm run test:watch          # Vitest watch mode
+npm run test:coverage       # Vitest with coverage report
+npm run test:e2e            # Playwright e2e tests
+npm run test:e2e:ui         # Playwright UI mode (debugging)
+npm run test:e2e:headed     # Playwright with visible browser
+npm run test:visual         # Visual regression tests
+npm run test:visual:update  # Update visual baselines
+npm run lighthouse          # Performance audits
+npm run analyze             # Bundle size analysis
+```
 
 ## Tech Stack
 
 - **Next.js 16** (App Router) + **React 19** + **TypeScript 5** (strict mode)
 - **Tailwind CSS 4** via `@tailwindcss/postcss`
-- **Supabase**: PostgreSQL (14 tables with RLS), Auth, Realtime (WebSocket), Edge Functions, Storage
+- **Supabase**: PostgreSQL (33 migrations with RLS), Auth (OTP magic code), Realtime (WebSocket), Edge Functions, Storage
+- **Resend**: Transactional emails. Client at `src/lib/resend.ts`, templates in `src/lib/emails/`. Server-side only (`RESEND_API_KEY`, no `NEXT_PUBLIC_` prefix).
 - **UI**: 52 shadcn/ui components in `src/components/ui/` with barrel export at `src/components/ui/index.ts`
+- **Testing**: Vitest (unit) + Playwright (e2e + visual regression)
 
 ## Architecture
 
@@ -38,9 +51,9 @@ Agents form a tree: humans are root (depth 0), agents spawn child agents. Roles:
 
 All state changes on agents, tasks, decisions, and escalations fire the `log_activity()` trigger, creating records in the `activities` table. Supabase Realtime publishes changes on channels like `tenant:{id}`, `tenant:{id}:agents`, `agent:{id}`.
 
-### Database Schema (14 tables)
+### Database Schema
 
-Core tables: `tenants`, `users`, `agents`, `tasks`, `task_dependencies`, `decisions`, `escalations`, `activities`, `messages`, `agent_sessions`, `analytics_daily`, `files`, `agent_presence`. Migrations live in `supabase/migrations/001-005`. Key stored functions: `get_agent_descendants()`, `get_task_chain()`, `rollup_daily_analytics()`, `calculate_escalation_sla()`.
+Core tables: `tenants`, `users`, `agents`, `tasks`, `task_dependencies`, `decisions`, `escalations`, `activities`, `messages`, `agent_sessions`, `analytics_daily`, `files`, `agent_presence`. Migrations live in `supabase/migrations/` (33 migrations total). Key stored functions: `get_agent_descendants()`, `get_task_chain()`, `rollup_daily_analytics()`, `calculate_escalation_sla()`.
 
 ### Key Enums
 
@@ -66,6 +79,10 @@ Use `cn()` from `@/lib/utils` for conditional class merging (clsx + tailwind-mer
 - Utility functions in `@/lib/utils.ts`: `cn()`, `formatCurrency()`, `formatDate()`, `formatDuration()`
 - Component directories: `components/dashboard/`, `components/agents/`, `components/tasks/`, `components/chat/`, `components/escalations/`
 
+### Auth Flow
+
+OTP-based (no magic links). User enters email → receives 6-digit code → enters code in same tab → session created client-side → `/api/auth/initialize` creates tenant + user for new signups. Auth provider at `src/components/auth/AuthProvider.tsx`.
+
 ### Environment Variables
 
 ```
@@ -73,6 +90,10 @@ NEXT_PUBLIC_SUPABASE_URL       # Supabase project URL
 NEXT_PUBLIC_SUPABASE_ANON_KEY  # Client-side (RLS-enforced)
 SUPABASE_SERVICE_ROLE_KEY      # Server-side (bypasses RLS)
 NEXT_PUBLIC_APP_URL            # App URL (default: http://localhost:3000)
+RESEND_API_KEY                 # Server-side only — transactional emails
+STRIPE_SECRET_KEY              # Stripe API key (test: sk_test_...)
+STRIPE_WEBHOOK_SECRET          # Stripe webhook signing secret
+DEV_AUTH_BYPASS                # Local dev convenience — bypasses auth in middleware (NEVER in production)
 ```
 
 ## Key Documentation
@@ -82,6 +103,16 @@ NEXT_PUBLIC_APP_URL            # App URL (default: http://localhost:3000)
 - `docs/PRD.md` — Full product requirements, personas, feature phases
 - `docs/STATUS.md` — Current development status and engineering queue
 
+### API Route Pattern
+
+All protected API routes use `authenticateRequest()` from `@/lib/api/auth`. Returns `{ tenantId, userId, supabase }` (service role client). Always filter queries by `tenant_id`. Validate request bodies with Zod.
+
+## Testing
+
+### E2E Testing
+
+E2E tests authenticate via the real Supabase OTP flow using Playwright's setup project pattern. The `setup` project (`src/__tests__/e2e/auth.setup.ts`) runs first, authenticates a persistent test user (`e2e-test@pinkbeam-test.com`) via `admin.generateLink()`, and saves session cookies to `.playwright/.auth/user.json`. Other test projects declare `dependencies: ['setup']` and use the `authenticatedPage` fixture which loads this storageState. Requires `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables.
+
 ## Development Status
 
-Foundation phase complete (schema, migrations, UI components). Currently building toward Phase 2: dashboard shells, agent roster, activity feed, and auth integration.
+Foundation phase complete (schema, migrations, UI components, auth). Currently building toward Phase 2: dashboard shells, agent roster, activity feed, and email notifications.

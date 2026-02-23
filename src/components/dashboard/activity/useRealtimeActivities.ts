@@ -1,8 +1,49 @@
 'use client';
 
+/**
+ * useRealtimeActivities Hook
+ * 
+ * Real-time activity feed subscription hook with Supabase Realtime.
+ * 
+ * Features:
+ * - Subscribe to activities table via Supabase Realtime
+ * - Real-time updates when new activities are inserted
+ * - Filter by activity type, agent, time range
+ * - Cursor-based pagination with loadMore
+ * - Proper tenant scoping for multi-tenancy
+ * - Connection error handling with exponential backoff retry
+ * - Smooth connection status indicator support
+ * 
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { 
+ *     events, 
+ *     isLoading, 
+ *     isRealtime, 
+ *     connectionError,
+ *     connectionState,
+ *     hasMore, 
+ *     loadMore,
+ *     retryConnection,
+ *     refetch 
+ *   } = useRealtimeActivities({
+ *     filter: { type: 'tasks', timeRange: '24h' },
+ *     onNewActivity: (activity) => {
+ *       console.log('New activity:', activity);
+ *     },
+ *   });
+ * 
+ *   return <ActivityFeed events={events} isLoading={isLoading} />;
+ * }
+ * ```
+ */
+
 import * as React from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { Activity, ActivityType } from '@/types';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { useRealtime, type ConnectionState } from '@/lib/realtime/useRealtime';
+import type { Activity } from '@/types';
 import type { ActivityEvent, UseRealtimeActivitiesOptions } from './types';
 
 // ============================================================================
@@ -43,7 +84,7 @@ function transformActivity(activity: Activity): ActivityEvent {
     'agent_status_changed': 'agent_spawned',
     'message': 'task_created',
   };
-  
+
   return {
     id: activity.id,
     type: typeMap[activity.type] || 'task_created',
@@ -68,75 +109,152 @@ function transformActivity(activity: Activity): ActivityEvent {
 }
 
 // ============================================================================
-// useRealtimeActivities Hook
+// Category Filter Helper
+// ============================================================================
+
+const categoryMap: Record<string, string> = {
+  'agent.spawned': 'agents',
+  'agent.status_changed': 'agents',
+  'agent.terminated': 'agents',
+  'task.created': 'tasks',
+  'task.assigned': 'tasks',
+  'task.started': 'tasks',
+  'task.progress': 'tasks',
+  'task.completed': 'tasks',
+  'task.failed': 'tasks',
+  'decision.proposed': 'decisions',
+  'decision.made': 'decisions',
+  'decision.overridden': 'decisions',
+  'escalation.created': 'escalations',
+  'escalation.resolved': 'escalations',
+  'system.error': 'system',
+  'system.config_changed': 'system',
+};
+
+// ============================================================================
+// Hook Return Type
 // ============================================================================
 
 export interface UseRealtimeActivitiesReturn {
+  /** Activity events for display */
   events: ActivityEvent[];
+  
+  /** Whether initial data is loading */
   isLoading: boolean;
+  
+  /** Whether Realtime subscription is active */
   isRealtime: boolean;
+  
+  /** Current connection state */
+  connectionState: ConnectionState;
+  
+  /** Connection/realtime error if any */
+  connectionError: Error | null;
+  
+  /** Number of reconnection attempts */
+  retryCount: number;
+  
+  /** Fetch error if any */
   error: Error | null;
+  
+  /** Whether more data is available */
   hasMore: boolean;
+  
+  /** Load more paginated data */
   loadMore: () => void;
+  
+  /** Refetch initial data */
   refetch: () => void;
+  
+  /** Manually retry realtime connection */
+  retryConnection: () => void;
 }
+
+// ============================================================================
+// useRealtimeActivities Hook
+// ============================================================================
 
 export function useRealtimeActivities(
   options: UseRealtimeActivitiesOptions = {}
 ): UseRealtimeActivitiesReturn {
   const { enabled = true, filter, onNewActivity } = options;
-  
+  const { session, user } = useAuth();
+
   const [events, setEvents] = React.useState<ActivityEvent[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
-  const [isRealtime, setIsRealtime] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
   const [hasMore, setHasMore] = React.useState(false);
   const [cursor, setCursor] = React.useState<string | undefined>();
+
+  const supabase = React.useMemo(() => createClient(), []);
+  const accessToken = session?.access_token;
   
-  const supabase = createClient();
-  
-  // Fetch initial activities
-  const fetchActivities = React.useCallback(async (cursor?: string) => {
+  // Extract tenant ID from user metadata or use default
+  const tenantId = user?.user_metadata?.tenant_id as string | undefined;
+
+  // Refs for values used in callbacks
+  const filterRef = React.useRef(filter);
+  filterRef.current = filter;
+  const onNewActivityRef = React.useRef(onNewActivity);
+  onNewActivityRef.current = onNewActivity;
+
+  // ============================================================================
+  // Data Fetching (Initial + Pagination)
+  // ============================================================================
+
+  const fetchActivities = React.useCallback(async (cursorParam?: string) => {
+    if (!accessToken) {
+      setIsLoading(false);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      
+
+      const currentFilter = filterRef.current;
+
       // Build query params
       const params = new URLSearchParams();
-      if (filter?.type && filter.type !== 'all') {
-        params.append('category', filter.type);
+      if (currentFilter?.type && currentFilter.type !== 'all') {
+        params.append('category', currentFilter.type);
       }
-      if (filter?.agentId) {
-        params.append('agent_id', filter.agentId);
+      if (currentFilter?.agentId) {
+        params.append('agent_id', currentFilter.agentId);
       }
-      if (filter?.timeRange && filter.timeRange !== 'all') {
-        params.append('time_range', filter.timeRange);
+      if (currentFilter?.timeRange && currentFilter.timeRange !== 'all') {
+        params.append('time_range', currentFilter.timeRange);
       }
-      if (filter?.search) {
-        params.append('search', filter.search);
+      if (currentFilter?.search) {
+        params.append('search', currentFilter.search);
       }
-      if (cursor) {
-        params.append('cursor', cursor);
+      if (cursorParam) {
+        params.append('cursor', cursorParam);
       }
       params.append('limit', '50');
-      
-      // Fetch from API
-      const response = await fetch(`/api/activities?${params.toString()}`);
-      
+
+      // Fetch from API with auth header
+      const response = await fetch(`/api/v1/activities?${params.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
       if (!response.ok) {
         throw new Error(`Failed to fetch activities: ${response.statusText}`);
       }
-      
+
       const data = await response.json();
-      
+
       const newEvents = (data.activities || []).map(transformActivity);
-      
-      if (cursor) {
+
+      if (cursorParam) {
         setEvents(prev => [...prev, ...newEvents]);
       } else {
         setEvents(newEvents);
       }
-      
+
       setHasMore(data.meta?.hasMore || false);
       setCursor(data.meta?.cursor);
     } catch (err) {
@@ -144,96 +262,93 @@ export function useRealtimeActivities(
     } finally {
       setIsLoading(false);
     }
-  }, [filter]);
-  
-  // Initial fetch
+  }, [accessToken]);
+
+  // Initial fetch + refetch when filter changes
   React.useEffect(() => {
     if (enabled) {
       fetchActivities();
     }
-  }, [enabled, fetchActivities]);
-  
-  // Realtime subscription
-  React.useEffect(() => {
-    if (!enabled) return;
-    
-    // Subscribe to activity changes
-    const channel = supabase
-      .channel('activities')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'activities',
-        },
-        (payload) => {
-          const newActivity = payload.new as Activity;
-          const newEvent = transformActivity(newActivity);
-          
-          // Apply filters
-          if (filter?.type && filter.type !== 'all') {
-            const categoryMap: Record<string, string> = {
-              'agent.spawned': 'agents',
-              'agent.status_changed': 'agents',
-              'agent.terminated': 'agents',
-              'task.created': 'tasks',
-              'task.assigned': 'tasks',
-              'task.started': 'tasks',
-              'task.progress': 'tasks',
-              'task.completed': 'tasks',
-              'task.failed': 'tasks',
-              'decision.proposed': 'decisions',
-              'decision.made': 'decisions',
-              'decision.overridden': 'decisions',
-              'escalation.created': 'escalations',
-              'escalation.resolved': 'escalations',
-              'system.error': 'system',
-              'system.config_changed': 'system',
-            };
-            
-            if (categoryMap[newActivity.type] !== filter.type) {
-              return;
-            }
-          }
-          
-          if (filter?.agentId && newActivity.agent_id !== filter.agentId) {
-            return;
-          }
-          
-          // Add to events
-          setEvents(prev => [newEvent, ...prev]);
-          
-          // Notify callback
-          onNewActivity?.(newActivity);
-        }
-      )
-      .subscribe((status) => {
-        setIsRealtime(status === 'SUBSCRIBED');
-      });
-    
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [enabled, filter, onNewActivity, supabase]);
-  
+  }, [enabled, fetchActivities, filter]);
+
+  // ============================================================================
+  // Realtime Subscription (using new core hook)
+  // ============================================================================
+
+  const handleRealtimeInsert = React.useCallback((newActivity: object) => {
+    const activity = newActivity as Activity;
+    const newEvent = transformActivity(activity);
+    const currentFilter = filterRef.current;
+
+    // Apply client-side filters
+    if (currentFilter?.type && currentFilter.type !== 'all') {
+      if (categoryMap[activity.type] !== currentFilter.type) {
+        return;
+      }
+    }
+
+    if (currentFilter?.agentId && activity.agent_id !== currentFilter.agentId) {
+      return;
+    }
+
+    // Add to events
+    setEvents(prev => [newEvent, ...prev]);
+
+    // Notify callback
+    onNewActivityRef.current?.(activity);
+  }, []);
+
+  // Build filter for realtime subscription
+  const realtimeFilter = React.useMemo(() => {
+    const filters: string[] = [];
+    if (tenantId) filters.push(`tenant_id=eq.${tenantId}`);
+    if (filter?.agentId) filters.push(`agent_id=eq.${filter.agentId}`);
+    return filters.length > 0 ? filters.join(',') : undefined;
+  }, [tenantId, filter?.agentId]);
+
+  // Use the core realtime hook
+  const {
+    connectionState,
+    error: connectionError,
+    retryCount,
+    isConnected,
+    retry: retryConnection,
+  } = useRealtime({
+    table: 'activities',
+    filter: realtimeFilter,
+    events: ['INSERT'],
+    enabled,
+    tenantId,
+    onInsert: handleRealtimeInsert,
+  });
+
+  // ============================================================================
+  // Actions
+  // ============================================================================
+
   const loadMore = React.useCallback(() => {
     if (hasMore && cursor && !isLoading) {
       fetchActivities(cursor);
     }
   }, [hasMore, cursor, isLoading, fetchActivities]);
-  
+
   const refetch = React.useCallback(() => {
     fetchActivities();
   }, [fetchActivities]);
-  
+
   return {
     events,
     isLoading,
-    isRealtime,
+    isRealtime: isConnected,
+    connectionState,
+    connectionError,
+    retryCount,
     error,
     hasMore,
     loadMore,
     refetch,
+    retryConnection,
   };
 }
+
+export default useRealtimeActivities;

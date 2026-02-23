@@ -173,7 +173,7 @@ SELECT
     COALESCE(bt.blocked_count, 0) as blocked_tasks_count,
     bt.avg_blocked_duration_seconds,
     jsonb_object_agg(
-        COALESCE(hs.status, 'unknown'),
+        COALESCE(hs.status::text, 'unknown'),
         jsonb_build_object(
             'count', COALESCE(hs.task_count, 0),
             'avg_time_to_complete', hs.avg_time_to_complete_seconds,
@@ -329,7 +329,8 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION get_roi_metrics(
     p_tenant_id UUID,
     p_start_date DATE DEFAULT CURRENT_DATE - INTERVAL '30 days',
-    p_end_date DATE DEFAULT CURRENT_DATE
+    p_end_date DATE DEFAULT CURRENT_DATE,
+    p_avg_human_cost_per_hour NUMERIC DEFAULT 50.00
 )
 RETURNS TABLE (
     total_tasks_completed BIGINT,
@@ -337,7 +338,7 @@ RETURNS TABLE (
     cost_per_task NUMERIC,
     tasks_per_dollar NUMERIC,
     estimated_hours_saved NUMERIC,
-    avg_human_cost_per_hour NUMERIC DEFAULT 50.00,
+    avg_human_cost_per_hour NUMERIC,
     estimated_value_generated NUMERIC,
     roi_percentage NUMERIC
 ) AS $$
@@ -346,7 +347,7 @@ DECLARE
     v_total_completed BIGINT;
     v_avg_duration NUMERIC;
 BEGIN
-    SELECT 
+    SELECT
         COALESCE(SUM(apd.total_cost_usd), 0),
         COALESCE(SUM(apd.tasks_completed), 0),
         COALESCE(AVG(apd.avg_task_duration_seconds), 0)
@@ -356,22 +357,22 @@ BEGIN
     AND apd.date BETWEEN p_start_date AND p_end_date;
 
     RETURN QUERY
-    SELECT 
+    SELECT
         v_total_completed,
         ROUND(v_total_cost, 4),
-        CASE 
+        CASE
             WHEN v_total_completed > 0 THEN ROUND(v_total_cost / v_total_completed, 4)
             ELSE 0
         END as cost_per_task,
-        CASE 
+        CASE
             WHEN v_total_cost > 0 THEN ROUND(v_total_completed / v_total_cost, 2)
             ELSE 0
         END as tasks_per_dollar,
         ROUND((v_total_completed * v_avg_duration) / 3600, 2) as estimated_hours_saved,
-        50.00 as avg_human_cost_per_hour,
-        ROUND((v_total_completed * v_avg_duration / 3600) * 50, 2) as estimated_value_generated,
-        CASE 
-            WHEN v_total_cost > 0 THEN ROUND((((v_total_completed * v_avg_duration / 3600) * 50) - v_total_cost) / v_total_cost * 100, 2)
+        p_avg_human_cost_per_hour as avg_human_cost_per_hour,
+        ROUND((v_total_completed * v_avg_duration / 3600) * p_avg_human_cost_per_hour, 2) as estimated_value_generated,
+        CASE
+            WHEN v_total_cost > 0 THEN ROUND((((v_total_completed * v_avg_duration / 3600) * p_avg_human_cost_per_hour) - v_total_cost) / v_total_cost * 100, 2)
             ELSE 0
         END as roi_percentage;
 END;

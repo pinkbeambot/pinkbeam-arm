@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { analyticsRoiQuerySchema } from '@/lib/validation';
 import { z } from 'zod';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
  * Cache configuration
@@ -31,33 +28,9 @@ function setCachedData(key: string, data: unknown): void {
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -75,9 +48,6 @@ export async function GET(request: NextRequest) {
     if (cachedData) {
       return NextResponse.json({ data: cachedData, cached: true });
     }
-
-    // Set tenant context
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
 
     // Calculate date ranges
     const endDate = new Date();
@@ -99,9 +69,9 @@ export async function GET(request: NextRequest) {
     );
 
     if (roiError) {
-      console.error('Error fetching ROI metrics:', roiError);
+      console.error('Failed to fetch ROI metrics:', roiError);
       return NextResponse.json(
-        { error: 'Failed to fetch ROI metrics', details: roiError.message },
+        { error: 'Failed to fetch ROI metrics' },
         { status: 500 }
       );
     }

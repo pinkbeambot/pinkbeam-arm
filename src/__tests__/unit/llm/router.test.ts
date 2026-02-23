@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { LLMRouter, getLLMRouter, resetLLMRouter } from '@/lib/llm/router';
+import { EnhancedLLMRouter, getLLMRouter, resetLLMRouter } from '@/lib/llm/router';
 import { LLMError } from '@/lib/llm/types';
 
 // Mock the Claude provider
@@ -40,6 +40,18 @@ vi.mock('@/lib/llm/claude', () => ({
       costPer1KOutput: 0.015,
       latencyProfile: 'balanced',
     },
+    {
+      id: 'claude-3-opus-20240229',
+      provider: 'anthropic',
+      displayName: 'Claude 3 Opus',
+      contextWindow: 200000,
+      maxOutputTokens: 4096,
+      supportsFunctions: true,
+      supportsVision: true,
+      costPer1KInput: 0.015,
+      costPer1KOutput: 0.075,
+      latencyProfile: 'slow',
+    },
   ],
 }));
 
@@ -51,7 +63,7 @@ describe('LLMRouter', () => {
   describe('initialization', () => {
     it('should initialize with default config', () => {
       const router = getLLMRouter();
-      expect(router).toBeInstanceOf(LLMRouter);
+      expect(router).toBeInstanceOf(EnhancedLLMRouter);
       expect(router.getConfig().defaultProvider).toBe('anthropic');
     });
 

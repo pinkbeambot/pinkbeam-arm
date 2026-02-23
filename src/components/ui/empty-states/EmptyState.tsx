@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card'
 import { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 
-interface EmptyStateProps {
+export interface EmptyStateProps {
   icon: LucideIcon
   title: string
   description: string
@@ -16,6 +16,19 @@ interface EmptyStateProps {
   className?: string
 }
 
+/**
+ * Empty state component for when no data is available
+ * 
+ * @example
+ * ```tsx
+ * <EmptyState
+ *   icon={Inbox}
+ *   title="No messages"
+ *   description="You don't have any messages yet."
+ *   action={{ label: "Create Message", href: "/messages/new" }}
+ * />
+ * ```
+ */
 export function EmptyState({
   icon: Icon,
   title,
@@ -25,23 +38,20 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <Card className={cn('p-12 text-center border-dashed', className)}>
-      <Icon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+      <Icon className="h-12 w-12 text-muted-foreground mx-auto mb-4" aria-hidden="true" />
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
         {description}
       </p>
       {action && (
         action.href ? (
-          <Button asChild className="bg-pink-500 hover:bg-pink-600">
+          <Button asChild>
             <Link href={action.href}>
               {action.label}
             </Link>
           </Button>
         ) : (
-          <Button 
-            onClick={action.onClick}
-            className="bg-pink-500 hover:bg-pink-600"
-          >
+          <Button onClick={action.onClick}>
             {action.label}
           </Button>
         )

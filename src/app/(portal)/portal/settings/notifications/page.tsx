@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { useRouter } from 'next/navigation';
 import { PortalLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,13 +12,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNotificationPreferences } from '@/lib/hooks/useNotifications';
 import {
-  DEFAULT_NOTIFICATION_PREFERENCES,
   NotificationType,
   NotificationChannel,
   NotificationPriority,
 } from '@/types/notification';
 import {
   Bell,
+  BellRing,
   Mail,
   Globe,
   Smartphone,
@@ -32,8 +31,21 @@ import {
   Check,
   AlertCircle,
   Info,
+  Volume2,
+  VolumeX,
+  Moon,
+  Clock,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBrowserNotifications } from '@/lib/hooks/useBrowserNotifications';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 // Channel configuration
 const CHANNELS: { id: NotificationChannel; label: string; icon: typeof Bell; description: string }[] = [
@@ -129,7 +141,7 @@ function PreferenceCard({
         {/* Channel toggles */}
         <div className="space-y-3">
           <Label className="text-sm font-medium">Delivery Channels</Label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {CHANNELS.map((channel) => (
               <div
                 key={channel.id}
@@ -215,9 +227,49 @@ function LoadingState() {
   );
 }
 
+// Common timezones for the selector
+const COMMON_TIMEZONES = [
+  'America/New_York',
+  'America/Chicago',
+  'America/Denver',
+  'America/Los_Angeles',
+  'America/Anchorage',
+  'Pacific/Honolulu',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Asia/Tokyo',
+  'Asia/Shanghai',
+  'Asia/Kolkata',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+];
+
+function getTimezoneLabel(tz: string): string {
+  try {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      timeZoneName: 'short',
+    });
+    const parts = formatter.formatToParts(now);
+    const tzAbbr = parts.find(p => p.type === 'timeZoneName')?.value || '';
+    const city = tz.split('/').pop()?.replace(/_/g, ' ') || tz;
+    return `${city} (${tzAbbr})`;
+  } catch {
+    return tz;
+  }
+}
+
 export default function NotificationSettingsPage() {
-  const router = useRouter();
   const { preferences, loading, error, updatePreferences } = useNotificationPreferences();
+  const {
+    permission,
+    requestPermission,
+    settings: browserSettings,
+    updateSettings: updateBrowserSettings,
+    isSupported,
+  } = useBrowserNotifications();
   const [localPreferences, setLocalPreferences] = React.useState<Record<NotificationType, PreferenceCardProps['channels'] & { minPriority: NotificationPriority }>>({
     task_assigned: { in_app: true, email: true, webhook: false, push: false, minPriority: 'normal' },
     escalation_received: { in_app: true, email: true, webhook: true, push: true, minPriority: 'high' },
@@ -385,6 +437,218 @@ export default function NotificationSettingsPage() {
               channels for each notification type and set minimum priority thresholds.
             </AlertDescription>
           </Alert>
+
+          {/* Browser Notifications */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <BellRing className="h-4 w-4" />
+                Browser Notifications
+              </CardTitle>
+              <CardDescription>
+                Receive desktop notifications for escalations, decisions, and system alerts even when
+                the app is in the background
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Permission status */}
+              {!isSupported ? (
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Your browser does not support desktop notifications.
+                  </AlertDescription>
+                </Alert>
+              ) : permission === 'denied' ? (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Browser notifications are blocked. Please enable them in your browser settings
+                    for this site, then refresh the page.
+                  </AlertDescription>
+                </Alert>
+              ) : permission === 'default' ? (
+                <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">Enable Desktop Notifications</p>
+                    <p className="text-xs text-muted-foreground">
+                      Get alerted about critical events even when the app isn&apos;t in focus
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={requestPermission}
+                  >
+                    <BellRing className="h-4 w-4 mr-2" />
+                    Allow Notifications
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between p-4 rounded-lg border bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                      Desktop notifications enabled
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="text-green-700 border-green-300 dark:text-green-300 dark:border-green-700">
+                    Active
+                  </Badge>
+                </div>
+              )}
+
+              {/* Enable/disable toggle */}
+              {isSupported && permission === 'granted' && (
+                <>
+                  <Separator />
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label htmlFor="browser-enabled" className="text-sm font-medium">
+                          Notifications Enabled
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Temporarily pause all desktop notifications
+                        </p>
+                      </div>
+                      <Switch
+                        id="browser-enabled"
+                        checked={browserSettings.enabled}
+                        onCheckedChange={(enabled) => updateBrowserSettings({ enabled })}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {browserSettings.soundEnabled ? (
+                          <Volume2 className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <VolumeX className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <div className="space-y-0.5">
+                          <Label htmlFor="sound-enabled" className="text-sm font-medium">
+                            Notification Sound
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Play a chime when notifications arrive
+                          </p>
+                        </div>
+                      </div>
+                      <Switch
+                        id="sound-enabled"
+                        checked={browserSettings.soundEnabled}
+                        onCheckedChange={(soundEnabled) => updateBrowserSettings({ soundEnabled })}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Quiet Hours */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Moon className="h-4 w-4" />
+                Quiet Hours
+              </CardTitle>
+              <CardDescription>
+                Pause desktop notifications during specified hours so you aren&apos;t disturbed
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="quiet-hours-enabled" className="text-sm font-medium">
+                    Enable Quiet Hours
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Silence desktop notifications during the specified time range
+                  </p>
+                </div>
+                <Switch
+                  id="quiet-hours-enabled"
+                  checked={browserSettings.quietHours.enabled}
+                  onCheckedChange={(enabled) =>
+                    updateBrowserSettings({
+                      quietHours: { ...browserSettings.quietHours, enabled },
+                    })
+                  }
+                />
+              </div>
+
+              {browserSettings.quietHours.enabled && (
+                <>
+                  <Separator />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="quiet-start" className="text-sm font-medium flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        Start Time
+                      </Label>
+                      <Input
+                        id="quiet-start"
+                        type="time"
+                        value={browserSettings.quietHours.start}
+                        onChange={(e) =>
+                          updateBrowserSettings({
+                            quietHours: { ...browserSettings.quietHours, start: e.target.value },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quiet-end" className="text-sm font-medium flex items-center gap-1.5">
+                        <Clock className="h-3.5 w-3.5" />
+                        End Time
+                      </Label>
+                      <Input
+                        id="quiet-end"
+                        type="time"
+                        value={browserSettings.quietHours.end}
+                        onChange={(e) =>
+                          updateBrowserSettings({
+                            quietHours: { ...browserSettings.quietHours, end: e.target.value },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="quiet-timezone" className="text-sm font-medium flex items-center gap-1.5">
+                        <Globe className="h-3.5 w-3.5" />
+                        Timezone
+                      </Label>
+                      <Select
+                        value={browserSettings.quietHours.timezone}
+                        onValueChange={(timezone) =>
+                          updateBrowserSettings({
+                            quietHours: { ...browserSettings.quietHours, timezone },
+                          })
+                        }
+                      >
+                        <SelectTrigger id="quiet-timezone">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COMMON_TIMEZONES.map((tz) => (
+                            <SelectItem key={tz} value={tz}>
+                              {getTimezoneLabel(tz)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Notifications arriving between {browserSettings.quietHours.start} and{' '}
+                    {browserSettings.quietHours.end} ({getTimezoneLabel(browserSettings.quietHours.timezone)}) will be silenced.
+                    You&apos;ll still see them in your notification center.
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Notification type cards */}
           {NOTIFICATION_TYPES.map(({ type, label, icon, description }) => (

@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { updateDecisionSchema, overrideDecisionSchema } from '@/lib/validation';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
@@ -59,47 +55,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch decision with all related data
     const { data: decision, error } = await supabase
@@ -122,7 +80,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching decision:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch decision', details: error.message },
+        { error: 'Failed to fetch decision' },
         { status: 500 }
       );
     }
@@ -204,51 +162,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse request body
     const body = await request.json();
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, userId, supabase } = auth;
 
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
+    // Look up the internal user ID for override tracking
+    const { data: userProfile } = await supabase
       .from('users')
-      .select('tenant_id, id')
-      .eq('auth_id', user.id)
+      .select('id')
+      .eq('auth_id', userId)
       .single();
 
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-    const userId = userProfile.id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const internalUserId = userProfile?.id;
 
     // Check if decision exists and belongs to tenant
     const { data: existingDecision, error: fetchError } = await supabase
@@ -272,7 +200,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     // Determine update type based on body structure
     const isOverride = 'reason' in body;
-    
+
     let updateData: Record<string, unknown> = {};
     let validatedData;
 
@@ -281,7 +209,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       validatedData = overrideDecisionSchema.parse(body);
       updateData = {
         status: 'overridden',
-        overridden_by: userId,
+        overridden_by: internalUserId,
         override_reason: validatedData.reason,
         executed_action: validatedData.correct_action || null,
         overridden_at: new Date().toISOString(),
@@ -323,7 +251,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating decision:', error);
       return NextResponse.json(
-        { error: 'Failed to update decision', details: error.message },
+        { error: 'Failed to update decision' },
         { status: 500 }
       );
     }

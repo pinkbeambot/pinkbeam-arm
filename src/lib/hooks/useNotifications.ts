@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { REALTIME_LISTEN_TYPES, REALTIME_POSTGRES_CHANGES_LISTEN_EVENT } from '@supabase/supabase-js';
 import type {
   Notification,
   NotificationType,
@@ -233,18 +234,19 @@ export function useNotifications({
     const channel = supabase
       .channel(`notifications:${tenantId}:${userId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload: {
-          eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-          new: Notification | null;
-          old: Notification | null;
-        }) => {
+        (rawPayload) => {
+          const payload = rawPayload as unknown as {
+            eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+            new: Notification | null;
+            old: Notification | null;
+          };
           setNotifications((current) => {
             if (payload.eventType === 'INSERT' && payload.new) {
               // Only add if it's for this user or global
@@ -256,7 +258,7 @@ export function useNotifications({
               return current;
             } else if (payload.eventType === 'UPDATE' && payload.new) {
               const updated = current.map((n) =>
-                n.id === payload.new?.id ? payload.new : n
+                n.id === payload.new?.id ? payload.new! : n
               );
               setUnreadCount(calculateUnreadCount(updated));
               return updated;
@@ -328,9 +330,9 @@ export function useUnreadNotificationCount(
     const channel = supabase
       .channel(`notifications-count:${tenantId}`)
       .on(
-        'postgres_changes' as any,
+        REALTIME_LISTEN_TYPES.POSTGRES_CHANGES,
         {
-          event: '*',
+          event: REALTIME_POSTGRES_CHANGES_LISTEN_EVENT.ALL,
           schema: 'public',
           table: 'notifications',
           filter: `tenant_id=eq.${tenantId}`,

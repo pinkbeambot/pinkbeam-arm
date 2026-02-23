@@ -4,8 +4,27 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
-// Re-export schemas
+// Re-export schemas and types
 export * from './schemas.ts';
+
+// Re-export types explicitly for edge functions
+export type {
+  SpawnRequest,
+  LifecycleRequest,
+  TaskExecuteRequest,
+  TaskCreateRequest,
+  TaskClaimRequest,
+  TaskStartRequest,
+  TaskCompleteRequest,
+  TaskFailRequest,
+  SendMessageRequest,
+  DecisionProposal,
+  EscalationRequest,
+  AgentIdentity,
+  AgentMessage,
+  ProtocolError,
+  RuntimeResponse,
+} from './schemas.ts';
 
 // Environment variables
 export const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;

@@ -3,45 +3,88 @@
  * Issue: #64 - Fix metrics error handling
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import * as React from 'react';
 
-// Mock Supabase
-const mockSupabaseClient = {
-  from: vi.fn(),
-  channel: vi.fn(() => ({
-    on: vi.fn().mockReturnThis(),
-    subscribe: vi.fn((callback) => {
-      callback('SUBSCRIBED');
-      return { unsubscribe: vi.fn() };
-    }),
-  })),
-};
+// Mock useAuth to provide session tokens
+const mockUseAuth = vi.fn();
+vi.mock('@/components/auth/AuthProvider', () => ({
+  useAuth: () => mockUseAuth(),
+}));
 
+// Mock the Supabase browser client (used for Realtime subscriptions only)
 vi.mock('@/lib/supabase/client', () => ({
-  createClient: () => mockSupabaseClient,
+  createClient: () => ({
+    channel: () => ({
+      on: vi.fn().mockReturnThis(),
+      subscribe: vi.fn((cb: (status: string) => void) => {
+        cb('SUBSCRIBED');
+        return { unsubscribe: vi.fn() };
+      }),
+      unsubscribe: vi.fn(),
+    }),
+  }),
 }));
 
 // Import after mocks
 import { useRealtimeMetrics } from '@/components/dashboard/metrics/useRealtimeMetrics';
 
+// Helper: create a successful fetch Response
+function okResponse(body: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Helper: create an error fetch Response
+function errorResponse(status: number, statusText: string, body?: Record<string, unknown>): Response {
+  return new Response(JSON.stringify(body || { error: statusText }), {
+    status,
+    statusText,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+// Default mock responses for agents + activities
+function mockSuccessResponses(
+  mockFetch: ReturnType<typeof vi.fn>,
+  agents: unknown[] = [],
+  activities: unknown[] = []
+) {
+  mockFetch.mockImplementation((url: string) => {
+    if (url.startsWith('/api/v1/agents')) {
+      return Promise.resolve(okResponse({ data: agents }));
+    }
+    if (url.startsWith('/api/v1/activities')) {
+      return Promise.resolve(okResponse({ activities }));
+    }
+    return Promise.resolve(okResponse({}));
+  });
+}
+
 describe('useRealtimeMetrics', () => {
+  const originalFetch = globalThis.fetch;
+  let mockFetch: ReturnType<typeof vi.fn>;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFetch = vi.fn();
+    globalThis.fetch = mockFetch as unknown as typeof fetch;
+    // Default: authenticated session
+    mockUseAuth.mockReturnValue({
+      session: { access_token: 'test-token-123' },
+    });
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
   });
 
   describe('initial state', () => {
     it('should initialize with loading state', () => {
-      // Setup mock to return empty data
-      mockSupabaseClient.from.mockImplementation((table: string) => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       const { result } = renderHook(() => useRealtimeMetrics());
 
@@ -51,14 +94,7 @@ describe('useRealtimeMetrics', () => {
     });
 
     it('should initialize with correct default values', () => {
-      mockSupabaseClient.from.mockImplementation((table: string) => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       const { result } = renderHook(() => useRealtimeMetrics());
 
@@ -72,28 +108,76 @@ describe('useRealtimeMetrics', () => {
     });
   });
 
+  describe('data fetching', () => {
+    it('should include Authorization header when fetching', async () => {
+      mockSuccessResponses(mockFetch);
+
+      const { result } = renderHook(() => useRealtimeMetrics());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      // Should have called /api/agents, /api/activities, and /api/analytics/realtime
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      for (const call of mockFetch.mock.calls) {
+        const [, options] = call;
+        expect((options as RequestInit).headers).toEqual(
+          expect.objectContaining({
+            Authorization: 'Bearer test-token-123',
+          })
+        );
+      }
+    });
+
+    it('should not fetch when session has no access_token', async () => {
+      mockUseAuth.mockReturnValue({ session: null });
+      mockSuccessResponses(mockFetch);
+
+      const { result } = renderHook(() => useRealtimeMetrics());
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false);
+      });
+
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(result.current.error).toBeNull();
+    });
+
+    it('should populate agent metrics from API response', async () => {
+      const agents = [
+        {
+          id: 'agent-1',
+          name: 'Test Agent',
+          status: 'active',
+          current_task_id: null,
+          updated_at: new Date().toISOString(),
+        },
+      ];
+
+      mockSuccessResponses(mockFetch, agents, []);
+
+      const { result } = renderHook(() => useRealtimeMetrics());
+
+      await waitFor(() => {
+        expect(result.current.agentMetrics.length).toBe(1);
+      });
+
+      expect(result.current.agentMetrics[0].agentId).toBe('agent-1');
+      expect(result.current.agentMetrics[0].agentName).toBe('Test Agent');
+      expect(result.current.aggregated).not.toBeNull();
+      expect(result.current.systemHealth).not.toBeNull();
+    });
+  });
+
   describe('error handling', () => {
     it('should set error state when agents fetch fails', async () => {
-      const errorMessage = 'Failed to fetch agents: Database error';
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'agents') {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ 
-                data: null, 
-                error: { message: 'Database error' } 
-              })),
-            })),
-          };
+      mockFetch.mockImplementation((url: string) => {
+        if (url.startsWith('/api/v1/agents')) {
+          return Promise.resolve(errorResponse(500, 'Internal Server Error', { error: 'Database error' }));
         }
-        return {
-          select: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            gte: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          })),
-        };
+        return Promise.resolve(okResponse({ activities: [] }));
       });
 
       const { result } = renderHook(() => useRealtimeMetrics());
@@ -106,89 +190,15 @@ describe('useRealtimeMetrics', () => {
       expect(result.current.isLoading).toBe(false);
     });
 
-    it('should set error state when tasks fetch fails', async () => {
-      let callCount = 0;
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        callCount++;
-        if (table === 'tasks' || callCount === 2) {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ 
-                data: null, 
-                error: { message: 'Tasks table error' } 
-              })),
-            })),
-          };
-        }
-        if (table === 'agents' || callCount === 1) {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          };
-        }
-        return {
-          select: vi.fn(() => ({
-            gte: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          })),
-        };
-      });
-
-      const { result } = renderHook(() => useRealtimeMetrics());
-
-      await waitFor(() => {
-        expect(result.current.error).not.toBeNull();
-      });
-
-      expect(result.current.error?.message).toContain('Failed to fetch tasks');
-    });
-
     it('should set error state when activities fetch fails', async () => {
-      const agentsData = [
-        { 
-          id: 'agent-1', 
-          name: 'Test Agent', 
-          status: 'idle',
-          current_task_id: null,
-          last_active_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+      mockFetch.mockImplementation((url: string) => {
+        if (url.startsWith('/api/v1/agents')) {
+          return Promise.resolve(okResponse({ data: [] }));
         }
-      ];
-
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'agents') {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: agentsData, error: null })),
-            })),
-          };
+        if (url.startsWith('/api/v1/activities')) {
+          return Promise.resolve(errorResponse(500, 'Internal Server Error', { error: 'Activities error' }));
         }
-        if (table === 'tasks') {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          };
-        }
-        if (table === 'activities') {
-          return {
-            select: vi.fn(() => ({
-              gte: vi.fn(() => ({
-                order: vi.fn(() => Promise.resolve({ 
-                  data: null, 
-                  error: { message: 'Activities error' } 
-                })),
-              })),
-            })),
-          };
-        }
-        return {
-          select: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        };
+        return Promise.resolve(okResponse({}));
       });
 
       const { result } = renderHook(() => useRealtimeMetrics());
@@ -203,28 +213,16 @@ describe('useRealtimeMetrics', () => {
     it('should clear error state on successful refresh', async () => {
       let shouldFail = true;
 
-      mockSupabaseClient.from.mockImplementation((table: string) => {
+      mockFetch.mockImplementation((url: string) => {
         if (shouldFail) {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ 
-                data: null, 
-                error: { message: 'Database error' } 
-              })),
-              gte: vi.fn(() => ({
-                order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-              })),
-            })),
-          };
+          if (url.startsWith('/api/v1/agents')) {
+            return Promise.resolve(errorResponse(500, 'Internal Server Error'));
+          }
         }
-        return {
-          select: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            gte: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          })),
-        };
+        if (url.startsWith('/api/v1/agents')) {
+          return Promise.resolve(okResponse({ data: [] }));
+        }
+        return Promise.resolve(okResponse({ activities: [] }));
       });
 
       const { result } = renderHook(() => useRealtimeMetrics());
@@ -246,10 +244,8 @@ describe('useRealtimeMetrics', () => {
       });
     });
 
-    it('should handle unknown error types gracefully', async () => {
-      mockSupabaseClient.from.mockImplementation(() => {
-        throw new Error('Unknown error');
-      });
+    it('should handle network error gracefully', async () => {
+      mockFetch.mockRejectedValue(new Error('Network error'));
 
       const { result } = renderHook(() => useRealtimeMetrics());
 
@@ -257,20 +253,13 @@ describe('useRealtimeMetrics', () => {
         expect(result.current.error).not.toBeNull();
       });
 
-      expect(result.current.error?.message).toBe('Unknown error');
+      expect(result.current.error?.message).toBe('Network error');
     });
   });
 
   describe('refresh functionality', () => {
-    it('should expose refresh function', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+    it('should expose refresh function', () => {
+      mockSuccessResponses(mockFetch);
 
       const { result } = renderHook(() => useRealtimeMetrics());
 
@@ -278,14 +267,7 @@ describe('useRealtimeMetrics', () => {
     });
 
     it('should set loading state during refresh', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
       const { result } = renderHook(() => useRealtimeMetrics());
 
@@ -307,9 +289,9 @@ describe('useRealtimeMetrics', () => {
 
   describe('agent selection', () => {
     it('should allow selecting and deselecting agents', async () => {
-      const mockAgent = { 
-        agentId: 'agent-1', 
-        agentName: 'Test Agent', 
+      const mockAgent = {
+        agentId: 'agent-1',
+        agentName: 'Test Agent',
         status: 'idle' as const,
         tasksPerMinute: 0,
         successRate: 100,
@@ -317,36 +299,22 @@ describe('useRealtimeMetrics', () => {
         avgResponseTime: 100,
         errorRate: 0,
         lastActivityAt: new Date().toISOString(),
+        tasksCompleted: 0,
+        tasksFailed: 0,
+        tasksInProgress: 0,
       };
 
-      const agentsData = [
-        { 
-          id: 'agent-1', 
-          name: 'Test Agent', 
+      const agents = [
+        {
+          id: 'agent-1',
+          name: 'Test Agent',
           status: 'idle',
           current_task_id: null,
-          last_active_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        }
+        },
       ];
 
-      mockSupabaseClient.from.mockImplementation((table: string) => {
-        if (table === 'agents') {
-          return {
-            select: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: agentsData, error: null })),
-            })),
-          };
-        }
-        return {
-          select: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            gte: vi.fn(() => ({
-              order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-            })),
-          })),
-        };
-      });
+      mockSuccessResponses(mockFetch, agents, []);
 
       const { result } = renderHook(() => useRealtimeMetrics());
 
@@ -379,18 +347,13 @@ describe('useRealtimeMetrics', () => {
     });
 
     it('should accept agentIds filter', async () => {
-      mockSupabaseClient.from.mockImplementation(() => ({
-        select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          gte: vi.fn(() => ({
-            order: vi.fn(() => Promise.resolve({ data: [], error: null })),
-          })),
-        })),
-      }));
+      mockSuccessResponses(mockFetch);
 
-      const { result } = renderHook(() => useRealtimeMetrics({ 
-        agentIds: ['agent-1', 'agent-2'] 
-      }));
+      const { result } = renderHook(() =>
+        useRealtimeMetrics({
+          agentIds: ['agent-1', 'agent-2'],
+        })
+      );
 
       // Should not throw
       expect(result.current.agentMetrics).toEqual([]);

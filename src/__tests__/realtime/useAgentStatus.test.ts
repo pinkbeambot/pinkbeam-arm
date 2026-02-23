@@ -94,16 +94,16 @@ describe('useAgentStatus Return Structure', () => {
 
 describe('Status Change Detection', () => {
   it('should detect status changes correctly', () => {
-    const previousStatus = 'idle';
-    const newStatus = 'active';
+    const previousStatus: string = 'idle';
+    const newStatus: string = 'active';
 
     const hasChanged = previousStatus !== newStatus;
     expect(hasChanged).toBe(true);
   });
 
   it('should not trigger change for same status', () => {
-    const previousStatus = 'active';
-    const newStatus = 'active';
+    const previousStatus: string = 'active';
+    const newStatus: string = 'active';
 
     const hasChanged = previousStatus !== newStatus;
     expect(hasChanged).toBe(false);
@@ -126,7 +126,7 @@ describe('Reconnection Logic', () => {
 
   it('should respect max reconnect attempts', () => {
     const maxReconnectAttempts = 5;
-    let reconnectAttempts = 5;
+    const reconnectAttempts = 5;
 
     const shouldReconnect = reconnectAttempts < maxReconnectAttempts;
     expect(shouldReconnect).toBe(false);

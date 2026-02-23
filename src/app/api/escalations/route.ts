@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
 import { z } from 'zod';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { escapeIlike } from '@/lib/utils';
 
 const listEscalationsQuerySchema = z.object({
   status: z.enum(['open', 'in_progress', 'resolved', 'dismissed']).optional(),
@@ -91,34 +89,9 @@ const listEscalationsQuerySchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     const { searchParams } = new URL(request.url);
     const queryParams = {
@@ -153,14 +126,15 @@ export async function GET(request: NextRequest) {
     if (validatedQuery.type) dbQuery = dbQuery.eq('type', validatedQuery.type);
     if (validatedQuery.agent_id) dbQuery = dbQuery.eq('agent_id', validatedQuery.agent_id);
     if (validatedQuery.search) {
-      dbQuery = dbQuery.or(`title.ilike.%${validatedQuery.search}%,description.ilike.%${validatedQuery.search}%`);
+      const searchTerm = escapeIlike(validatedQuery.search);
+      dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 
     const { data: escalations, error, count } = await dbQuery;
 
     if (error) {
       console.error('Error fetching escalations:', error);
-      return NextResponse.json({ error: 'Failed to fetch escalations', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to fetch escalations' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -223,59 +197,41 @@ const createEscalationSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     const body = await request.json();
     const validatedData = createEscalationSchema.parse(body);
 
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: { persistSession: false, autoRefreshToken: false },
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    const { data: agent, error: agentError } = await supabase
+    // Parallelize validation queries for agent and task (if provided)
+    const agentPromise = supabase
       .from('agents')
       .select('id')
       .eq('id', validatedData.agent_id)
       .eq('tenant_id', tenantId)
       .single();
 
+    const taskPromise = validatedData.task_id
+      ? supabase
+          .from('tasks')
+          .select('id')
+          .eq('id', validatedData.task_id)
+          .eq('tenant_id', tenantId)
+          .single()
+      : Promise.resolve({ data: null, error: null });
+
+    const [
+      { data: agent, error: agentError },
+      { data: task, error: taskError },
+    ] = await Promise.all([agentPromise, taskPromise]);
+
     if (agentError || !agent) {
       return NextResponse.json({ error: 'Agent not found' }, { status: 400 });
     }
 
-    if (validatedData.task_id) {
-      const { data: task, error: taskError } = await supabase
-        .from('tasks')
-        .select('id')
-        .eq('id', validatedData.task_id)
-        .eq('tenant_id', tenantId)
-        .single();
-      if (taskError || !task) {
-        return NextResponse.json({ error: 'Task not found' }, { status: 400 });
-      }
+    if (validatedData.task_id && (taskError || !task)) {
+      return NextResponse.json({ error: 'Task not found' }, { status: 400 });
     }
 
     const { data: escalation, error } = await supabase
@@ -298,7 +254,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error creating escalation:', error);
-      return NextResponse.json({ error: 'Failed to create escalation', details: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to create escalation' }, { status: 500 });
     }
 
     return NextResponse.json({ data: escalation }, { status: 201 });

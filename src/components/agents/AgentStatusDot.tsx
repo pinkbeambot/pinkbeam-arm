@@ -46,6 +46,14 @@ const statusConfig: Record<AgentStatus, {
     description: "Agent is currently processing tasks",
     animate: true,
   },
+  busy: {
+    color: "text-yellow-500",
+    bgColor: "bg-yellow-500",
+    borderColor: "border-yellow-500/30",
+    label: "Busy",
+    description: "Agent is occupied with high-priority work",
+    animate: true,
+  },
   paused: {
     color: "text-blue-500",
     bgColor: "bg-blue-500",
@@ -82,6 +90,13 @@ const statusConfig: Record<AgentStatus, {
     borderColor: "border-gray-700/30",
     label: "Terminated",
     description: "Agent has been shut down",
+  },
+  offline: {
+    color: "text-slate-400",
+    bgColor: "bg-slate-400",
+    borderColor: "border-slate-400/30",
+    label: "Offline",
+    description: "Agent is not connected",
   },
 };
 

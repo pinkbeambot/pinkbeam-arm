@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
-import { 
-  createTaskSchema, 
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import {
+  createTaskSchema,
   listTasksQuerySchema,
-  enhancedListTasksQuerySchema 
+  enhancedListTasksQuerySchema
 } from '@/lib/validation';
+import { requirePermission } from '@/lib/rbac';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+import { escapeIlike } from '@/lib/utils';
 
 // Priority order mapping for sorting
 const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
@@ -134,47 +132,9 @@ const priorityOrder = { urgent: 4, high: 3, normal: 2, low: 1 };
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
@@ -287,7 +247,7 @@ export async function GET(request: NextRequest) {
 
     // Search in title and description
     if ('search' in validatedQuery && validatedQuery.search) {
-      const searchTerm = validatedQuery.search;
+      const searchTerm = escapeIlike(validatedQuery.search);
       dbQuery = dbQuery.or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`);
     }
 
@@ -317,7 +277,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching tasks:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch tasks', details: error.message },
+        { error: 'Failed to fetch tasks' },
         { status: 500 }
       );
     }
@@ -403,86 +363,60 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = createTaskSchema.parse(body);
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase, userRole } = auth;
 
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // RBAC: Check if user can create tasks
+    const guard = requirePermission(userRole, 'tasks:create');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
     }
 
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
+    // Validate assignee and parent task exist and belong to tenant (if provided)
+    // Parallelize these independent queries
+    const [assigneeResult, parentTaskResult] = await Promise.all([
+      validatedData.assignee_id
+        ? supabase
+            .from('agents')
+            .select('id')
+            .eq('id', validatedData.assignee_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+      validatedData.parent_task_id
+        ? supabase
+            .from('tasks')
+            .select('id, depth')
+            .eq('id', validatedData.parent_task_id)
+            .eq('tenant_id', tenantId)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
 
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
+    const { data: assignee, error: assigneeError } = assigneeResult;
+    const { data: parentTask, error: parentError } = parentTaskResult;
+
+    if (validatedData.assignee_id && (assigneeError || !assignee)) {
+      return NextResponse.json(
+        { error: 'Assignee agent not found' },
+        { status: 400 }
+      );
     }
 
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    // Validate assignee exists and belongs to tenant (if provided)
-    if (validatedData.assignee_id) {
-      const { data: assignee, error: assigneeError } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', validatedData.assignee_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (assigneeError || !assignee) {
-        return NextResponse.json(
-          { error: 'Assignee agent not found' },
-          { status: 400 }
-        );
-      }
+    if (validatedData.parent_task_id && (parentError || !parentTask)) {
+      return NextResponse.json(
+        { error: 'Parent task not found' },
+        { status: 400 }
+      );
     }
 
-    // Validate parent task exists and belongs to tenant (if provided)
     let parentDepth = 0;
-    if (validatedData.parent_task_id) {
-      const { data: parentTask, error: parentError } = await supabase
-        .from('tasks')
-        .select('id, depth')
-        .eq('id', validatedData.parent_task_id)
-        .eq('tenant_id', tenantId)
-        .single();
-
-      if (parentError || !parentTask) {
-        return NextResponse.json(
-          { error: 'Parent task not found' },
-          { status: 400 }
-        );
-      }
-
+    if (parentTask) {
       parentDepth = parentTask.depth || 0;
     }
 
@@ -492,7 +426,7 @@ export async function POST(request: NextRequest) {
       .insert({
         ...validatedData,
         tenant_id: tenantId,
-        assigner_id: user.id, // Set the user who created the task
+        assigner_id: auth.userId, // Set the user who created the task
         depth: parentDepth + 1,
       })
       .select(
@@ -507,7 +441,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Error creating task:', error);
       return NextResponse.json(
-        { error: 'Failed to create task', details: error.message },
+        { error: 'Failed to create task' },
         { status: 500 }
       );
     }

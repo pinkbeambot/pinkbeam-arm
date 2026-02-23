@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@supabase/supabase-js';
+import { authenticateRequest, isErrorResponse } from '@/lib/api/auth';
+import { apiDeleted, apiError } from '@/lib/api/response';
 import { updateAgentSchema } from '@/lib/validation';
+import { requirePermission, requireAnyPermission } from '@/lib/rbac';
 import { z } from 'zod';
-
-// Environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 interface RouteParams {
   params: Promise<{
@@ -73,55 +71,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
-    }
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase } = auth;
 
     // Fetch agent with all related data
     const { data: agent, error } = await supabase
@@ -131,7 +83,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         *,
         parent:parent_id(id, name, avatar_url, role, status),
         children:agents!parent_id(id, name, avatar_url, role, status),
-        current_task:current_task_id(id, title, status, priority),
         root:root_id(id, name, avatar_url, role)
       `
       )
@@ -145,46 +96,47 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
       console.error('Error fetching agent:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch agent', details: error.message },
+        { error: 'Failed to fetch agent' },
         { status: 500 }
       );
     }
 
-    // Fetch recent tasks assigned to this agent
-    const { data: recentTasks } = await supabase
-      .from('tasks')
-      .select('id, title, status, priority, created_at, completed_at')
-      .eq('assignee_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent decisions made by this agent
-    const { data: recentDecisions } = await supabase
-      .from('decisions')
-      .select('id, title, status, confidence, proposed_at, category')
-      .eq('agent_id', id)
-      .eq('tenant_id', tenantId)
-      .order('proposed_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent escalations raised by this agent
-    const { data: recentEscalations } = await supabase
-      .from('escalations')
-      .select('id, title, status, urgency, created_at, type')
-      .eq('agent_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Fetch recent activities for this agent
-    const { data: recentActivities } = await supabase
-      .from('activities')
-      .select('*')
-      .eq('agent_id', id)
-      .eq('tenant_id', tenantId)
-      .order('created_at', { ascending: false })
-      .limit(20);
+    // Fetch related data in parallel to avoid N+1 query pattern
+    const [
+      { data: recentTasks },
+      { data: recentDecisions },
+      { data: recentEscalations },
+      { data: recentActivities },
+    ] = await Promise.all([
+      supabase
+        .from('tasks')
+        .select('id, title, status, priority, created_at, completed_at')
+        .eq('assignee_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('decisions')
+        .select('id, title, status, confidence, proposed_at, category')
+        .eq('agent_id', id)
+        .eq('tenant_id', tenantId)
+        .order('proposed_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('escalations')
+        .select('id, title, status, urgency, created_at, type')
+        .eq('agent_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('activities')
+        .select('*')
+        .eq('agent_id', id)
+        .eq('tenant_id', tenantId)
+        .order('created_at', { ascending: false })
+        .limit(20),
+    ]);
 
     return NextResponse.json({
       data: {
@@ -257,58 +209,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
-
     // Parse and validate request body
     const body = await request.json();
     const validatedData = updateAgentSchema.parse(body);
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase, userRole } = auth;
 
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
+    // RBAC: Check if user can update agents
+    const guard = requirePermission(userRole, 'agents:update');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
     }
 
     // Check if agent exists and belongs to tenant
@@ -349,8 +261,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         `
         *,
         parent:parent_id(id, name, avatar_url, role, status),
-        children:agents!parent_id(id, name, avatar_url, role, status),
-        current_task:current_task_id(id, title, status, priority)
+        children:agents!parent_id(id, name, avatar_url, role, status)
       `
       )
       .single();
@@ -358,7 +269,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error updating agent:', error);
       return NextResponse.json(
-        { error: 'Failed to update agent', details: error.message },
+        { error: 'Failed to update agent' },
         { status: 500 }
       );
     }
@@ -431,54 +342,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
 
-    // Get auth token from header
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const token = authHeader.split(' ')[1];
+    const auth = await authenticateRequest(request);
+    if (isErrorResponse(auth)) return auth;
+    const { tenantId, supabase, userRole } = auth;
 
-    // Create Supabase client with user's token
-    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    });
-
-    // Get current user to extract tenant
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get user's tenant
-    const { data: userProfile, error: profileError } = await supabase
-      .from('users')
-      .select('tenant_id')
-      .eq('auth_id', user.id)
-      .single();
-
-    if (profileError || !userProfile?.tenant_id) {
-      return NextResponse.json({ error: 'Tenant not found' }, { status: 403 });
-    }
-
-    const tenantId = userProfile.tenant_id;
-
-    // Set tenant context for RLS
-    const { data: contextSet, error: contextError } = await supabase.rpc('set_tenant_context', { tenant_id: tenantId });
-
-    if (contextError || contextSet !== true) {
-      console.error('Failed to set tenant context:', contextError);
-      return NextResponse.json(
-        { error: 'Failed to set tenant context', details: contextError?.message },
-        { status: 500 }
-      );
+    // RBAC: Check if user can delete agents (owner only)
+    const guard = requirePermission(userRole, 'agents:delete');
+    if (!guard.allowed) {
+      return NextResponse.json({ error: guard.reason, code: 'FORBIDDEN' }, { status: 403 });
     }
 
     // Check if agent exists and get its status
@@ -502,9 +373,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .limit(1);
 
     if (childrenError) {
-      console.error('Error checking agent children:', childrenError);
+      console.error('Failed to check agent dependencies:', childrenError);
       return NextResponse.json(
-        { error: 'Failed to check agent dependencies', details: childrenError.message },
+        { error: 'Failed to check agent dependencies' },
         { status: 500 }
       );
     }
@@ -529,9 +400,9 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       .limit(1);
 
     if (tasksError) {
-      console.error('Error checking agent tasks:', tasksError);
+      console.error('Failed to check agent tasks:', tasksError);
       return NextResponse.json(
-        { error: 'Failed to check agent tasks', details: tasksError.message },
+        { error: 'Failed to check agent tasks' },
         { status: 500 }
       );
     }
@@ -568,26 +439,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     if (error) {
       console.error('Error deleting agent:', error);
       return NextResponse.json(
-        { error: 'Failed to delete agent', details: error.message },
+        { error: 'Failed to delete agent' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json(
-      { 
-        message: 'Agent deleted successfully',
-        deleted_agent: {
-          id,
-          name: existingAgent.name,
-        }
-      },
-      { status: 200 }
-    );
+    return apiDeleted({ id, name: existingAgent.name });
   } catch (error) {
     console.error('Unexpected error in DELETE /api/agents/:id:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return apiError('Internal server error', 500);
   }
 }

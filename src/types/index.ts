@@ -8,9 +8,11 @@ export type AgentStatus =
   | 'initializing' 
   | 'idle' 
   | 'active' 
+  | 'busy'
   | 'paused' 
   | 'blocked' 
   | 'error' 
+  | 'offline'
   | 'escaped' 
   | 'terminated';
 
@@ -546,6 +548,7 @@ export type {
   ChatListProps,
   ChatRealtimeMessage,
   TypingIndicator,
+  ChatSearchResult,
 } from './chat';
 
 // ============================================================================
@@ -587,3 +590,86 @@ export type {
   BroadcastParams,
   BroadcastResult,
 } from './meta-agent';
+
+// ============================================================================
+// Billing Types
+// ============================================================================
+
+export type {
+  SubscriptionTier,
+  SubscriptionStatus,
+  SubscriptionTierConfig,
+  TenantBilling,
+  TenantWithBilling,
+  TenantUsage,
+  UsageLimits,
+  UsageWithLimits,
+  CreateCheckoutSessionRequest,
+  CreateCheckoutSessionResponse,
+  CreatePortalSessionRequest,
+  CreatePortalSessionResponse,
+  Invoice,
+  BillingEventType,
+  BillingEvent,
+  PlanFeature,
+  StripeWebhookPayload,
+} from './billing';
+
+// Analytics Types
+export type {
+  DateRangePreset,
+  DateRange,
+  AnalyticsFilters,
+  AgentPerformanceMetrics,
+  AgentPerformanceResponse,
+  TaskStatusBreakdown,
+  TaskPipelineStage,
+  TaskPipelineResponse,
+  DecisionCategoryMetrics,
+  DecisionTrend,
+  DecisionAnalyticsResponse,
+  CostBreakdown,
+  CostTrend,
+  AgentCostMetrics,
+  CostAnalyticsResponse,
+  ActivityTimelineItem,
+  ActivityTimelineResponse,
+  ExportFormat,
+  ExportRequest,
+  ExportResponse,
+  AnalyticsQueryParams,
+} from './analytics';
+
+// Advanced Analytics Types
+export type {
+  TaskCompletionPrediction,
+  PredictionFactor,
+  WorkloadForecast,
+  AgentWorkloadForecast,
+  WorkloadForecastPoint,
+  CostProjection,
+  CostForecastPoint,
+  Anomaly,
+  TimeSeriesData,
+  HeatmapCell,
+  ActivityHeatmapData,
+  CohortData,
+  CohortAnalysis,
+  PeriodComparison,
+  ComparisonDataPoint,
+  RealtimeMetrics,
+  AgentStatusUpdate,
+  NLQueryResult,
+  VisualizationRecommendation,
+  AutomatedInsight,
+  SmartAlert,
+  ReportConfig,
+  ReportSection,
+  GeneratedReport,
+  PredictiveAnalyticsRequest,
+  PredictiveAnalyticsResponse,
+  HeatmapRequest,
+  CohortRequest,
+  NLQueryRequest,
+  RealtimeMetricsResponse,
+} from './advanced-analytics';

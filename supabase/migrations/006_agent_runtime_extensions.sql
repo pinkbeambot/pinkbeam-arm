@@ -6,7 +6,7 @@
 -- ============================================================================
 
 CREATE TABLE agent_task_queue (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Task reference
@@ -56,7 +56,7 @@ CREATE POLICY service_role_bypass_agent_task_queue ON agent_task_queue
 -- ============================================================================
 
 CREATE TABLE agent_decision_log (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     -- Who made the decision
@@ -110,7 +110,7 @@ CREATE POLICY service_role_bypass_agent_decision_log ON agent_decision_log
 -- ============================================================================
 
 CREATE TABLE agent_execution_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
@@ -164,7 +164,7 @@ CREATE POLICY service_role_bypass_agent_exec_history ON agent_execution_history
 -- ============================================================================
 
 CREATE TABLE message_delivery (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     message_id UUID NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
@@ -210,7 +210,7 @@ CREATE POLICY service_role_bypass_message_delivery ON message_delivery
 -- ============================================================================
 
 CREATE TABLE agent_lifecycle_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     
     agent_id UUID NOT NULL REFERENCES agents(id) ON DELETE CASCADE,

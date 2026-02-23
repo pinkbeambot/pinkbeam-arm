@@ -18,6 +18,19 @@ vi.mock('@/components/dashboard/useDashboardStats', () => ({
   useDashboardStats: vi.fn(),
 }));
 
+// Mock useOnboarding hook to avoid AuthProvider requirement
+vi.mock('@/components/onboarding', () => ({
+  useOnboarding: vi.fn(() => ({
+    isOpen: false,
+    isLoading: false,
+    error: null,
+    completeOnboarding: vi.fn(),
+    skipOnboarding: vi.fn(),
+    closeOnboarding: vi.fn(),
+  })),
+  OnboardingModal: vi.fn(() => null),
+}));
+
 // Mock ActivityFeed component - needs to match actual import path
 vi.mock('@/components/dashboard/activity', () => ({
   ActivityFeed: vi.fn(() => <div data-testid="activity-feed">Activity Feed</div>),

@@ -219,9 +219,9 @@ export function CreateTaskModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] p-0">
+      <DialogContent aria-modal="true" aria-labelledby="create-task-title" className="max-w-2xl max-h-[90vh] p-0">
         <DialogHeader className="px-6 py-4 border-b">
-          <DialogTitle>Create New Task</DialogTitle>
+          <DialogTitle id="create-task-title">Create New Task</DialogTitle>
           <DialogDescription>
             Create a task and assign it to an AI agent
           </DialogDescription>

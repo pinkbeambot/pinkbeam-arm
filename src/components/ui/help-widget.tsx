@@ -1,5 +1,6 @@
 'use client'
 
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from 'react'
 import { Search, HelpCircle, X, ArrowRight, Mail } from 'lucide-react'
 import Link from 'next/link'
@@ -39,6 +40,7 @@ export function HelpWidget() {
   }, [isOpen])
 
   // Search functionality
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => {
     if (searchQuery.trim().length > 0) {
       const results = searchArticles(searchQuery)

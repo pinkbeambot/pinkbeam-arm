@@ -1,3 +1,14 @@
+---
+title: "Deployment Procedures"
+type: operations
+status: active
+created: 2026-02-13
+updated: 2026-02-15
+owner: CTO
+tags: [operations, deployment, critical]
+aliases: ["Deployment", "Deploy Guide"]
+---
+
 # Pink Beam ARM — Deployment Process
 
 **Document:** Deployment Procedures  
@@ -136,7 +147,7 @@ v0.1.2-beta.1  # Pre-release
 
 ## Rollback
 
-See [INCIDENT-RESPONSE.md](./INCIDENT-RESPONSE.md) for full rollback procedures.
+See [[INCIDENT-RESPONSE]] for full rollback procedures.
 
 Quick rollback:
 
@@ -252,6 +263,15 @@ Configure in Vercel:
 
 ---
 
-*Document Owner: CTO*  
-*Review Schedule: Monthly*  
+*Document Owner: CTO*
+*Review Schedule: Monthly*
 *Next Review: 2026-03-13*
+
+---
+
+## Related Documentation
+
+- [[CICD]] — CI/CD pipeline automation
+- [[INCIDENT-RESPONSE]] — Rollback and incident procedures
+- [[DEVELOPMENT-PROCESS]] — Development process with deployment decisions
+- [[TESTING-STANDARDS]] — Pre-deployment test requirements

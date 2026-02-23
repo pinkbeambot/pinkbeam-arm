@@ -1,30 +1,42 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
-import { Plus, Users, Network } from 'lucide-react';
+/* eslint-disable react-hooks/set-state-in-effect */
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { Plus, Users, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { DashboardLayout, PageContainer, PageHeader } from '@/components/dashboard/layout';
 import { AgentList, AgentFilters, filterAndSortAgents } from '@/components/dashboard/agents/AgentList';
 import { AgentDetailPanel } from '@/components/dashboard/agents/AgentDetailPanel';
 import { CreateAgentModal } from '@/components/dashboard/agents/CreateAgentModal';
-import { AgentHierarchy } from '@/components/agents';
+import { BulkActionBar } from '@/components/dashboard/agents/BulkActionBar';
 import { ChatPanel } from '@/components/chat';
-import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent } from '@/lib/hooks/useAgents';
+import { useAgentsRealtime, useUpdateAgent, useDeleteAgent, useCreateAgent, useCloneAgent, useBulkAgentActions } from '@/lib/hooks/useAgents';
+import { useTenant, useRBAC } from '@/lib/hooks';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CSVImportDialog, AGENT_SAMPLE_CSV } from '@/components/shared/CSVImportDialog';
+import { AGENT_COLUMNS } from '@/lib/csv-parser';
 import type { Agent, AgentStatus, AgentRole, ViewMode, SortField, SortOrder, CreateAgentInput } from '@/types';
-
-const DEMO_TENANT_ID = '00000000-0000-0000-0000-000000000000';
 
 export default function AgentsPage() {
   const { toast } = useToast();
-  const { agents, loading, error, refetch } = useAgentsRealtime(DEMO_TENANT_ID);
+  const { tenantId, isLoading: tenantLoading, error: tenantError } = useTenant();
+  const { can, isLoading: rbacLoading } = useRBAC();
+  const { agents, loading: agentsLoading, error: agentsError, refetch } = useAgentsRealtime(tenantId);
   const { updateAgent, loading: updateLoading } = useUpdateAgent();
   const { deleteAgent, loading: deleteLoading } = useDeleteAgent();
   const { createAgent, loading: createLoading } = useCreateAgent();
+  const { cloneAgent, loading: cloneLoading } = useCloneAgent();
+  const { bulkPause, bulkResume, bulkDelete, loading: bulkLoading } = useBulkAgentActions();
+
+  // RBAC permissions
+  const canCreateAgents = can('agents:create');
+  const canUpdateAgents = can('agents:update');
+  const canDeleteAgents = can('agents:delete');
+  const canManageAgents = can('agents:manage');
 
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<AgentStatus | 'all'>('all');
   const [roleFilter, setRoleFilter] = useState<AgentRole | 'all'>('all');
@@ -37,20 +49,153 @@ export default function AgentsPage() {
   
   const [chatOpen, setChatOpen] = useState(false);
   const [chatAgentId, setChatAgentId] = useState<string | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
-  const filteredAgents = useMemo(() => 
+  const filteredAgents = useMemo(() =>
     filterAndSortAgents(agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder),
     [agents, searchQuery, statusFilter, roleFilter, sortField, sortOrder]
   );
+
+  // Clear bulk selection when filters change to avoid stale references
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [searchQuery, statusFilter, roleFilter]);
 
   const handleSelectAgent = useCallback((agent: Agent) => {
     setSelectedAgent(agent);
     setDetailOpen(true);
   }, []);
 
-  const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
+  const handleToggleStatus = useCallback(async (agent: Agent) => {
+    const newStatus: AgentStatus = (agent.status === 'active' || agent.status === 'idle') ? 'paused' : 'active';
     try {
-      await createAgent({ ...data, tenant_id: DEMO_TENANT_ID });
+      await updateAgent(agent.id, { status: newStatus });
+      toast({ title: 'Status Updated', description: `${agent.name} is now ${newStatus}.` });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update agent status.', variant: 'destructive' });
+    }
+  }, [updateAgent, refetch, toast]);
+
+  const handleDeleteAgent = useCallback(async (agent: Agent) => {
+    if (!confirm(`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`)) return;
+    try {
+      await deleteAgent(agent.id);
+      toast({ title: 'Agent Deleted', description: `${agent.name} has been deleted.` });
+      if (selectedAgent?.id === agent.id) {
+        setDetailOpen(false);
+        setSelectedAgent(null);
+      }
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete agent.', variant: 'destructive' });
+    }
+  }, [deleteAgent, selectedAgent, refetch, toast]);
+
+  const handleEditAgent = useCallback((agent: Agent) => {
+    setSelectedAgent(agent);
+    setDetailOpen(true);
+  }, []);
+
+  const handleChat = useCallback((agent: Agent) => {
+    setChatAgentId(agent.id);
+    setChatOpen(true);
+  }, []);
+
+  const handleCloneAgent = useCallback(async (agent: Agent) => {
+    try {
+      const clonedAgent = await cloneAgent(agent.id);
+      toast({ title: 'Agent Cloned', description: `${clonedAgent.name} has been created from ${agent.name}.` });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to clone agent.', variant: 'destructive' });
+    }
+  }, [cloneAgent, refetch, toast]);
+
+  const handleToggleSelect = useCallback((agentId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(agentId)) {
+        next.delete(agentId);
+      } else {
+        next.add(agentId);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    const allIds = filteredAgents.map(a => a.id);
+    const allSelected = allIds.every(id => selectedIds.has(id));
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allIds));
+    }
+  }, [filteredAgents, selectedIds]);
+
+  const handleDeselectAll = useCallback(() => {
+    setSelectedIds(new Set());
+  }, []);
+
+  const handleBulkPause = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await bulkPause(ids);
+      toast({
+        title: 'Agents Paused',
+        description: `${result.succeeded} of ${result.total} agent${result.total !== 1 ? 's' : ''} paused.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to pause agents.', variant: 'destructive' });
+    }
+  }, [selectedIds, bulkPause, refetch, toast]);
+
+  const handleBulkResume = useCallback(async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await bulkResume(ids);
+      toast({
+        title: 'Agents Resumed',
+        description: `${result.succeeded} of ${result.total} agent${result.total !== 1 ? 's' : ''} resumed.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+      });
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to resume agents.', variant: 'destructive' });
+    }
+  }, [selectedIds, bulkResume, refetch, toast]);
+
+  const handleBulkDelete = useCallback(async () => {
+    const count = selectedIds.size;
+    if (!confirm(`Are you sure you want to delete ${count} agent${count !== 1 ? 's' : ''}? This action cannot be undone.`)) return;
+    const ids = Array.from(selectedIds);
+    try {
+      const result = await bulkDelete(ids);
+      toast({
+        title: 'Agents Deleted',
+        description: `${result.succeeded} of ${result.total} agent${result.total !== 1 ? 's' : ''} deleted.${result.failed > 0 ? ` ${result.failed} failed.` : ''}`,
+      });
+      if (selectedAgent && selectedIds.has(selectedAgent.id)) {
+        setDetailOpen(false);
+        setSelectedAgent(null);
+      }
+      setSelectedIds(new Set());
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to delete agents.', variant: 'destructive' });
+    }
+  }, [selectedIds, bulkDelete, selectedAgent, refetch, toast]);
+
+  const handleCreateAgent = useCallback(async (data: CreateAgentInput) => {
+    if (!tenantId) {
+      toast({ title: 'Error', description: 'Tenant not available.', variant: 'destructive' });
+      return;
+    }
+    try {
+      await createAgent({ ...data, tenant_id: tenantId });
       toast({ title: 'Agent Created', description: `${data.name} has been created.` });
       setCreateModalOpen(false);
       refetch();
@@ -58,7 +203,32 @@ export default function AgentsPage() {
       toast({ title: 'Error', description: 'Failed to create agent.', variant: 'destructive' });
       throw err;
     }
-  }, [createAgent, refetch, toast]);
+  }, [createAgent, refetch, toast, tenantId]);
+
+  const handleImportAgents = useCallback(async (rows: Record<string, string>[]) => {
+    const agents = rows.map(row => ({
+      name: row.name,
+      role: row.role.toLowerCase() as 'ceo' | 'manager' | 'worker' | 'specialist' | 'system',
+      description: row.description || '',
+      capabilities: row.capabilities ? row.capabilities.split(';').map(c => c.trim()).filter(Boolean) : [],
+      model: row.model || undefined,
+    }));
+
+    const response = await fetch('/api/agents/import/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agents }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error || 'Import failed');
+    }
+
+    const result = await response.json();
+    refetch();
+    return { succeeded: result.data.succeeded, failed: result.data.failed };
+  }, [refetch]);
 
   const stats = useMemo(() => ({
     total: agents.length,
@@ -75,13 +245,23 @@ export default function AgentsPage() {
           title="Agent Roster"
           description={`Manage your AI workforce. ${stats.total} agent${stats.total !== 1 ? 's' : ''} total.`}
         >
-          <Button onClick={() => setCreateModalOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Agent
-          </Button>
+          {canCreateAgents && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={() => setImportDialogOpen(true)} size="sm" className="sm:size-default">
+                <Upload className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Import CSV</span>
+                <span className="sm:hidden">Import</span>
+              </Button>
+              <Button onClick={() => setCreateModalOpen(true)} size="sm" className="sm:size-default">
+                <Plus className="mr-2 h-4 w-4" />
+                <span className="hidden sm:inline">Create Agent</span>
+                <span className="sm:hidden">Create</span>
+              </Button>
+            </div>
+          )}
         </PageHeader>
 
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
           <StatCard label="Total" value={stats.total} icon={Users} />
           <StatCard label="Active" value={stats.active} color="emerald" />
           <StatCard label="Idle" value={stats.idle} color="amber" />
@@ -89,66 +269,53 @@ export default function AgentsPage() {
           <StatCard label="Error" value={stats.error} color="red" />
         </div>
 
-        <Tabs defaultValue="list" className="space-y-6">
-          <TabsList className="grid w-full sm:w-auto grid-cols-2 sm:inline-flex">
-            <TabsTrigger value="list" className="flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Agent List
-            </TabsTrigger>
-            <TabsTrigger value="hierarchy" className="flex items-center gap-2">
-              <Network className="h-4 w-4" />
-              Hierarchy
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="list" className="space-y-6">
-            <AgentFilters
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              roleFilter={roleFilter}
-              onRoleFilterChange={setRoleFilter}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              sortField={sortField}
-              onSortFieldChange={setSortField}
-              sortOrder={sortOrder}
-              onSortOrderChange={setSortOrder}
-            />
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
-                <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
-              </div>
-            )}
-            <AgentList
-              agents={filteredAgents}
-              loading={loading}
-              viewMode={viewMode}
-              selectedAgentId={selectedAgent?.id}
-              onSelectAgent={handleSelectAgent}
-            />
-          </TabsContent>
-
-          <TabsContent value="hierarchy" className="space-y-6">
-            {error && (
-              <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <p className="text-red-800 dark:text-red-200">Failed to load agents: {error.message}</p>
-                <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
-              </div>
-            )}
-            <div className="border rounded-lg bg-card" style={{ height: '600px' }}>
-              <AgentHierarchy agents={agents} selectedAgentId={selectedAgent?.id} onSelectAgent={handleSelectAgent} showStats={true} />
+        <div className="space-y-6">
+          <AgentFilters
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
+            roleFilter={roleFilter}
+            onRoleFilterChange={setRoleFilter}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+            sortField={sortField}
+            onSortFieldChange={setSortField}
+            sortOrder={sortOrder}
+            onSortOrderChange={setSortOrder}
+          />
+          {(tenantError || agentsError) && (
+            <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-red-800 dark:text-red-200">
+                {tenantError ? `Tenant error: ${tenantError.message}` : `Failed to load agents: ${agentsError?.message}`}
+              </p>
+              <Button variant="outline" size="sm" onClick={refetch} className="mt-2">Retry</Button>
             </div>
-          </TabsContent>
-        </Tabs>
+          )}
+          <AgentList
+            agents={filteredAgents}
+            loading={agentsLoading || tenantLoading}
+            viewMode={viewMode}
+            selectedAgentId={selectedAgent?.id}
+            selectedIds={selectedIds}
+            onToggleSelect={handleToggleSelect}
+            onSelectAll={handleSelectAll}
+            onSelectAgent={handleSelectAgent}
+            onEditAgent={handleEditAgent}
+            onToggleStatus={handleToggleStatus}
+            onDeleteAgent={handleDeleteAgent}
+            onCloneAgent={handleCloneAgent}
+          />
+        </div>
 
         <AgentDetailPanel
           agent={selectedAgent}
-          loading={updateLoading || deleteLoading}
+          loading={updateLoading || deleteLoading || cloneLoading}
           open={detailOpen}
           onOpenChange={setDetailOpen}
+          onChat={() => selectedAgent && handleChat(selectedAgent)}
+          onToggleStatus={() => selectedAgent && handleToggleStatus(selectedAgent)}
+          onCloneAgent={() => selectedAgent && handleCloneAgent(selectedAgent)}
         />
 
         <CreateAgentModal
@@ -160,6 +327,26 @@ export default function AgentsPage() {
         />
 
         <ChatPanel chatId={null} agentId={chatAgentId || undefined} open={chatOpen} onOpenChange={setChatOpen} />
+
+        <CSVImportDialog
+          open={importDialogOpen}
+          onOpenChange={setImportDialogOpen}
+          type="agents"
+          columns={AGENT_COLUMNS}
+          onImport={handleImportAgents}
+          sampleData={AGENT_SAMPLE_CSV}
+        />
+
+        <BulkActionBar
+          selectedCount={selectedIds.size}
+          totalCount={filteredAgents.length}
+          onPauseSelected={handleBulkPause}
+          onResumeSelected={handleBulkResume}
+          onDeleteSelected={handleBulkDelete}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          loading={bulkLoading}
+        />
       </PageContainer>
     </DashboardLayout>
   );
