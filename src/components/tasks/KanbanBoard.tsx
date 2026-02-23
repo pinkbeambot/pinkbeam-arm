@@ -12,6 +12,7 @@
  * - Optimistic UI updates with rollback on error
  * - Accessibility support (keyboard navigation)
  * - Visual feedback during drag operations
+ * - Assignment dropdown with team members
  * 
  * @example
  * ```tsx
@@ -20,6 +21,8 @@
  *   onTaskMove={handleTaskMove}
  *   onTaskReorder={handleTaskReorder}
  *   onTaskClick={(task) => console.log(task)}
+ *   teamMembers={agents}
+ *   onAssigneeChange={handleAssigneeChange}
  * />
  * ```
  */
@@ -162,6 +165,8 @@ export function KanbanBoard({
   onTaskClick,
   onTaskEdit,
   onTaskDelete,
+  onAssigneeChange,
+  teamMembers,
   readOnly = false,
   isLoading = false,
   error = null,
@@ -230,11 +235,11 @@ export function KanbanBoard({
     
     if (!over) return;
 
-    const activeId = active.id as string;
+    const activeIdValue = active.id as string;
     const overId = over.id as string;
 
     // Find the column we're over
-    const activeColumn = findColumnByTaskId(activeId);
+    const activeColumn = findColumnByTaskId(activeIdValue);
     const overColumn = KANBAN_COLUMNS.find(c => c.id === overId)?.id || 
                        findColumnByTaskId(overId);
 
@@ -244,7 +249,7 @@ export function KanbanBoard({
 
     // Optimistically update the UI
     setLocalTasks(prev => {
-      const activeIndex = prev.findIndex(t => t.id === activeId);
+      const activeIndex = prev.findIndex(t => t.id === activeIdValue);
       if (activeIndex === -1) return prev;
 
       const newTasks = [...prev];
@@ -262,18 +267,18 @@ export function KanbanBoard({
 
     if (!over) return;
 
-    const activeId = active.id as string;
+    const activeIdValue = active.id as string;
     const overId = over.id as string;
 
     // Find the source and target columns
-    const sourceColumn = findColumnByTaskId(activeId);
+    const sourceColumn = findColumnByTaskId(activeIdValue);
     const targetColumn = KANBAN_COLUMNS.find(c => c.id === overId)?.id || 
                          findColumnByTaskId(overId);
 
     if (!sourceColumn || !targetColumn) return;
 
     // Get the task being moved
-    const task = findTask(activeId);
+    const task = findTask(activeIdValue);
     if (!task) return;
 
     // Calculate the new order
@@ -284,24 +289,24 @@ export function KanbanBoard({
     // If moving to a new column
     if (sourceColumn !== targetColumn) {
       // Mark as pending
-      setPendingUpdates(prev => new Set(prev).add(activeId));
+      setPendingUpdates(prev => new Set(prev).add(activeIdValue));
       
       // Optimistic update
       setLocalTasks(prev => 
         prev.map(t => 
-          t.id === activeId 
+          t.id === activeIdValue 
             ? { ...t, status: targetColumn, order: newOrder }
             : t
         )
       );
 
       try {
-        await onTaskMove(activeId, targetColumn, newOrder);
+        await onTaskMove(activeIdValue, targetColumn, newOrder);
       } catch (err) {
         // Revert on error
         setLocalTasks(prev => 
           prev.map(t => 
-            t.id === activeId 
+            t.id === activeIdValue 
               ? { ...t, status: sourceColumn }
               : t
           )
@@ -310,19 +315,19 @@ export function KanbanBoard({
       } finally {
         setPendingUpdates(prev => {
           const next = new Set(prev);
-          next.delete(activeId);
+          next.delete(activeIdValue);
           return next;
         });
       }
     } else {
       // Reordering within the same column
       const sourceTasks = tasksByColumn[sourceColumn];
-      const sourceIndex = sourceTasks.findIndex(t => t.id === activeId);
+      const sourceIndex = sourceTasks.findIndex(t => t.id === activeIdValue);
       const targetIndex = overIndex >= 0 ? overIndex : sourceTasks.length - 1;
 
       if (sourceIndex !== targetIndex) {
         // Mark as pending
-        setPendingUpdates(prev => new Set(prev).add(activeId));
+        setPendingUpdates(prev => new Set(prev).add(activeIdValue));
         
         // Optimistic reorder
         setLocalTasks(prev => {
@@ -339,7 +344,7 @@ export function KanbanBoard({
         });
 
         try {
-          await onTaskReorder(activeId, sourceColumn, sourceColumn, targetIndex);
+          await onTaskReorder(activeIdValue, sourceColumn, sourceColumn, targetIndex);
         } catch (err) {
           // Revert on error - refetch to get correct state
           setLocalTasks(tasks);
@@ -347,7 +352,7 @@ export function KanbanBoard({
         } finally {
           setPendingUpdates(prev => {
             const next = new Set(prev);
-            next.delete(activeId);
+            next.delete(activeIdValue);
             return next;
           });
         }
@@ -434,6 +439,8 @@ export function KanbanBoard({
                       onTaskClick={onTaskClick}
                       onTaskEdit={onTaskEdit}
                       onTaskDelete={onTaskDelete}
+                      onAssigneeChange={onAssigneeChange}
+                      teamMembers={teamMembers}
                       readOnly={readOnly}
                     />
                   </motion.div>
@@ -452,6 +459,7 @@ export function KanbanBoard({
             index={0}
             columnId={activeTask.status}
             isOverlay
+            teamMembers={teamMembers}
           />
         ) : null}
       </DragOverlay>
