@@ -158,6 +158,25 @@ export interface Task {
   deadline_at?: string;
 }
 
+// Task Dependency Types
+export interface TaskDependency {
+  id: string;
+  tenant_id: string;
+  task_id: string;
+  depends_on_task_id: string;
+  dependency_type: 'blocks' | 'requires' | 'optional';
+  created_at: string;
+  // Join fields
+  depends_on?: Task;
+  dependent_task?: Task;
+}
+
+export interface TaskWithDependencies extends Task {
+  dependencies: TaskDependency[];
+  blocked_by: TaskDependency[];
+  subtasks?: Task[];
+}
+
 // Activity Types
 export type ActivityType = 
   | 'task_started'
