@@ -389,6 +389,10 @@ function getTypeConfig(type: EscalationType) {
       label: 'Edge Case',
       icon: <Brain className="h-3 w-3" />,
     },
+    policy_violation: {
+      label: 'Policy Violation',
+      icon: <XCircle className="h-3 w-3" />,
+    },
   };
 
   return configs[type] || configs.clarification;

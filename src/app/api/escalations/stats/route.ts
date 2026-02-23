@@ -25,6 +25,7 @@ export async function GET(request: NextRequest) {
       .from('escalations')
       .select('*')
       .eq('tenant_id', tenantId)
+      .is('deleted_at', null)
       .gte('created_at', dateFromStr);
 
     if (error) {
@@ -37,13 +38,24 @@ export async function GET(request: NextRequest) {
     const byStatus: Record<string, number> = {};
     const byUrgency: Record<string, number> = {};
     const byType: Record<string, number> = {};
+    const openByUrgency: Record<string, number> = {};
     let totalResolutionTime = 0;
     let resolvedCount = 0;
+    let acknowledgedCount = 0;
 
     list.forEach((e) => {
       byStatus[e.status] = (byStatus[e.status] || 0) + 1;
       byUrgency[e.urgency] = (byUrgency[e.urgency] || 0) + 1;
       byType[e.type] = (byType[e.type] || 0) + 1;
+
+      // Count open escalations by urgency
+      if (e.status === 'open' || e.status === 'acknowledged') {
+        openByUrgency[e.urgency] = (openByUrgency[e.urgency] || 0) + 1;
+      }
+
+      if (e.status === 'acknowledged') {
+        acknowledgedCount++;
+      }
 
       if (e.time_to_resolve_seconds && e.status === 'resolved') {
         totalResolutionTime += e.time_to_resolve_seconds;
@@ -74,6 +86,8 @@ export async function GET(request: NextRequest) {
         by_status: byStatus,
         by_urgency: byUrgency,
         by_type: byType,
+        open_by_urgency: openByUrgency,
+        acknowledged_count: acknowledgedCount,
         avg_resolution_time_seconds: resolvedCount > 0 ? Math.round(totalResolutionTime / resolvedCount) : null,
         timeline,
       },
