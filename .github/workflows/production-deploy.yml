@@ -207,7 +207,7 @@ jobs:
 
       - name: Notify deployment success
         if: success()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v2
         with:
           payload: |
             {
@@ -227,7 +227,7 @@ jobs:
 
       - name: Notify deployment failure
         if: failure()
-        uses: slackapi/slack-github-action@v1
+        uses: slackapi/slack-github-action@v2
         with:
           payload: |
             {
