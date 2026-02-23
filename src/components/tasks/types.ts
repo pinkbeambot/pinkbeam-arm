@@ -19,6 +19,8 @@ export interface KanbanTask extends Task {
   isUpdating?: boolean;
   /** Whether this is a newly created task */
   isNew?: boolean;
+  /** Tags for categorization */
+  tags?: string[];
 }
 
 export interface KanbanColumnType {
@@ -49,6 +51,8 @@ export interface KanbanBoardProps {
   onTaskClick?: (task: KanbanTask) => void;
   onTaskEdit?: (task: KanbanTask) => void;
   onTaskDelete?: (task: KanbanTask) => void;
+  onAssigneeChange?: (taskId: string, assigneeId: string | null) => void;
+  teamMembers?: Agent[];
   readOnly?: boolean;
   isLoading?: boolean;
   error?: Error | null;
@@ -61,6 +65,8 @@ export interface KanbanColumnProps {
   onTaskClick?: (task: KanbanTask) => void;
   onTaskEdit?: (task: KanbanTask) => void;
   onTaskDelete?: (task: KanbanTask) => void;
+  onAssigneeChange?: (taskId: string, assigneeId: string | null) => void;
+  teamMembers?: Agent[];
   readOnly?: boolean;
 }
 
