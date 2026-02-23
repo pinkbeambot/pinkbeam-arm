@@ -77,7 +77,7 @@ export default function DecisionsPage() {
 
   // RBAC permissions
   const { can } = useRBAC();
-  const canOverrideDecisions = can('decisions:override');
+  const canManageDecisions = can('decisions:override');
 
   const showPermissionDenied = useCallback(() => {
     toast({ title: 'Permission Denied', description: 'You do not have permission to override decisions.', variant: 'destructive' });
@@ -97,7 +97,11 @@ export default function DecisionsPage() {
     } catch (err) {
       toast({ title: 'Error', description: err instanceof Error ? err.message : 'Failed to override.', variant: 'destructive' });
     }
+<<<<<<< Updated upstream
   }, [overrideDecision, refetch, toast]);
+=======
+  }, [canManageDecisions, overrideDecision, refetch, showPermissionDenied, toast]);
+>>>>>>> Stashed changes
 
   const handleExport = useCallback((format: 'csv' | 'json') => {
     exportDecisions(decisions, format);
