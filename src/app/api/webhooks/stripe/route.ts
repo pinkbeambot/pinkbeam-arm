@@ -316,15 +316,16 @@ function createSubscriptionCreatedHandler(supabase: ReturnType<typeof createServ
     }
 
     const tier = subscription.metadata?.tier as SubscriptionTier | undefined;
+    const periodDates = getSubscriptionPeriodDates(subscription);
 
     await updateTenantBilling(supabase, tenantId, {
       stripe_subscription_id: subscription.id,
       subscription_status: subscription.status,
-      current_period_starts_at: getSubscriptionPeriodDates(subscription).currentPeriodStart
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodStart * 1000).toISOString()
+      current_period_starts_at: periodDates.currentPeriodStart != null
+        ? new Date(periodDates.currentPeriodStart * 1000).toISOString()
         : null,
-      current_period_ends_at: getSubscriptionPeriodDates(subscription).currentPeriodEnd
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodEnd * 1000).toISOString()
+      current_period_ends_at: periodDates.currentPeriodEnd != null
+        ? new Date(periodDates.currentPeriodEnd * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(tier ? { current_tier: tier } : {}),
@@ -359,15 +360,16 @@ function createSubscriptionUpdatedHandler(supabase: ReturnType<typeof createServ
     }
 
     const tier = subscription.metadata?.tier as SubscriptionTier | undefined;
+    const periodDates = getSubscriptionPeriodDates(subscription);
 
     await updateTenantBilling(supabase, tenantId, {
       stripe_subscription_id: subscription.id,
       subscription_status: subscription.status,
-      current_period_starts_at: getSubscriptionPeriodDates(subscription).currentPeriodStart
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodStart * 1000).toISOString()
+      current_period_starts_at: periodDates.currentPeriodStart != null
+        ? new Date(periodDates.currentPeriodStart * 1000).toISOString()
         : null,
-      current_period_ends_at: getSubscriptionPeriodDates(subscription).currentPeriodEnd
-        ? new Date(getSubscriptionPeriodDates(subscription).currentPeriodEnd * 1000).toISOString()
+      current_period_ends_at: periodDates.currentPeriodEnd != null
+        ? new Date(periodDates.currentPeriodEnd * 1000).toISOString()
         : null,
       cancel_at_period_end: subscription.cancel_at_period_end,
       ...(tier ? { current_tier: tier } : {}),
@@ -488,7 +490,7 @@ function createPaymentMethodAttachedHandler(supabase: ReturnType<typeof createSe
       card_last4: paymentMethod.card?.last4 ?? null,
       card_exp_month: paymentMethod.card?.exp_month ?? null,
       card_exp_year: paymentMethod.card?.exp_year ?? null,
-      billing_details: paymentMethod.billing_details ?? {},
+      billing_details: (paymentMethod.billing_details ?? {}) as unknown as Record<string, unknown>,
     });
 
     await logBillingEvent(
@@ -569,11 +571,18 @@ function createPaymentIntentFailedHandler(supabase: ReturnType<typeof createServ
       await recordPaymentMethodEvent(supabase, {
         tenant_id: tenantId,
         stripe_payment_method_id: paymentIntent.payment_method as string,
+        stripe_customer_id: paymentIntent.customer as string,
+        type: 'card',
+        card_brand: null,
+        card_last4: null,
+        card_exp_month: null,
+        card_exp_year: null,
+        billing_details: {},
         event_type: 'failed',
         event_data: {
           payment_intent_id: paymentIntent.id,
-          failure_code: paymentIntent.last_payment_error?.code,
-          failure_message: paymentIntent.last_payment_error?.message,
+          failure_code: paymentIntent.last_payment_error?.code ?? null,
+          failure_message: paymentIntent.last_payment_error?.message ?? null,
         },
       });
     }
