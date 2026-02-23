@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   // Process the event with idempotency and retry logic
   try {
-    const result = await processor.processEvent(event.id, event.type, event.data.object as Record<string, unknown>);
+    const result = await processor.processEvent(event.id, event.type, event.data.object as unknown as Record<string, unknown>);
 
     if (result.success) {
       if (result.processed) {
@@ -211,7 +211,7 @@ function createInvoicePaidHandler(supabase: ReturnType<typeof createServiceRoleC
       {
         invoice_id: invoice.id,
         amount: invoice.amount_due,
-        subscription_id: invoice.subscription,
+        subscription_id: getInvoiceSubscriptionId(invoice),
       },
       invoice.id,
       'invoice.paid'

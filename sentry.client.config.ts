@@ -70,7 +70,4 @@ Sentry.init({
   
   // Attach stack traces to messages
   attachStacktrace: true,
-  
-  // Enable auto-session tracking
-  autoSessionTracking: true,
 });

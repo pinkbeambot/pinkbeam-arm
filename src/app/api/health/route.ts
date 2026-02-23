@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { createServiceClient } from '@/lib/supabase/server';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 /**
  * Health check endpoint for monitoring
@@ -8,22 +8,28 @@ import { createServiceClient } from '@/lib/supabase/server';
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   
-  const health = {
-    status: 'healthy' as const,
-    timestamp: new Date().toISOString(),
-    version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'unknown',
-    region: process.env.VERCEL_REGION || 'unknown',
-    checks: {} as Record<string, {
+  const health: {
+    status: 'healthy' | 'degraded' | 'unhealthy';
+    timestamp: string;
+    version: string;
+    region: string;
+    checks: Record<string, {
       status: 'healthy' | 'degraded' | 'unhealthy';
       responseTimeMs: number;
       error?: string;
-    }>,
+    }>;
+  } = {
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    version: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) || 'unknown',
+    region: process.env.VERCEL_REGION || 'unknown',
+    checks: {},
   };
 
   // Check database connectivity
   const dbStart = Date.now();
   try {
-    const supabase = createServiceClient();
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase
       .from('tenants')
       .select('id')
@@ -47,7 +53,7 @@ export async function GET(request: NextRequest) {
   // Check Supabase Auth service
   const authStart = Date.now();
   try {
-    const supabase = createServiceClient();
+    const supabase = await createServerSupabaseClient();
     const { error } = await supabase.auth.getSession();
 
     // Missing session is expected for health check

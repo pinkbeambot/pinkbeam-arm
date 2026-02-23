@@ -12,7 +12,7 @@ import { Send, Sparkles, BarChart3, Table, Activity, Lightbulb } from 'lucide-re
 import type { NLQueryResult } from '@/types/advanced-analytics';
 
 interface NaturalLanguageQueryProps {
-  onQuery?: (query: string) => Promise<NLQueryResult>;
+  onQuery?: (query: string) => Promise<NLQueryResult | undefined>;
   isLoading?: boolean;
   className?: string;
 }

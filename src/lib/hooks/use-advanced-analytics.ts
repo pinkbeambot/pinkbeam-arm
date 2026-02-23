@@ -34,7 +34,7 @@ interface UseNLQueryResult {
   data: NLQueryResult | null;
   isLoading: boolean;
   error: Error | null;
-  executeQuery: (query: string) => Promise<void>;
+  executeQuery: (query: string) => Promise<NLQueryResult | undefined>;
 }
 
 interface UseInsightsResult {
@@ -186,8 +186,8 @@ export function useNLQuery(dateRange: DateRange): UseNLQueryResult {
 
   const days = dateRangeToDays(dateRange);
 
-  const executeQuery = React.useCallback(async (query: string) => {
-    if (!accessToken || !query.trim()) return;
+  const executeQuery = React.useCallback(async (query: string): Promise<NLQueryResult | undefined> => {
+    if (!accessToken || !query.trim()) return undefined;
 
     setIsLoading(true);
     setError(null);
@@ -205,8 +205,10 @@ export function useNLQuery(dateRange: DateRange): UseNLQueryResult {
 
       const result = await response.json();
       setData(result.data);
+      return result.data as NLQueryResult;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
+      return undefined;
     } finally {
       setIsLoading(false);
     }
