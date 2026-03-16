@@ -93,10 +93,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/swagger-ui-react": "^5.18.0",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@vitest/coverage-v8": "^4.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "happy-dom": "^20.6.1",
+    "happy-dom": "^20.8.4",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"
